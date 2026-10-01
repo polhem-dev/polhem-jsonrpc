@@ -53,10 +53,51 @@ var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));
 |--------|---------------|
 | [QuickStart.Server](samples/QuickStart.Server/README.md) | A server on ASP.NET Core minimal APIs |
 | [QuickStart.Client](samples/QuickStart.Client/README.md) | Calls, errors, notifications and batches from a console application |
-| [ApiKey](samples/ApiKey/README.md) | A server filter that checks an API key, and the client handler that sends it |
+
+## Extension points
+
+A **filter** runs around every call on the server. It can reject the call by throwing `JsonRpcErrorException`,
+rewrite `context.Request.Params` before `next`, and rewrite `context.Result` after it:
+
+```csharp
+public sealed class ApiKeyFilter(string expectedKey) : IJsonRpcFilter
+{
+    public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+    {
+        context.Transport.Headers.TryGetValue("X-Api-Key", out var key);
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(key ?? ""), Encoding.UTF8.GetBytes(expectedKey)))
+        {
+            throw new JsonRpcErrorException(-32001, "Unauthorized");
+        }
+        return next(context);
+    }
+}
+
+builder.Services.AddJsonRpcServer(options =>
+{
+    options.AddTarget<Calculator>("math");
+    options.Filters.Add(new ApiKeyFilter(apiKey));
+});
+```
+
+On the client, HTTP headers belong to the `HttpClient`: add them with a `DelegatingHandler`. To rewrite parameters
+and results, for example to encrypt them, add an `IJsonRpcClientInterceptor` to `JsonRpcClientOptions.Interceptors`.
+
+```csharp
+public sealed class ApiKeyHandler(string key) : DelegatingHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        request.Headers.Add("X-Api-Key", key);
+        return base.SendAsync(request, cancellationToken);
+    }
+}
+
+using var http = new HttpClient(new ApiKeyHandler(apiKey) { InnerHandler = new HttpClientHandler() }) { BaseAddress = endpoint };
+```
 
 Payload encryption and compression are not part of the packages. Use HTTPS and HTTP compression, or rewrite
-parameters and results in a server filter and a client interceptor.
+parameters and results in a filter and an interceptor as above.
 
 ## Design
 

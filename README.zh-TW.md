@@ -53,9 +53,50 @@ var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));
 |------|----------|
 | [QuickStart.Server](samples/QuickStart.Server/README.zh-TW.md) | 以 ASP.NET Core minimal API 架設伺服器 |
 | [QuickStart.Client](samples/QuickStart.Client/README.zh-TW.md) | 從主控台程式發出一般呼叫、處理錯誤、notification 與 batch |
-| [ApiKey](samples/ApiKey/README.zh-TW.md) | 伺服器以 filter 檢查 API key，用戶端以 handler 送出 |
 
-套件本身不做 payload 的加密與壓縮。請用 HTTPS 與 HTTP 壓縮，或在伺服器的 filter 與用戶端的攔截器裡改寫參數與結果。
+## 擴充點
+
+**filter** 會包在伺服器端每個呼叫外面執行。丟出 `JsonRpcErrorException` 可以拒絕呼叫；在 `next` 之前可改寫
+`context.Request.Params`，之後可改寫 `context.Result`：
+
+```csharp
+public sealed class ApiKeyFilter(string expectedKey) : IJsonRpcFilter
+{
+    public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+    {
+        context.Transport.Headers.TryGetValue("X-Api-Key", out var key);
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(key ?? ""), Encoding.UTF8.GetBytes(expectedKey)))
+        {
+            throw new JsonRpcErrorException(-32001, "Unauthorized");
+        }
+        return next(context);
+    }
+}
+
+builder.Services.AddJsonRpcServer(options =>
+{
+    options.AddTarget<Calculator>("math");
+    options.Filters.Add(new ApiKeyFilter(apiKey));
+});
+```
+
+用戶端的 HTTP header 屬於 `HttpClient` 的事，用 `DelegatingHandler` 加上。要改寫參數與結果（例如加密），
+就在 `JsonRpcClientOptions.Interceptors` 加一個 `IJsonRpcClientInterceptor`。
+
+```csharp
+public sealed class ApiKeyHandler(string key) : DelegatingHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        request.Headers.Add("X-Api-Key", key);
+        return base.SendAsync(request, cancellationToken);
+    }
+}
+
+using var http = new HttpClient(new ApiKeyHandler(apiKey) { InnerHandler = new HttpClientHandler() }) { BaseAddress = endpoint };
+```
+
+套件本身不做 payload 的加密與壓縮。請用 HTTPS 與 HTTP 壓縮，或像上面那樣在 filter 與攔截器裡改寫參數與結果。
 
 ## 設計
 

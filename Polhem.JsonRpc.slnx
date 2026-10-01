@@ -12,6 +12,5 @@
   <Folder Name="/samples/">
     <Project Path="samples/QuickStart.Server/QuickStart.Server.csproj" />
     <Project Path="samples/QuickStart.Client/QuickStart.Client.csproj" />
-    <Project Path="samples/ApiKey/ApiKey.csproj" />
   </Folder>
 </Solution>

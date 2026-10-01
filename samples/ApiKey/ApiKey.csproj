@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Polhem.JsonRpc.AspNetCore\Polhem.JsonRpc.AspNetCore.csproj" />
-    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Client\Polhem.JsonRpc.Client.csproj" />
-  </ItemGroup>
-
-</Project>
