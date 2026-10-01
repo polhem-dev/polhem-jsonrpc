@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>JSON-RPC 2.0 client: JsonRpcConnector with an HTTP transport, batches, notifications and request interceptors.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polhem.JsonRpc\Polhem.JsonRpc.csproj" />
+  </ItemGroup>
+
+</Project>

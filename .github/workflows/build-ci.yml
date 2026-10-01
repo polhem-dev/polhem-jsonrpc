@@ -1,0 +1,107 @@
+name: Build CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # A hung test or restore ends the run instead of holding the runner for the default six hours.
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7  # v5.2.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build Polhem.JsonRpc.slnx --configuration Release
+
+      - name: Test
+        run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
+
+  # SonarCloud analysis. It runs apart from the build job above, because the scanner wraps the build and turns warnings
+  # back into warnings, so the build job stays the gate for TreatWarningsAsErrors. Settings tied to the files of this
+  # repository are in SonarQube.Analysis.xml.
+  sonarcloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # Secrets are not passed to pull requests from forks, and the repository may not have the token yet. The analysis
+      # is then skipped instead of failing the run.
+      - name: Check for the SonarCloud token
+        id: token
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else echo "SONAR_TOKEN is not available, so the SonarCloud analysis is skipped."; fi
+
+      - name: Checkout code
+        if: steps.token.outputs.enabled == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          # SonarCloud reads the history to find new code and to assign issues to authors.
+          fetch-depth: 0
+
+      - name: Setup .NET
+        if: steps.token.outputs.enabled == 'true'
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7  # v5.2.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Java (for SonarScanner)
+        if: steps.token.outputs.enabled == 'true'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Cache SonarCloud packages
+        if: steps.token.outputs.enabled == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Install SonarScanner for .NET
+        if: steps.token.outputs.enabled == 'true'
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: SonarScanner begin
+        if: steps.token.outputs.enabled == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >-
+          dotnet sonarscanner begin
+          /k:"polhem-dev_polhem-jsonrpc"
+          /o:"polhem-dev"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /s:"$GITHUB_WORKSPACE/SonarQube.Analysis.xml"
+
+      - name: Build
+        if: steps.token.outputs.enabled == 'true'
+        run: dotnet build Polhem.JsonRpc.slnx --configuration Release --no-incremental
+
+      - name: Test with coverage
+        if: steps.token.outputs.enabled == 'true'
+        run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build --collect "Code Coverage;Format=xml" --results-directory TestResults/sonar
+
+      - name: SonarScanner end
+        if: steps.token.outputs.enabled == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"

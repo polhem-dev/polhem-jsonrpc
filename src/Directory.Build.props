@@ -1,0 +1,62 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- The single source of the package version. Only the projects under src/ are packed, so the version lives here
+         and nowhere else; the release workflow checks that the tag names it. -->
+    <Version>0.1.0</Version>
+
+    <!-- Package metadata -->
+    <Authors>Polhem contributors</Authors>
+    <Company>Polhem</Company>
+    <Product>Polhem</Product>
+    <Copyright>Copyright (c) Polhem contributors</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/polhem-dev/polhem-jsonrpc</PackageProjectUrl>
+    <PackageIcon>polhem.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>json-rpc;jsonrpc;rpc;system-text-json</PackageTags>
+
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Packing -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Language features -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Health checks -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <RepositoryUrl>https://github.com/polhem-dev/polhem-jsonrpc</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- Each package ships its own README for the nuget.org page (English), next to its .csproj. -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../polhem.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.303" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="4.14.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- Public API baselines: PublicAPI.Shipped.txt holds the API of released versions, and PublicAPI.Unshipped.txt the
+       changes since. The analyzer reports public API that neither file declares. -->
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+</Project>

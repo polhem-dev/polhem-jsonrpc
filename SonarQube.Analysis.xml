@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  SonarCloud analysis settings, read by the "SonarScanner begin" step of .github/workflows/build-ci.yml through
+  /s:"$GITHUB_WORKSPACE/SonarQube.Analysis.xml".
+
+  The command line keeps the settings that are not about the files of this repository: the project key (/k:), the
+  organization (/o:), the token (/d:sonar.token, from the SONAR_TOKEN secret) and the host URL. Quality profiles and the
+  quality gate are set in the SonarCloud UI.
+-->
+<SonarQubeAnalysisProperties xmlns="http://www.sonarsource.com/msbuild/integration/2015/1">
+  <!-- The Visual Studio XML reports that "dotnet test -collect "Code Coverage;Format=xml"" writes. -->
+  <Property Name="sonar.cs.vscoveragexml.reportsPaths">TestResults/sonar/**/*.xml</Property>
+
+  <!-- Tests and samples are analyzed but not measured for coverage. -->
+  <Property Name="sonar.coverage.exclusions">tests/**,samples/**</Property>
+
+  <!-- Each sample is a standalone project that a reader opens on its own, so samples may repeat code on purpose. -->
+  <Property Name="sonar.cpd.exclusions">samples/**</Property>
+</SonarQubeAnalysisProperties>

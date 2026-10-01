@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Transport-independent JSON-RPC 2.0 dispatcher: method resolution, parameter binding, filters and an in-process transport.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polhem.JsonRpc\Polhem.JsonRpc.csproj" />
+  </ItemGroup>
+
+</Project>

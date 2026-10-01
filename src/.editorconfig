@@ -1,0 +1,7 @@
+# Settings for the package source only. The repository root .editorconfig still applies.
+
+[*.cs]
+
+# The packages run inside applications that may block on their tasks, where an await that resumes on the captured
+# context deadlocks. Every await in the packages uses ConfigureAwait(false).
+dotnet_diagnostic.CA2007.severity = warning

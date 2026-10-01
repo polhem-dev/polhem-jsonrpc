@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Polhem.JsonRpc/Polhem.JsonRpc.csproj" />
+    <Project Path="src/Polhem.JsonRpc.Server/Polhem.JsonRpc.Server.csproj" />
+    <Project Path="src/Polhem.JsonRpc.AspNetCore/Polhem.JsonRpc.AspNetCore.csproj" />
+    <Project Path="src/Polhem.JsonRpc.Client/Polhem.JsonRpc.Client.csproj" />
+  </Folder>
+</Solution>

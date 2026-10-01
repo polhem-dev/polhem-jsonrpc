@@ -1,0 +1,116 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Trusted Publishing exchanges the GitHub OIDC token for a temporary NuGet API key.
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7  # v5.2.0
+        with:
+          dotnet-version: 10.0.x
+
+      # A tag that does not match the version would pack the previous version, which the push then skips as a duplicate
+      # while the release below is still created. The tag must name the version that src/Directory.Build.props sets.
+      - name: Check that the tag matches the version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $version = (dotnet msbuild src/Polhem.JsonRpc/Polhem.JsonRpc.csproj -getProperty:Version).Trim()
+          if ("v$version" -ne $env:TAG) {
+            Write-Error "The tag $env:TAG does not match the version $version."
+            exit 1
+          }
+
+      - name: Build
+        run: dotnet build Polhem.JsonRpc.slnx --configuration Release
+
+      - name: Test
+        run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
+
+      - name: Pack
+        run: dotnet pack Polhem.JsonRpc.slnx --configuration Release --no-build --output ./nupkgs
+
+      # Trusted Publishing only pushes the package IDs its nuget.org policy lists, and CI cannot read the policy
+      # (reading it needs a nuget.org sign-in). A package ID that is not on nuget.org yet is therefore the one case
+      # where the policy may be missing an entry. This gate stops the job before anything is pushed, so a missing
+      # entry cannot leave half a release on nuget.org (it happened to polhem 1.1.0).
+      #
+      # A new ID passes only when the repository variable `NUGET_NEW_PACKAGE_IDS` names it, which a maintainer sets
+      # after adding the ID to the policy. The error message below gives the steps.
+      - name: Check for package IDs new to nuget.org
+        env:
+          CONFIRMED_NEW_IDS: ${{ vars.NUGET_NEW_PACKAGE_IDS }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (dotnet msbuild src/Polhem.JsonRpc/Polhem.JsonRpc.csproj -getProperty:Version).Trim()
+          $confirmed = @($env:CONFIRMED_NEW_IDS -split '[\s,]+' | Where-Object { $_ })
+          $ids = Get-ChildItem -Path ./nupkgs |
+            Where-Object { $_.Extension -eq '.nupkg' } |
+            ForEach-Object { $_.Name -replace "\.$([regex]::Escape($version))\.nupkg$", '' }
+          $unconfirmed = @()
+          foreach ($id in $ids) {
+            $url = "https://api.nuget.org/v3-flatcontainer/$($id.ToLowerInvariant())/index.json"
+            $status = (Invoke-WebRequest -Uri $url -Method Head -SkipHttpErrorCheck).StatusCode
+            if ($status -eq 200) { continue }
+            if ($status -ne 404) { throw "Could not tell whether $id exists on nuget.org: HTTP $status from $url" }
+            # NuGet package IDs are case-insensitive, and PowerShell's -contains compares case-insensitively.
+            if ($confirmed -contains $id) {
+              Write-Host "$id is new to nuget.org and confirmed by NUGET_NEW_PACKAGE_IDS."
+            } else {
+              $unconfirmed += $id
+            }
+          }
+          if ($unconfirmed) {
+            $list = $unconfirmed -join ', '
+            Write-Host "::error::New package ID(s) not confirmed: $list. Nothing was pushed."
+            Write-Host "1. On nuget.org, add each ID to the Trusted Publishing policy of this repository and workflow."
+            Write-Host "2. Set the repository variable: gh variable set NUGET_NEW_PACKAGE_IDS --body '$list'"
+            Write-Host "3. Re-run this job. After the release, delete the variable: gh variable delete NUGET_NEW_PACKAGE_IDS"
+            exit 1
+          }
+
+      # The temporary key expires after one hour, so it is requested after the packages are built.
+      - name: Log in to NuGet
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841  # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          Get-ChildItem -Path ./nupkgs -Filter *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key "$env:NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          prerelease: ${{ startsWith(github.ref_name, 'v0.') || contains(github.ref_name, '-') }}
+          body: |
+            Changes: https://github.com/polhem-dev/polhem-jsonrpc/blob/${{ github.ref_name }}/CHANGELOG.md

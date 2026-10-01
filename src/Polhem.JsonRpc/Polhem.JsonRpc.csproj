@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>JSON-RPC 2.0 message types, error codes and the transport abstraction shared by Polhem.JsonRpc.Server and Polhem.JsonRpc.Client.</Description>
+  </PropertyGroup>
+
+</Project>

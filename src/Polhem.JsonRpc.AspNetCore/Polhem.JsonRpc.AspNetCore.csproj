@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>ASP.NET Core endpoint for Polhem.JsonRpc.Server: MapJsonRpc and the HTTP request handler.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Polhem.JsonRpc.Server\Polhem.JsonRpc.Server.csproj" />
+  </ItemGroup>
+
+</Project>
