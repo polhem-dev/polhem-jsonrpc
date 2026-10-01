@@ -118,19 +118,34 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     }
 
     [Fact]
-    [DisplayName("HTTP: AddJsonRpcServer keeps a dispatcher a framework registered first")]
-    public async Task AddJsonRpcServer_RegisteredDispatcher_IsKept()
+    [DisplayName("HTTP: AddJsonRpcServer adds to the options a framework registered first, after its filters")]
+    public async Task AddJsonRpcServer_RegisteredOptions_AreSharedAndExtended()
     {
+        var order = new List<string>();
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseTestServer();
-        var frameworkDispatcher = DispatcherFixture.Create(o => o.InternalErrorCode = -32000);
-        builder.Services.AddSingleton(frameworkDispatcher);
-        builder.Services.AddJsonRpcServer(options => options.InternalErrorCode = -32099);
+        var frameworkOptions = new JsonRpcServerOptions { ObjectFactory = new TestObjectFactory() };
+        frameworkOptions.Filters.Add(new NamedFilter("framework", order));
+        builder.Services.AddSingleton(frameworkOptions);
+        builder.Services.AddJsonRpcServer(options => options.Filters.Add(new NamedFilter("application", order)));
         await using var app = builder.Build();
         app.MapJsonRpc("/api");
         await app.StartAsync();
+        using var client = app.GetTestClient();
 
-        Assert.Same(frameworkDispatcher, app.Services.GetRequiredService<JsonRpcDispatcher>());
+        using var response = await client.PostAsync("/api", new StringContent(Subtract, Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(["framework", "application"], order);
+    }
+
+    private sealed class NamedFilter(string name, List<string> order) : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            order.Add(name);
+            return next(context);
+        }
     }
 
     private sealed class KindRecordingFilter(List<JsonRpcTransportKind> kinds) : IJsonRpcFilter
