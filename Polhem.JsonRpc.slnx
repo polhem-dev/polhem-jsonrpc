@@ -6,6 +6,7 @@
     <Project Path="src/Polhem.JsonRpc.Client/Polhem.JsonRpc.Client.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Polhem.JsonRpc.AotSmoke/Polhem.JsonRpc.AotSmoke.csproj" />
     <Project Path="tests/Polhem.JsonRpc.UnitTests/Polhem.JsonRpc.UnitTests.csproj" />
   </Folder>
   <Folder Name="/samples/">

@@ -24,6 +24,40 @@ ASP.NET Core). A client application references `Polhem.JsonRpc.Client` only.
 The packages do not depend on the [Polhem framework](https://github.com/polhem-dev/polhem). Polhem uses them for its
 API, and adds its own payload encryption, compression and authorization on top through the filters and interceptors.
 
+## Quick start
+
+Server (ASP.NET Core):
+
+```csharp
+builder.Services.AddJsonRpcServer(options => options.AddTarget<Calculator>("math"));
+app.MapJsonRpc("/api");
+
+public sealed class Calculator
+{
+    [JsonRpcMethod]
+    public int Add(AddArgs args) => args.A + args.B;   // answers "math.add"
+}
+```
+
+Client:
+
+```csharp
+using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
+var rpc = new JsonRpcConnector(new HttpTransport(http));
+var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));
+```
+
+## Samples
+
+| Sample | What it shows |
+|--------|---------------|
+| [QuickStart.Server](samples/QuickStart.Server/README.md) | A server on ASP.NET Core minimal APIs |
+| [QuickStart.Client](samples/QuickStart.Client/README.md) | Calls, errors, notifications and batches from a console application |
+| [ApiKey](samples/ApiKey/README.md) | A server filter that checks an API key, and the client handler that sends it |
+
+Payload encryption and compression are not part of the packages. Use HTTPS and HTTP compression, or rewrite
+parameters and results in a server filter and a client interceptor.
+
 ## Design
 
 The reasons behind the package split and the main design choices are recorded in

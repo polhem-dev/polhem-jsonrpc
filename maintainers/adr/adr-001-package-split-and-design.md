@@ -39,7 +39,7 @@ reason every consumer receives Newtonsoft.Json and MessagePack.
 
 | Package | Contents | References |
 |---------|----------|------------|
-| `Polhem.JsonRpc` | Request, response, error and id types; error codes; the `JsonSerializerContext`; batch and notification models; `IJsonRpcTransport` | .NET only |
+| `Polhem.JsonRpc` | Request, response, error and id types; error codes; `JsonRpcSerializer`, which reads and writes messages; `IJsonRpcTransport` | .NET only |
 | `Polhem.JsonRpc.Server` | The dispatcher, method resolution, parameter binding, filters, error mapping, the in-process transport | `Polhem.JsonRpc` |
 | `Polhem.JsonRpc.AspNetCore` | `JsonRpcHttpHandler` and `MapJsonRpc` | `Polhem.JsonRpc.Server`, ASP.NET Core |
 | `Polhem.JsonRpc.Client` | `JsonRpcConnector`, the HTTP transport, interceptors, error-to-exception mapping | `Polhem.JsonRpc` |
@@ -64,13 +64,16 @@ The default resolver follows the convention Polhem already uses:
   `Task` is awaited; a synchronous method is called as it is.
 - `params` must be an object, and it is deserialized into that one parameter. An array (positional parameters) is
   answered with `-32602 Invalid params`, which the specification allows a server to do.
+- Target and method names are compared case-insensitively, so the JSON-RPC convention `math.add` finds the C#
+  method `Add`. Two methods whose names differ only in case make the name ambiguous, and it is not resolved.
 - The resolver is replaceable, for a host that wants method names without a dot.
 
 ### 3. A method is callable only when it is marked
 
 Every public one-parameter method of an object the factory returns would otherwise be reachable from the network,
 including one added later for internal use. The default method policy therefore admits only methods marked with
-`[JsonRpcMethod]`: a method left unmarked cannot be called, which is the safe way to fail. The policy is replaceable;
+`[JsonRpcMethod]`: a method left unmarked cannot be called, which is the safe way to fail
+(`DispatcherTests.DispatchAsync_UnmarkedMethod_ReturnsMethodNotFound`). The policy is replaceable;
 Polhem replaces it with one that reads its own `[ApiAccessControl]` attribute.
 
 ### 4. The transport identity is set by the transport, never by the request
@@ -78,7 +81,8 @@ Polhem replaces it with one that reads its own `[ApiAccessControl]` attribute.
 The request context carries headers, the client address, the cancellation token, the service provider, a bag for
 per-request items, and the identity of the transport that delivered the request. The in-process transport marks its
 requests as in-process; the HTTP handler marks every request as HTTP. The identity is never read from a header, from
-`params` or from any other part of the request, because a host may grant in-process calls more than remote ones.
+`params` or from any other part of the request, because a host may grant in-process calls more than remote ones
+(`HttpHandlerTests.Post_HeaderClaimsInProcess_StillMarkedHttp`).
 
 ### 5. Compression and encryption are not part of the packages
 
@@ -93,8 +97,12 @@ let a host keep an older wire format: a different internal error code, and addit
 
 ### 7. AOT is promised for the shared package and the client
 
-`Polhem.JsonRpc` and `Polhem.JsonRpc.Client` are meant to run on iOS, Android and WebAssembly. They serialize through
-the source-generated `JsonSerializerContext` and are to be marked `IsAotCompatible`. `Polhem.JsonRpc.Server` resolves
+`Polhem.JsonRpc` and `Polhem.JsonRpc.Client` are meant to run on iOS, Android and WebAssembly. The envelope is read
+and written by hand with `JsonDocument` and `Utf8JsonWriter`, which needs no reflection; parameters and results go
+through the `JsonSerializerOptions` the application supplies, which under Native AOT carry a source-generated
+`JsonSerializerContext`. Both projects are marked `IsAotCompatible`, so the trim and AOT analyzers fail their build
+on an incompatible call, and the `aot` job of `build-ci.yml` publishes `tests/Polhem.JsonRpc.AotSmoke` with Native
+AOT and runs it. `Polhem.JsonRpc.Server` resolves
 methods and binds parameters by reflection (decision 2), so it does not claim AOT compatibility, and the APIs that
 reflect are annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`.
 
