@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Polhem.JsonRpc.Server;
 
 namespace Polhem.JsonRpc.AspNetCore;
@@ -19,6 +20,11 @@ public static class JsonRpcServiceCollectionExtensions
     /// <remarks>
     /// When <see cref="JsonRpcServerOptions.ObjectFactory"/> is not set, the <see cref="IJsonRpcObjectFactory"/>
     /// registered with the services is used, so an application registers its factory like any other service.
+    /// <para>
+    /// A <see cref="JsonRpcDispatcher"/> already registered with the services is kept, and <paramref name="configure"/>
+    /// is then not used. A framework that sets up its own dispatcher (its object factory, method policy and filters)
+    /// registers it first, and the application only adds the HTTP endpoint.
+    /// </para>
     /// </remarks>
     [RequiresUnreferencedCode(JsonRpcEndpointRouteBuilderExtensions.ReflectionMessage)]
     [RequiresDynamicCode(JsonRpcEndpointRouteBuilderExtensions.ReflectionMessage)]
@@ -35,12 +41,12 @@ public static class JsonRpcServiceCollectionExtensions
         configureHttp?.Invoke(httpOptions);
 
         services.AddSingleton(httpOptions);
-        services.AddSingleton(provider =>
+        services.TryAddSingleton(provider =>
         {
             options.ObjectFactory ??= provider.GetRequiredService<IJsonRpcObjectFactory>();
             return new JsonRpcDispatcher(options);
         });
-        services.AddSingleton<JsonRpcHttpHandler>();
+        services.TryAddSingleton<JsonRpcHttpHandler>();
         return services;
     }
 }

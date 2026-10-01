@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Polhem.JsonRpc.AspNetCore;
 using Polhem.JsonRpc.Server;
 
@@ -114,6 +115,22 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.All(_seenKinds, kind => Assert.Equal(JsonRpcTransportKind.Http, kind));
         Assert.NotEmpty(_seenKinds);
+    }
+
+    [Fact]
+    [DisplayName("HTTP: AddJsonRpcServer keeps a dispatcher a framework registered first")]
+    public async Task AddJsonRpcServer_RegisteredDispatcher_IsKept()
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        var frameworkDispatcher = DispatcherFixture.Create(o => o.InternalErrorCode = -32000);
+        builder.Services.AddSingleton(frameworkDispatcher);
+        builder.Services.AddJsonRpcServer(options => options.InternalErrorCode = -32099);
+        await using var app = builder.Build();
+        app.MapJsonRpc("/api");
+        await app.StartAsync();
+
+        Assert.Same(frameworkDispatcher, app.Services.GetRequiredService<JsonRpcDispatcher>());
     }
 
     private sealed class KindRecordingFilter(List<JsonRpcTransportKind> kinds) : IJsonRpcFilter
