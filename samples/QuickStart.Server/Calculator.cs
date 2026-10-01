@@ -1,21 +1,22 @@
 using Polhem.JsonRpc;
-using Polhem.JsonRpc.Server;
 
 namespace QuickStart.Server;
 
 /// <summary>
-/// The methods behind <c>math.add</c>, <c>math.divide</c> and <c>math.log</c>.
+/// The methods behind <c>Calculator.Add</c>, <c>Calculator.Divide</c> and <c>Calculator.Log</c>. A method is
+/// callable because its parameter is named <c>{Action}Request</c> and its result <c>{Action}Response</c>.
 /// </summary>
-public sealed class Calculator(ILogger<Calculator> logger)
+public sealed class Calculator
 {
-    [JsonRpcMethod]
-    public int Add(AddArgs args) => args.A + args.B;
+    public AddResponse Add(AddRequest request) => new(request.A + request.B);
 
-    [JsonRpcMethod]
-    public double Divide(DivideArgs args) => args.Divisor == 0
+    public DivideResponse Divide(DivideRequest request) => request.Divisor == 0
         ? throw new JsonRpcErrorException(-32001, "Division by zero")
-        : args.Dividend / args.Divisor;
+        : new DivideResponse(request.Dividend / request.Divisor);
 
-    [JsonRpcMethod]
-    public void Log(LogArgs args) => logger.LogInformation("Client says: {Message}", args.Message);
+    public LogResponse Log(LogRequest request)
+    {
+        Console.WriteLine($"Client says: {request.Message}");
+        return new LogResponse();
+    }
 }

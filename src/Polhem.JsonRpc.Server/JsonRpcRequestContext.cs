@@ -58,7 +58,7 @@ public sealed class JsonRpcRequestContext
     public JsonElement? Result { get; set; }
 
     /// <summary>
-    /// Gets values that filters and the target factory share during this call. It starts with a copy of
+    /// Gets values that filters and the object factory share during this call. It starts with a copy of
     /// <see cref="JsonRpcTransportInfo.Items"/>.
     /// </summary>
     public IDictionary<string, object?> Items => _items ??= new Dictionary<string, object?>(Transport.Items, StringComparer.Ordinal);

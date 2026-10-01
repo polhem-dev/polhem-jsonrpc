@@ -16,16 +16,16 @@ public class ClientTests
     [DisplayName("Client: InvokeAsync returns the result")]
     public async Task InvokeAsync_Call_ReturnsResult()
     {
-        var result = await InProcess().InvokeAsync<int>("spec.subtract", new SubtractArgs(10, 3));
+        var result = await InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", new SubtractRequest(10, 3));
 
-        Assert.Equal(7, result);
+        Assert.Equal(7, result!.Difference);
     }
 
     [Fact]
     [DisplayName("Client: an error response is thrown as JsonRpcErrorException")]
     public async Task InvokeAsync_ErrorResponse_ThrowsJsonRpcErrorException()
     {
-        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => InProcess().InvokeAsync<string>("spec.reject", new EchoArgs("x")));
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => InProcess().InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
 
         Assert.Equal(-32050, ex.Code);
     }
@@ -36,7 +36,7 @@ public class ClientTests
     {
         var options = new JsonRpcClientOptions { ErrorMapper = error => error.Code == -32050 ? new UnauthorizedAccessException(error.Message) : null };
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InProcess(options).InvokeAsync<string>("spec.reject", new EchoArgs("x")));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InProcess(options).InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class ClientTests
     {
         var marker = Guid.NewGuid().ToString();
 
-        await InProcess().InvokeAsync("spec.update", new EchoArgs(marker), CancellationToken.None);
+        await InProcess().InvokeAsync("Spec.Update", new UpdateRequest(marker), CancellationToken.None);
 
         Assert.Contains(marker, SpecTarget.Updates);
     }
@@ -56,7 +56,7 @@ public class ClientTests
     {
         var marker = Guid.NewGuid().ToString();
 
-        await InProcess().NotifyAsync("spec.update", new EchoArgs(marker));
+        await InProcess().NotifyAsync("Spec.Update", new UpdateRequest(marker));
 
         Assert.Contains(marker, SpecTarget.Updates);
     }
@@ -66,13 +66,13 @@ public class ClientTests
     public async Task Batch_MixedCalls_CompletesEachTask()
     {
         var batch = InProcess().CreateBatch();
-        var ok = batch.Add<int>("spec.subtract", new SubtractArgs(5, 1));
-        var failed = batch.Add<string>("spec.reject", new EchoArgs("x"));
-        batch.AddNotification("spec.update", new EchoArgs("batch"));
+        var ok = batch.Add<SubtractResponse>("Spec.Subtract", new SubtractRequest(5, 1));
+        var failed = batch.Add<RejectResponse>("Spec.Reject", new RejectRequest("x"));
+        batch.AddNotification("Spec.Update", new UpdateRequest("batch"));
 
         await batch.SendAsync();
 
-        Assert.Equal(4, await ok);
+        Assert.Equal(4, (await ok)!.Difference);
         await Assert.ThrowsAsync<JsonRpcErrorException>(() => failed);
     }
 
@@ -94,9 +94,9 @@ public class ClientTests
         options.Interceptors.Add(new SealingInterceptor());
         var connector = InProcess(options, server => server.Filters.Add(new OpeningFilter()));
 
-        var result = await connector.InvokeAsync<int>("spec.subtract", new SubtractArgs(9, 2));
+        var result = await connector.InvokeAsync<SubtractResponse>("Spec.Subtract", new SubtractRequest(9, 2));
 
-        Assert.Equal(7, result);
+        Assert.Equal(7, result!.Difference);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class ClientTests
         var transport = new RecordingTransport();
         var connector = new JsonRpcConnector(transport, new JsonRpcClientOptions { IdGenerator = () => "custom-id" });
 
-        await connector.InvokeAsync<JsonElement>("any.method", null);
+        await connector.InvokeAsync<JsonElement>("Any.Method", null);
 
         Assert.Equal(JsonRpcId.FromString("custom-id"), transport.LastRequest!.Id);
     }
@@ -117,14 +117,14 @@ public class ClientTests
     {
         var connector = new JsonRpcConnector(new HangingTransport(), new JsonRpcClientOptions { Timeout = TimeSpan.FromMilliseconds(50) });
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => connector.InvokeAsync<int>("any.method", null));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => connector.InvokeAsync<int>("Any.Method", null));
     }
 
     [Fact]
     [DisplayName("Client: parameters that are not an object or array are rejected")]
     public async Task InvokeAsync_ScalarParameters_Throws()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() => InProcess().InvokeAsync<int>("spec.subtract", 42));
+        await Assert.ThrowsAsync<ArgumentException>(() => InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", 42));
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class ClientTests
         const string Body = """{"jsonrpc": "2.0", "error": {"code": -32001, "message": "Unauthorized"}, "id": 1}""";
         using var http = new HttpClient(new StubHandler(HttpStatusCode.Unauthorized, Body)) { BaseAddress = new Uri("http://test/api") };
 
-        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("any.method", null));
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("Any.Method", null));
 
         Assert.Equal(-32001, ex.Code);
     }
@@ -145,16 +145,16 @@ public class ClientTests
     {
         using var http = new HttpClient(new StubHandler(HttpStatusCode.InternalServerError, "<html>oops</html>")) { BaseAddress = new Uri("http://test/api") };
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("any.method", null));
+        await Assert.ThrowsAsync<HttpRequestException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("Any.Method", null));
     }
 
     [Fact]
     [DisplayName("HTTP transport: a response from an older server without id and result reads as an empty success")]
     public async Task HttpTransport_LenientResponse_ReadsAsSuccess()
     {
-        using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "method": "a.b"}""")) { BaseAddress = new Uri("http://test/api") };
+        using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "method": "A.B"}""")) { BaseAddress = new Uri("http://test/api") };
 
-        var result = await new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<string>("a.b", null);
+        var result = await new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<string>("A.B", null);
 
         Assert.Null(result);
     }

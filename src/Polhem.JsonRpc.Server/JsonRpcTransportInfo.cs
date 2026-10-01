@@ -24,7 +24,7 @@ public sealed class JsonRpcTransportInfo
     /// <param name="services">The services of the call's scope, or <c>null</c> when there are none.</param>
     /// <param name="headers">The headers that came with the call, compared case-insensitively, or <c>null</c>.</param>
     /// <param name="remoteAddress">The address of the caller, or <c>null</c> when unknown.</param>
-    /// <param name="items">Values the transport passes to filters and target factories, or <c>null</c>.</param>
+    /// <param name="items">Values the transport passes to filters and the object factory, or <c>null</c>.</param>
     public JsonRpcTransportInfo(
         JsonRpcTransportKind kind,
         IServiceProvider? services = null,
@@ -60,7 +60,7 @@ public sealed class JsonRpcTransportInfo
     public string? RemoteAddress { get; }
 
     /// <summary>
-    /// Gets values the transport passes to filters and target factories, such as a credential an in-process caller
+    /// Gets values the transport passes to filters and the object factory, such as a credential an in-process caller
     /// holds.
     /// </summary>
     public IReadOnlyDictionary<string, object?> Items { get; }

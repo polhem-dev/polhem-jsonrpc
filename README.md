@@ -29,13 +29,24 @@ API, and adds its own payload encryption, compression and authorization on top t
 Server (ASP.NET Core):
 
 ```csharp
-builder.Services.AddJsonRpcServer(options => options.AddTarget<Calculator>("math"));
+builder.Services.AddSingleton<IJsonRpcObjectFactory, AppObjectFactory>();
+builder.Services.AddJsonRpcServer();
 app.MapJsonRpc("/api");
+
+// "Calculator.Add": the ProgId "Calculator" names the object, the action "Add" the method.
+public sealed class AppObjectFactory : IJsonRpcObjectFactory
+{
+    public object? CreateObject(string progId, JsonRpcRequestContext context) => progId switch
+    {
+        "Calculator" => new Calculator(),
+        _ => null,
+    };
+}
 
 public sealed class Calculator
 {
-    [JsonRpcMethod]
-    public int Add(AddArgs args) => args.A + args.B;   // answers "math.add"
+    // Callable because the parameter is AddRequest and the result AddResponse.
+    public AddResponse Add(AddRequest request) => new(request.A + request.B);
 }
 ```
 
@@ -44,7 +55,7 @@ Client:
 ```csharp
 using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
-var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));
 ```
 
 ## Samples
@@ -73,11 +84,7 @@ public sealed class ApiKeyFilter(string expectedKey) : IJsonRpcFilter
     }
 }
 
-builder.Services.AddJsonRpcServer(options =>
-{
-    options.AddTarget<Calculator>("math");
-    options.Filters.Add(new ApiKeyFilter(apiKey));
-});
+builder.Services.AddJsonRpcServer(options => options.Filters.Add(new ApiKeyFilter(apiKey)));
 ```
 
 On the client, HTTP headers belong to the `HttpClient`: add them with a `DelegatingHandler`. To rewrite parameters

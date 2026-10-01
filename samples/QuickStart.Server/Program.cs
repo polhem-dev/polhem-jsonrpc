@@ -1,8 +1,10 @@
 using Polhem.JsonRpc.AspNetCore;
+using Polhem.JsonRpc.Server;
 using QuickStart.Server;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddJsonRpcServer(options => options.AddTarget<Calculator>("math"));
+builder.Services.AddSingleton<IJsonRpcObjectFactory, AppObjectFactory>();
+builder.Services.AddJsonRpcServer();
 
 var app = builder.Build();
 app.MapJsonRpc("/api");

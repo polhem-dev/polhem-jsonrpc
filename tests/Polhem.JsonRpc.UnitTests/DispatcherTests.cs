@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using System.Text.Json;
 using Polhem.JsonRpc.Server;
 
@@ -14,75 +15,113 @@ public class DispatcherTests
     }
 
     [Fact]
-    [DisplayName("A method without [JsonRpcMethod] is answered as if it did not exist")]
-    public async Task DispatchAsync_UnmarkedMethod_ReturnsMethodNotFound()
+    [DisplayName("The dispatcher requires an object factory")]
+    public void Constructor_NoObjectFactory_Throws()
     {
-        var response = await CallAsync(DispatcherFixture.Create(), "spec.unmarked", """{"text": "x"}""");
+        Assert.Throws<ArgumentException>(() => new JsonRpcDispatcher(new JsonRpcServerOptions()));
+    }
+
+    [Fact]
+    [DisplayName("ProgId.Action creates the object for the ProgId and calls the action on it")]
+    public async Task DispatchAsync_ProgIdAction_CallsAction()
+    {
+        var response = await CallAsync(DispatcherFixture.Create(), "Spec.Subtract", """{"minuend": 5, "subtrahend": 3}""");
+
+        Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
+    }
+
+    [Theory]
+    [DisplayName("A name the factory or the object does not know is answered with -32601")]
+    [InlineData("Unknown.Subtract")]
+    [InlineData("Spec.Missing")]
+    public async Task DispatchAsync_UnknownProgIdOrAction_ReturnsMethodNotFound(string method)
+    {
+        var response = await CallAsync(DispatcherFixture.Create(), method, """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+    }
+
+    [Theory]
+    [DisplayName("Names are matched case-sensitively, as in the Polhem framework")]
+    [InlineData("Spec.subtract")]
+    [InlineData("spec.Subtract")]
+    public async Task DispatchAsync_DifferentCase_ReturnsMethodNotFound(string method)
+    {
+        var response = await CallAsync(DispatcherFixture.Create(), method, """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+    }
+
+    [Theory]
+    [DisplayName("Malformed names, static methods and overloaded names are not resolved")]
+    [InlineData("Spec")]
+    [InlineData(".Subtract")]
+    [InlineData("Spec.")]
+    [InlineData("Spec.Sub-tract")]
+    [InlineData("Spec.Subtract.Extra")]
+    [InlineData("Spec.Static")]
+    [InlineData("Spec.Twice")]
+    [InlineData("Spec.ToString")]
+    public async Task DispatchAsync_UnresolvableName_ReturnsMethodNotFound(string method)
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
+
+        var response = await CallAsync(dispatcher, method, """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+    }
+
+    [Fact]
+    [DisplayName("A public method outside the {Action}Request/{Action}Response convention is not callable")]
+    public async Task DispatchAsync_UnconventionalMethod_ReturnsMethodNotFound()
+    {
+        var response = await CallAsync(DispatcherFixture.Create(), "Spec.Echo", """{"text": "x"}""");
 
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
     [Fact]
     [DisplayName("A replaced method policy decides which methods are callable")]
-    public async Task DispatchAsync_CustomPolicy_AdmitsUnmarkedMethod()
+    public async Task DispatchAsync_CustomPolicy_AdmitsUnconventionalMethod()
     {
         var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
 
-        var response = await CallAsync(dispatcher, "spec.unmarked", """{"text": "x"}""");
+        var response = await CallAsync(dispatcher, "Spec.Echo", """{"text": "x"}""");
 
         Assert.Equal("x", response.Result!.Value.GetString());
     }
 
     [Theory]
-    [DisplayName("Static methods, overloaded names, rpc.* names and malformed names are not resolved")]
-    [InlineData("spec.staticMethod")]
-    [InlineData("spec.twice")]
-    [InlineData("rpc.subtract")]
-    [InlineData("spec")]
-    [InlineData(".subtract")]
-    [InlineData("spec.")]
-    [InlineData("spec.sub-tract")]
-    [InlineData("spec.toString")]
-    public async Task DispatchAsync_UnresolvableName_ReturnsMethodNotFound(string method)
+    [DisplayName("Naming convention: the parameter is {Action}Request, the result {Action}Response, also inside a task")]
+    [InlineData(nameof(SpecTarget.Subtract), true)]
+    [InlineData(nameof(SpecTarget.Upper), true)]
+    [InlineData(nameof(SpecTarget.Length), true)]
+    [InlineData(nameof(SpecTarget.Echo), false)]
+    [InlineData(nameof(SpecTarget.Reject), true)]
+    [InlineData(nameof(SpecTarget.Mismatch), false)]
+    public void NamingConventionPolicy_IsCallable_FollowsConvention(string methodName, bool expected)
     {
-        var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
+        var method = typeof(SpecTarget).GetMethod(methodName, [typeof(SpecTarget).GetMethod(methodName)!.GetParameters()[0].ParameterType])!;
 
-        var response = await CallAsync(dispatcher, method, """{"text": "x"}""");
-
-        Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+        Assert.Equal(expected, new JsonRpcNamingConventionPolicy().IsCallable(method));
     }
 
     [Theory]
-    [DisplayName("Target and method names match case-insensitively")]
-    [InlineData("spec.subtract")]
-    [InlineData("Spec.Subtract")]
-    [InlineData("SPEC.SUBTRACT")]
-    public async Task DispatchAsync_NameInAnyCase_ResolvesMethod(string method)
-    {
-        var response = await CallAsync(DispatcherFixture.Create(), method, """{"minuend": 5, "subtrahend": 3}""");
-
-        Assert.Equal(2, response.Result!.Value.GetInt32());
-    }
-
-    [Theory]
-    [DisplayName("Task, ValueTask and void results are awaited and serialized")]
-    [InlineData("spec.taskResult", "\"ABC\"")]
-    [InlineData("spec.valueTaskResult", "3")]
-    [InlineData("spec.noResult", "null")]
-    [InlineData("spec.update", "null")]
-    public async Task DispatchAsync_AsyncAndVoidMethods_ReturnResult(string method, string expected)
+    [DisplayName("Task and ValueTask results are awaited and serialized")]
+    [InlineData("Spec.Upper", """{"text":"ABC"}""")]
+    [InlineData("Spec.Length", """{"length":3}""")]
+    public async Task DispatchAsync_AsyncMethods_ReturnResult(string method, string expected)
     {
         var response = await CallAsync(DispatcherFixture.Create(), method, """{"text": "abc"}""");
 
-        Assert.True(response.IsSuccess);
-        Assert.Equal(expected, JsonSerializer.Serialize(response.Result));
+        Assert.Equal(expected, response.Result!.Value.GetRawText());
     }
 
     [Fact]
-    [DisplayName("Parameters that do not fit the method are answered with -32602")]
+    [DisplayName("Parameters that do not fit the request type are answered with -32602")]
     public async Task DispatchAsync_ParamsOfWrongShape_ReturnsInvalidParams()
     {
-        var response = await CallAsync(DispatcherFixture.Create(), "spec.subtract", """{"minuend": "not a number"}""");
+        var response = await CallAsync(DispatcherFixture.Create(), "Spec.Subtract", """{"minuend": "not a number"}""");
 
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, response.Error!.Code);
     }
@@ -91,7 +130,7 @@ public class DispatcherTests
     [DisplayName("An unexpected exception is answered with -32603 and a fixed message that does not leak its text")]
     public async Task DispatchAsync_UnexpectedException_DoesNotLeakMessage()
     {
-        var response = await CallAsync(DispatcherFixture.Create(), "spec.fail", """{"text": "pwd=1"}""");
+        var response = await CallAsync(DispatcherFixture.Create(), "Spec.Fail", """{"text": "pwd=1"}""");
 
         Assert.Equal(JsonRpcErrorCodes.InternalError, response.Error!.Code);
         Assert.Equal("Internal error", response.Error.Message);
@@ -104,7 +143,7 @@ public class DispatcherTests
     {
         var dispatcher = DispatcherFixture.Create(o => o.IncludeExceptionDetails = true);
 
-        var response = await CallAsync(dispatcher, "spec.fail", """{"text": "x"}""");
+        var response = await CallAsync(dispatcher, "Spec.Fail", """{"text": "x"}""");
 
         Assert.Equal("Secret connection string: x", response.Error!.Data!.Value.GetString());
     }
@@ -115,7 +154,7 @@ public class DispatcherTests
     {
         var dispatcher = DispatcherFixture.Create(o => o.InternalErrorCode = -32000);
 
-        var response = await CallAsync(dispatcher, "spec.fail", """{"text": "x"}""");
+        var response = await CallAsync(dispatcher, "Spec.Fail", """{"text": "x"}""");
 
         Assert.Equal(-32000, response.Error!.Code);
     }
@@ -124,7 +163,7 @@ public class DispatcherTests
     [DisplayName("JsonRpcErrorException thrown by a method reaches the caller as it is")]
     public async Task DispatchAsync_JsonRpcErrorException_IsSentAsIs()
     {
-        var response = await CallAsync(DispatcherFixture.Create(), "spec.reject", """{"text": "nope"}""");
+        var response = await CallAsync(DispatcherFixture.Create(), "Spec.Reject", """{"text": "nope"}""");
 
         Assert.Equal(-32050, response.Error!.Code);
         Assert.Equal("Rejected: nope", response.Error.Message);
@@ -137,7 +176,7 @@ public class DispatcherTests
         var dispatcher = DispatcherFixture.Create(o => o.ExceptionMapper = (ex, _) =>
             ex is InvalidOperationException ? new JsonRpcError(-32010, "Mapped") : null);
 
-        var response = await CallAsync(dispatcher, "spec.fail", """{"text": "x"}""");
+        var response = await CallAsync(dispatcher, "Spec.Fail", """{"text": "x"}""");
 
         Assert.Equal(-32010, response.Error!.Code);
     }
@@ -153,9 +192,22 @@ public class DispatcherTests
             o.Filters.Add(new RecordingFilter("b", log));
         });
 
-        await CallAsync(dispatcher, "spec.subtract", """{"minuend": 1, "subtrahend": 1}""");
+        await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""");
 
         Assert.Equal(["a:before", "b:before", "b:after", "a:after"], log);
+    }
+
+    [Fact]
+    [DisplayName("Filters see the resolved object and method, and do not run for a method that is not found")]
+    public async Task DispatchAsync_Filters_RunAfterResolution()
+    {
+        var seen = new List<string>();
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new MethodRecordingFilter(seen)));
+
+        await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""");
+        await CallAsync(dispatcher, "Spec.Missing", """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(["Spec.Subtract:SpecTarget"], seen);
     }
 
     [Fact]
@@ -165,7 +217,7 @@ public class DispatcherTests
         var marker = Guid.NewGuid().ToString();
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new RejectingFilter()));
 
-        var response = await CallAsync(dispatcher, "spec.update", $$"""{"text": "{{marker}}"}""");
+        var response = await CallAsync(dispatcher, "Spec.Update", $$"""{"text": "{{marker}}"}""");
 
         Assert.Equal(-32001, response.Error!.Code);
         Assert.DoesNotContain(marker, SpecTarget.Updates);
@@ -178,9 +230,9 @@ public class DispatcherTests
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new SealedPayloadFilter()));
         var sealedParams = SealedPayload.Seal(DispatcherFixture.Element("""{"minuend": 10, "subtrahend": 4}"""));
 
-        var response = await CallAsync(dispatcher, "spec.subtract", sealedParams.GetRawText());
+        var response = await CallAsync(dispatcher, "Spec.Subtract", sealedParams.GetRawText());
 
-        Assert.Equal(6, SealedPayload.Open(response.Result!.Value).GetInt32());
+        Assert.Equal(6, SealedPayload.Open(response.Result!.Value).GetProperty("difference").GetInt32());
     }
 
     [Fact]
@@ -189,9 +241,9 @@ public class DispatcherTests
     {
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new EchoMethodFilter()));
 
-        var response = await CallAsync(dispatcher, "spec.subtract", """{"minuend": 1, "subtrahend": 1}""");
+        var response = await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""");
 
-        Assert.Equal("spec.subtract", response.AdditionalMembers!["method"].GetString());
+        Assert.Equal("Spec.Subtract", response.AdditionalMembers!["method"].GetString());
     }
 
     [Fact]
@@ -202,18 +254,21 @@ public class DispatcherTests
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new TransportRecordingFilter(seen)));
         var transport = new JsonRpcTransportInfo(JsonRpcTransportKind.InProcess, items: new Dictionary<string, object?> { ["token"] = "t-1" });
 
-        await CallAsync(dispatcher, "spec.subtract", """{"minuend": 1, "subtrahend": 1}""", transport);
+        await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""", transport);
 
         Assert.Equal(["InProcess:t-1"], seen);
     }
 
-    [Fact]
-    [DisplayName("A target the factory created itself is disposed after the call")]
-    public async Task DispatchAsync_CreatedTarget_IsDisposed()
+    [Theory]
+    [DisplayName("The object is released after the call, whether it succeeded or failed")]
+    [InlineData("Disposable.Update")]
+    [InlineData("Disposable.Fail")]
+    public async Task DispatchAsync_Object_IsReleased(string method)
     {
         var marker = Guid.NewGuid().ToString();
+        var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
 
-        await CallAsync(DispatcherFixture.Create(), "disposable.ping", $$"""{"text": "{{marker}}"}""");
+        await CallAsync(dispatcher, method, $$"""{"text": "{{marker}}"}""");
 
         Assert.Contains(marker, DisposableTarget.Disposed);
     }
@@ -223,7 +278,7 @@ public class DispatcherTests
     public async Task DispatchMessageAsync_BatchTooLarge_ReturnsSingleInvalidRequest()
     {
         var dispatcher = DispatcherFixture.Create(o => o.MaxBatchSize = 2);
-        const string Call = """{"jsonrpc": "2.0", "method": "spec.subtract", "params": {"minuend": 1, "subtrahend": 1}, "id": 1}""";
+        const string Call = """{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": 1, "subtrahend": 1}, "id": 1}""";
 
         using var answer = await DispatcherFixture.RunAsync(dispatcher, $"[{Call},{Call},{Call}]");
 
@@ -233,7 +288,7 @@ public class DispatcherTests
 
     private sealed class AllowAllPolicy : IJsonRpcMethodPolicy
     {
-        public bool IsCallable(System.Reflection.MethodInfo method) => true;
+        public bool IsCallable(MethodInfo method) => true;
     }
 
     private sealed class RecordingFilter(string name, List<string> log) : IJsonRpcFilter
@@ -243,6 +298,16 @@ public class DispatcherTests
             log.Add($"{name}:before");
             await next(context);
             log.Add($"{name}:after");
+        }
+    }
+
+    private sealed class MethodRecordingFilter(List<string> seen) : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            var method = context.Method!;
+            seen.Add($"{method.ProgId}.{method.Action}:{method.Instance.GetType().Name}");
+            return next(context);
         }
     }
 

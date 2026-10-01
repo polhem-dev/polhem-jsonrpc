@@ -7,7 +7,7 @@ rewriting parameters and results. It supports trimming and Native AOT, so it run
 using var http = new HttpClient { BaseAddress = new Uri("https://example.com/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
 
-var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));
 ```
 
 An error answer is thrown as `JsonRpcErrorException`. Under Native AOT, set `JsonRpcClientOptions.SerializerOptions`

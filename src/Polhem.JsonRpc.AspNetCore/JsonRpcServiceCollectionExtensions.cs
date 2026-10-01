@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Polhem.JsonRpc.Server;
 
 namespace Polhem.JsonRpc.AspNetCore;
@@ -11,36 +10,36 @@ namespace Polhem.JsonRpc.AspNetCore;
 public static class JsonRpcServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="JsonRpcDispatcher"/> and <see cref="JsonRpcHttpHandler"/>, and every target as a
-    /// transient service, so that a target can take its own dependencies in its constructor.
+    /// Registers <see cref="JsonRpcDispatcher"/> and <see cref="JsonRpcHttpHandler"/>.
     /// </summary>
     /// <param name="services">The services.</param>
-    /// <param name="configure">Configures the server: targets, filters and the other settings.</param>
+    /// <param name="configure">Configures the server, or <c>null</c> for the defaults.</param>
     /// <param name="configureHttp">Configures the HTTP endpoint, or <c>null</c> for the defaults.</param>
     /// <returns>The services.</returns>
+    /// <remarks>
+    /// When <see cref="JsonRpcServerOptions.ObjectFactory"/> is not set, the <see cref="IJsonRpcObjectFactory"/>
+    /// registered with the services is used, so an application registers its factory like any other service.
+    /// </remarks>
     [RequiresUnreferencedCode(JsonRpcEndpointRouteBuilderExtensions.ReflectionMessage)]
     [RequiresDynamicCode(JsonRpcEndpointRouteBuilderExtensions.ReflectionMessage)]
     public static IServiceCollection AddJsonRpcServer(
         this IServiceCollection services,
-        Action<JsonRpcServerOptions> configure,
+        Action<JsonRpcServerOptions>? configure = null,
         Action<JsonRpcHttpOptions>? configureHttp = null)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
 
         var options = new JsonRpcServerOptions();
-        configure(options);
+        configure?.Invoke(options);
         var httpOptions = new JsonRpcHttpOptions();
         configureHttp?.Invoke(httpOptions);
 
-        foreach (var targetType in options.Targets.Values)
-        {
-            services.TryAddTransient(targetType);
-        }
-
-        services.AddSingleton(options);
         services.AddSingleton(httpOptions);
-        services.AddSingleton(new JsonRpcDispatcher(options));
+        services.AddSingleton(provider =>
+        {
+            options.ObjectFactory ??= provider.GetRequiredService<IJsonRpcObjectFactory>();
+            return new JsonRpcDispatcher(options);
+        });
         services.AddSingleton<JsonRpcHttpHandler>();
         return services;
     }

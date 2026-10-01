@@ -29,13 +29,24 @@
 伺服器（ASP.NET Core）：
 
 ```csharp
-builder.Services.AddJsonRpcServer(options => options.AddTarget<Calculator>("math"));
+builder.Services.AddSingleton<IJsonRpcObjectFactory, AppObjectFactory>();
+builder.Services.AddJsonRpcServer();
 app.MapJsonRpc("/api");
+
+// "Calculator.Add"：ProgId "Calculator" 指定物件，action "Add" 指定方法。
+public sealed class AppObjectFactory : IJsonRpcObjectFactory
+{
+    public object? CreateObject(string progId, JsonRpcRequestContext context) => progId switch
+    {
+        "Calculator" => new Calculator(),
+        _ => null,
+    };
+}
 
 public sealed class Calculator
 {
-    [JsonRpcMethod]
-    public int Add(AddArgs args) => args.A + args.B;   // 回應 "math.add"
+    // 參數是 AddRequest、回傳是 AddResponse，所以可被呼叫。
+    public AddResponse Add(AddRequest request) => new(request.A + request.B);
 }
 ```
 
@@ -44,7 +55,7 @@ public sealed class Calculator
 ```csharp
 using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
-var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));
 ```
 
 ## 範例
@@ -73,11 +84,7 @@ public sealed class ApiKeyFilter(string expectedKey) : IJsonRpcFilter
     }
 }
 
-builder.Services.AddJsonRpcServer(options =>
-{
-    options.AddTarget<Calculator>("math");
-    options.Filters.Add(new ApiKeyFilter(apiKey));
-});
+builder.Services.AddJsonRpcServer(options => options.Filters.Add(new ApiKeyFilter(apiKey)));
 ```
 
 用戶端的 HTTP header 屬於 `HttpClient` 的事，用 `DelegatingHandler` 加上。要改寫參數與結果（例如加密），

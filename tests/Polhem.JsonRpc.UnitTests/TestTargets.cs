@@ -1,69 +1,88 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Polhem.JsonRpc.Server;
 
 namespace Polhem.JsonRpc.UnitTests;
 
-public sealed record SubtractArgs(int Minuend, int Subtrahend);
+public sealed record SubtractRequest(int Minuend, int Subtrahend);
+
+public sealed record SubtractResponse(int Difference);
+
+public sealed record UpdateRequest(string Text);
+
+public sealed record UpdateResponse;
+
+public sealed record UpperRequest(string Text);
+
+public sealed record UpperResponse(string Text);
+
+public sealed record LengthRequest(string Text);
+
+public sealed record LengthResponse(int Length);
+
+public sealed record FailRequest(string Text);
+
+public sealed record FailResponse;
+
+public sealed record RejectRequest(string Text);
+
+public sealed record RejectResponse;
+
+public sealed record MismatchRequest(string Text);
 
 public sealed record EchoArgs(string Text);
 
 /// <summary>
-/// The methods of the JSON-RPC 2.0 specification's examples, plus shapes the dispatcher must handle.
+/// The methods of the JSON-RPC 2.0 specification's examples, plus shapes the dispatcher must handle. The ProgId
+/// is <c>Spec</c>.
 /// </summary>
 [SuppressMessage("Performance", "CA1822:Mark members as static",
-    Justification = "JSON-RPC targets are called on an instance; static methods are not resolved.")]
+    Justification = "JSON-RPC actions are called on an instance; static methods are not resolved.")]
 public sealed class SpecTarget
 {
     // Tests run in parallel, so a test identifies its own call by a unique text instead of counting calls.
     public static ConcurrentBag<string> Updates { get; } = [];
 
-    [JsonRpcMethod]
-    public int Subtract(SubtractArgs args) => args.Minuend - args.Subtrahend;
+    public SubtractResponse Subtract(SubtractRequest request) => new(request.Minuend - request.Subtrahend);
 
-    [JsonRpcMethod]
-    public void Update(EchoArgs args) => Updates.Add(args.Text);
-
-    [JsonRpcMethod]
-    public static int StaticMethod(EchoArgs args) => args.Text.Length;
-
-    public string Unmarked(EchoArgs args) => args.Text;
-
-    [JsonRpcMethod]
-    public string Twice(EchoArgs args) => args.Text + args.Text;
-
-    [JsonRpcMethod]
-    public string Twice(SubtractArgs args) => args.ToString();
-
-    [JsonRpcMethod]
-    public async Task<string> TaskResult(EchoArgs args)
+    public UpdateResponse Update(UpdateRequest request)
     {
-        await Task.Yield();
-        return args.Text.ToUpperInvariant();
+        Updates.Add(request.Text);
+        return new UpdateResponse();
     }
 
-    [JsonRpcMethod]
-    public async ValueTask<int> ValueTaskResult(EchoArgs args)
+    public async Task<UpperResponse> Upper(UpperRequest request)
     {
         await Task.Yield();
-        return args.Text.Length;
+        return new UpperResponse(request.Text.ToUpperInvariant());
     }
 
-    [JsonRpcMethod]
-    public async Task NoResult(EchoArgs args) => await Task.Yield();
+    public async ValueTask<LengthResponse> Length(LengthRequest request)
+    {
+        await Task.Yield();
+        return new LengthResponse(request.Text.Length);
+    }
 
-    [JsonRpcMethod]
-    public string Fail(EchoArgs args) => throw new InvalidOperationException("Secret connection string: " + args.Text);
+    public FailResponse Fail(FailRequest request) => throw new InvalidOperationException("Secret connection string: " + request.Text);
 
-    [JsonRpcMethod]
-    public string Reject(EchoArgs args) => throw new JsonRpcErrorException(-32050, "Rejected: " + args.Text);
+    public RejectResponse Reject(RejectRequest request) => throw new JsonRpcErrorException(-32050, "Rejected: " + request.Text);
 
-    [JsonRpcMethod]
-    public string TransportKind(EchoArgs args) => args.Text;
+    // Not callable under the naming convention: the result is not named MismatchResponse.
+    public FailResponse Mismatch(MismatchRequest request) => new();
+
+    // Not callable under the naming convention: the parameter is not named EchoRequest.
+    public string Echo(EchoArgs args) => args.Text;
+
+    // Not resolvable: static.
+    public static SubtractResponse Static(SubtractRequest request) => new(0);
+
+    // Not resolvable: two overloads make the name ambiguous.
+    public SubtractResponse Twice(SubtractRequest request) => new(request.Minuend * 2);
+
+    public SubtractResponse Twice(UpdateRequest request) => new(request.Text.Length * 2);
 }
 
 /// <summary>
-/// A target that records whether it was disposed.
+/// An object that records whether it was released. The ProgId is <c>Disposable</c>.
 /// </summary>
 public sealed class DisposableTarget : IDisposable
 {
@@ -71,11 +90,16 @@ public sealed class DisposableTarget : IDisposable
 
     public static ConcurrentBag<string> Disposed { get; } = [];
 
-    [JsonRpcMethod]
-    public int Ping(EchoArgs args)
+    public UpdateResponse Update(UpdateRequest request)
     {
-        _text = args.Text;
-        return args.Text.Length;
+        _text = request.Text;
+        return new UpdateResponse();
+    }
+
+    public FailResponse Fail(FailRequest request)
+    {
+        _text = request.Text;
+        throw new InvalidOperationException("Failed");
     }
 
     public void Dispose() => Disposed.Add(_text ?? string.Empty);

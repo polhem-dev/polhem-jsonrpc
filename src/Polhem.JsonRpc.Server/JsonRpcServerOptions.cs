@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Polhem.JsonRpc.Server;
@@ -8,11 +7,6 @@ namespace Polhem.JsonRpc.Server;
 /// </summary>
 public sealed class JsonRpcServerOptions
 {
-    internal const DynamicallyAccessedMemberTypes TargetMembers =
-        DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor;
-
-    private readonly Dictionary<string, Type> _targets = new(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>
     /// Gets or sets the options that bind <c>params</c> and serialize results. The default uses
     /// <see cref="JsonSerializerDefaults.Web"/>: camelCase names, case-insensitive reading.
@@ -20,28 +14,15 @@ public sealed class JsonRpcServerOptions
     public JsonSerializerOptions SerializerOptions { get; set; } = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// Gets the registered targets, by name.
+    /// Gets or sets the factory that creates the object for the ProgId of a method name. The dispatcher requires
+    /// one.
     /// </summary>
-    public IReadOnlyDictionary<string, Type> Targets => _targets;
+    public IJsonRpcObjectFactory? ObjectFactory { get; set; }
 
     /// <summary>
-    /// Gets or sets the method resolver. When <c>null</c>, methods are resolved by convention: <c>target.action</c>
-    /// names the target registered as <c>target</c> and its method <c>action</c>.
+    /// Gets or sets which methods may be called. The default is <see cref="JsonRpcNamingConventionPolicy"/>.
     /// </summary>
-    public IJsonRpcMethodResolver? MethodResolver { get; set; }
-
-    /// <summary>
-    /// Gets or sets which methods may be called. The default admits methods marked with
-    /// <see cref="JsonRpcMethodAttribute"/>. It is used by the default resolver only.
-    /// </summary>
-    public IJsonRpcMethodPolicy MethodPolicy { get; set; } = new JsonRpcMethodAttributePolicy();
-
-    /// <summary>
-    /// Gets or sets the factory that creates targets. When <c>null</c>, a target is taken from
-    /// <see cref="JsonRpcTransportInfo.Services"/> when it is registered there, and created with its parameterless
-    /// constructor otherwise.
-    /// </summary>
-    public IJsonRpcTargetFactory? TargetFactory { get; set; }
+    public IJsonRpcMethodPolicy MethodPolicy { get; set; } = new JsonRpcNamingConventionPolicy();
 
     /// <summary>
     /// Gets or sets the parameter binder. When <c>null</c>, <c>params</c> must be an object, which is deserialized
@@ -82,30 +63,4 @@ public sealed class JsonRpcServerOptions
     /// <see cref="JsonRpcErrorCodes.InvalidRequest"/> error. The default is 100.
     /// </summary>
     public int MaxBatchSize { get; set; } = 100;
-
-    /// <summary>
-    /// Registers a target type under a name, so that <c>name.action</c> calls the method <c>action</c> on it.
-    /// </summary>
-    /// <typeparam name="T">The target type.</typeparam>
-    /// <param name="name">The target name: letters, digits, underscores and hyphens.</param>
-    /// <returns>These options.</returns>
-    public JsonRpcServerOptions AddTarget<[DynamicallyAccessedMembers(TargetMembers)] T>(string name) where T : class
-        => AddTarget(name, typeof(T));
-
-    /// <summary>
-    /// Registers a target type under a name, so that <c>name.action</c> calls the method <c>action</c> on it.
-    /// </summary>
-    /// <param name="name">The target name: letters, digits, underscores and hyphens.</param>
-    /// <param name="targetType">The target type.</param>
-    /// <returns>These options.</returns>
-    public JsonRpcServerOptions AddTarget(string name, [DynamicallyAccessedMembers(TargetMembers)] Type targetType)
-    {
-        ArgumentNullException.ThrowIfNull(targetType);
-        if (!ConventionMethodResolver.IsValidName(name, allowHyphen: true))
-        {
-            throw new ArgumentException("A target name holds 1 to 64 letters, digits, underscores and hyphens.", nameof(name));
-        }
-        _targets[name] = targetType;
-        return this;
-    }
 }

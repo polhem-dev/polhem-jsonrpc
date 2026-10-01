@@ -1,7 +1,11 @@
 namespace QuickStart.Client;
 
-public sealed record AddArgs(int A, int B);
+public sealed record AddRequest(int A, int B);
 
-public sealed record DivideArgs(double Dividend, double Divisor);
+public sealed record AddResponse(int Sum);
 
-public sealed record LogArgs(string Message);
+public sealed record DivideRequest(double Dividend, double Divisor);
+
+public sealed record DivideResponse(double Quotient);
+
+public sealed record LogRequest(string Message);

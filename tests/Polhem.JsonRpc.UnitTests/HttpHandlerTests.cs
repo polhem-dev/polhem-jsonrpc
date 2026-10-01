@@ -11,7 +11,7 @@ namespace Polhem.JsonRpc.UnitTests;
 
 public sealed class HttpHandlerTests : IAsyncLifetime
 {
-    private const string Subtract = """{"jsonrpc": "2.0", "method": "spec.subtract", "params": {"minuend": 3, "subtrahend": 1}, "id": 1}""";
+    private const string Subtract = """{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": 3, "subtrahend": 1}, "id": 1}""";
 
     private WebApplication? _app;
     private HttpClient? _client;
@@ -24,7 +24,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         builder.Services.AddJsonRpcServer(
             options =>
             {
-                options.AddTarget<SpecTarget>("spec");
+                options.ObjectFactory = new TestObjectFactory();
                 options.Filters.Add(new KindRecordingFilter(_seenKinds));
             },
             http =>
@@ -56,14 +56,14 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType!.MediaType);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal(2, body.RootElement.GetProperty("result").GetInt32());
+        Assert.Equal(2, body.RootElement.GetProperty("result").GetProperty("difference").GetInt32());
     }
 
     [Fact]
     [DisplayName("HTTP: a notification is answered with 204 and no body")]
     public async Task Post_Notification_Returns204()
     {
-        using var response = await PostAsync("""{"jsonrpc": "2.0", "method": "spec.update", "params": {"text": "http"}}""");
+        using var response = await PostAsync("""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "http"}}""");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Empty(await response.Content.ReadAsByteArrayAsync());
@@ -82,7 +82,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     [DisplayName("HTTP: a body larger than MaxRequestBodySize is answered with 413")]
     public async Task Post_TooLarge_Returns413()
     {
-        var large = $$"""{"jsonrpc": "2.0", "method": "spec.update", "params": {"text": "{{new string('x', 2048)}}"}, "id": 1}""";
+        var large = $$"""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "{{new string('x', 2048)}}"}, "id": 1}""";
 
         using var response = await PostAsync(large);
 
@@ -93,7 +93,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     [DisplayName("HTTP: StatusCodeSelector chooses the status of a single response")]
     public async Task Post_StatusCodeSelector_ChoosesStatus()
     {
-        using var response = await PostAsync("""{"jsonrpc": "2.0", "method": "nothing.here", "id": 1}""");
+        using var response = await PostAsync("""{"jsonrpc": "2.0", "method": "Nothing.Here", "id": 1}""");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

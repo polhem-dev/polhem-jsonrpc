@@ -6,13 +6,9 @@ namespace Polhem.JsonRpc.UnitTests;
 
 internal static class DispatcherFixture
 {
-    public static JsonRpcServerOptions Options() => new JsonRpcServerOptions()
-        .AddTarget<SpecTarget>("spec")
-        .AddTarget<DisposableTarget>("disposable");
-
     public static JsonRpcDispatcher Create(Action<JsonRpcServerOptions>? configure = null)
     {
-        var options = Options();
+        var options = new JsonRpcServerOptions { ObjectFactory = new TestObjectFactory() };
         configure?.Invoke(options);
         return new JsonRpcDispatcher(options);
     }

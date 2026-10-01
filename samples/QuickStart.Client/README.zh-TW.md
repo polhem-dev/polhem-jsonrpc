@@ -15,13 +15,13 @@ dotnet run --project samples/QuickStart.Client
 using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
 
-var sum = await rpc.InvokeAsync<int>("math.add", new AddArgs(1, 2));   // 一般呼叫
-await rpc.NotifyAsync("math.log", new LogArgs("Hello"));               // notification：沒有回應
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));   // 一般呼叫
+await rpc.NotifyAsync("Calculator.Log", new LogRequest("Hello"));        // notification：沒有回應
 
 var batch = rpc.CreateBatch();                                         // batch：一次送出多個呼叫
-var first = batch.Add<int>("math.add", new AddArgs(2, 3));
+var first = batch.Add<AddResponse>("Calculator.Add", new AddRequest(2, 3));
 await batch.SendAsync();
-Console.WriteLine(await first);
+Console.WriteLine((await first)!.Sum);
 ```
 
 伺服器回傳的錯誤會以 `JsonRpcErrorException` 丟出，帶有伺服器給的錯誤碼與訊息。

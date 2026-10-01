@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -7,8 +8,9 @@ using System.Text.Json.Serialization.Metadata;
 namespace Polhem.JsonRpc.Server;
 
 /// <summary>
-/// Runs JSON-RPC calls: resolves the method, runs the filters, binds the parameters, invokes the method and turns
-/// the outcome into a response. It does not know how the calls arrive.
+/// Runs JSON-RPC calls. For a method name <c>ProgId.Action</c> it creates the object for the ProgId, finds the
+/// action on it, checks the method policy, runs the filters, binds the parameters, invokes the method and turns the
+/// outcome into a response. It does not know how the calls arrive.
 /// </summary>
 /// <remarks>
 /// The dispatcher is thread-safe and meant to be shared. The options are read when it is created; later changes to
@@ -23,8 +25,9 @@ public sealed class JsonRpcDispatcher
     private const string MethodNotFoundMessage = "Method not found";
     private const string InvalidRequestMessage = "Invalid Request";
 
-    private readonly IJsonRpcMethodResolver _resolver;
-    private readonly IJsonRpcTargetFactory _targetFactory;
+    private readonly IJsonRpcObjectFactory _objectFactory;
+    private readonly IJsonRpcMethodPolicy _policy;
+    private readonly ConcurrentDictionary<(Type Type, string Action), MethodInfo?> _actions = new();
     private readonly IJsonRpcParameterBinder _binder;
     private readonly IJsonRpcFilter[] _filters;
     private readonly JsonSerializerOptions _serializerOptions;
@@ -36,7 +39,7 @@ public sealed class JsonRpcDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonRpcDispatcher"/> class.
     /// </summary>
-    /// <param name="options">The settings.</param>
+    /// <param name="options">The settings. <see cref="JsonRpcServerOptions.ObjectFactory"/> is required.</param>
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]
     public JsonRpcDispatcher(JsonRpcServerOptions options)
@@ -48,9 +51,9 @@ public sealed class JsonRpcDispatcher
         _serializerOptions = serializerOptions.TypeInfoResolver is null
             ? new JsonSerializerOptions(serializerOptions) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() }
             : serializerOptions;
-        _resolver = options.MethodResolver
-            ?? new ConventionMethodResolver(options.Targets, options.MethodPolicy);
-        _targetFactory = options.TargetFactory ?? new DefaultTargetFactory();
+        _objectFactory = options.ObjectFactory
+            ?? throw new ArgumentException("ObjectFactory is required: it creates the object for the ProgId of a method name.", nameof(options));
+        _policy = options.MethodPolicy ?? throw new ArgumentException("MethodPolicy is required.", nameof(options));
         _binder = options.ParameterBinder ?? new DefaultParameterBinder(_serializerOptions);
         _filters = [.. options.Filters];
         _exceptionMapper = options.ExceptionMapper;
@@ -130,10 +133,22 @@ public sealed class JsonRpcDispatcher
         var context = new JsonRpcRequestContext(request, transport, cancellationToken);
 
         JsonRpcResponse response;
+        object? instance = null;
         try
         {
-            context.Method = _resolver.Resolve(context)
+            // The order follows the Polhem framework: the object and the method are resolved, and the method policy
+            // checked, before any filter runs, so that a filter which decrypts the parameters only does so for a
+            // call that is allowed to happen.
+            if (!JsonRpcMethodName.TryParse(request.Method, out var progId, out var action))
+            {
+                throw new JsonRpcErrorException(JsonRpcErrorCodes.MethodNotFound, MethodNotFoundMessage);
+            }
+            instance = _objectFactory.CreateObject(progId, context)
                 ?? throw new JsonRpcErrorException(JsonRpcErrorCodes.MethodNotFound, MethodNotFoundMessage);
+            var method = FindAction(instance.GetType(), action)
+                ?? throw new JsonRpcErrorException(JsonRpcErrorCodes.MethodNotFound, MethodNotFoundMessage);
+            context.Method = new JsonRpcMethod(progId, action, instance, method);
+
             await RunFiltersAsync(context, 0).ConfigureAwait(false);
             response = JsonRpcResponse.Success(request.Id, context.Result);
         }
@@ -147,6 +162,13 @@ public sealed class JsonRpcDispatcher
             // host did not foresee, has to become an error response; letting it escape would end the whole batch or
             // the HTTP request instead of answering this one call.
             response = JsonRpcResponse.Failure(request.Id, MapException(ex, context));
+        }
+        finally
+        {
+            if (instance is not null)
+            {
+                await _objectFactory.ReleaseObjectAsync(instance, context).ConfigureAwait(false);
+            }
         }
 
         if (request.IsNotification) { return null; }
@@ -167,28 +189,39 @@ public sealed class JsonRpcDispatcher
     {
         var method = context.Method!;
         var argument = _binder.Bind(context);
-        var target = _targetFactory.CreateTarget(method, context);
-        try
-        {
-            var (value, valueType) = await InvokeMethodAsync(method.MethodInfo, target, argument).ConfigureAwait(false);
-            context.Result = valueType is null || value is null
-                ? null
-                : JsonSerializer.SerializeToElement(value, _serializerOptions.GetTypeInfo(valueType));
-        }
-        finally
-        {
-            await _targetFactory.ReleaseTargetAsync(target, context).ConfigureAwait(false);
-        }
+        var (value, valueType) = await InvokeMethodAsync(method.MethodInfo, method.Instance, argument).ConfigureAwait(false);
+        context.Result = valueType is null || value is null
+            ? null
+            : JsonSerializer.SerializeToElement(value, _serializerOptions.GetTypeInfo(valueType));
     }
+
+    // Exact, case-sensitive name match, like the Polhem framework's `Type.GetMethod(action)`. A name with more than
+    // one resolvable method is ambiguous and not resolved.
+    [UnconditionalSuppressMessage("Trimming", "IL2070",
+        Justification = "The constructor requires unreferenced code; the object types come from the application's factory.")]
+    private MethodInfo? FindAction(Type type, string action) => _actions.GetOrAdd((type, action), key =>
+    {
+        MethodInfo? found = null;
+        foreach (var candidate in key.Type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!string.Equals(candidate.Name, key.Action, StringComparison.Ordinal) || !JsonRpcMethod.IsResolvableAction(candidate))
+            {
+                continue;
+            }
+            if (found is not null) { return null; }
+            found = candidate;
+        }
+        return found is not null && _policy.IsCallable(found) ? found : null;
+    });
 
     [UnconditionalSuppressMessage("Trimming", "IL2075",
         Justification = "The constructor requires unreferenced code; Result is read from the task type the method declares.")]
-    private static async ValueTask<(object? Value, Type? ValueType)> InvokeMethodAsync(MethodInfo method, object target, object? argument)
+    private static async ValueTask<(object? Value, Type? ValueType)> InvokeMethodAsync(MethodInfo method, object instance, object? argument)
     {
         object? returned;
         try
         {
-            returned = method.Invoke(target, [argument]);
+            returned = method.Invoke(instance, [argument]);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {

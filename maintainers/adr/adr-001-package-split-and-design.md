@@ -54,27 +54,37 @@ reason every consumer receives Newtonsoft.Json and MessagePack.
 - The packages reference nothing but .NET, and ASP.NET Core for `Polhem.JsonRpc.AspNetCore`. There is no MessagePack
   and no Newtonsoft.Json. The packages do not reference Polhem; Polhem references them.
 
-### 2. Methods are resolved by convention
+### 2. Methods are resolved the way the Polhem framework resolves them
 
-The default resolver follows the convention Polhem already uses:
+The server is extracted from the Polhem framework's JSON-RPC executor, not designed anew, so that Polhem can move
+onto it without a second mechanism. It follows the executor step by step:
 
-- A method name `target.action` asks an `IJsonRpcTargetFactory` for the object named `target`, then calls its method
-  `action`.
-- The method must be a public, non-generic instance method with exactly one parameter. A method that returns a
-  `Task` is awaited; a synchronous method is called as it is.
-- `params` must be an object, and it is deserialized into that one parameter. An array (positional parameters) is
-  answered with `-32602 Invalid params`, which the specification allows a server to do.
-- Target and method names are compared case-insensitively, so the JSON-RPC convention `math.add` finds the C#
-  method `Add`. Two methods whose names differ only in case make the name ambiguous, and it is not resolved.
-- The resolver is replaceable, for a host that wants method names without a dot.
+1. A method name has the form `ProgId.Action`. A ProgId holds letters, digits, underscores and hyphens, an action
+   letters, digits and underscores, each at most 64 characters. Names are matched case-sensitively.
+2. The ProgId names the object the call runs on. The application decides which object that is by implementing
+   `IJsonRpcObjectFactory.CreateObject(progId, context)`; the package holds no registry of names. Polhem implements
+   the interface with its `ProgramSettings` registry.
+3. The action is looked up on the object's type: a public, non-generic instance method with exactly one parameter,
+   not an accessor and not declared by `object` (`JsonRpcMethod.IsResolvableAction`, the rule of Polhem's
+   `IsResolvableAction`). A name with more than one such method is ambiguous and not resolved.
+4. The method policy decides whether the method may be called (decision 3).
+5. Only then do the filters run, so that a filter which decrypts the parameters does so only for a call that is
+   allowed to happen. Polhem orders its access check before decryption for the same reason.
+6. `params` must be an object, deserialized into the method's parameter. An array (positional parameters) is
+   answered with `-32602 Invalid params`, which the specification allows a server to do. A method that returns a task
+   is awaited.
+7. The object is released through `IJsonRpcObjectFactory.ReleaseObjectAsync` after the call, whether it succeeded or
+   failed.
 
-### 3. A method is callable only when it is marked
+### 3. A method is callable when its types follow the naming convention
 
-Every public one-parameter method of an object the factory returns would otherwise be reachable from the network,
-including one added later for internal use. The default method policy therefore admits only methods marked with
-`[JsonRpcMethod]`: a method left unmarked cannot be called, which is the safe way to fail
-(`DispatcherTests.DispatchAsync_UnmarkedMethod_ReturnsMethodNotFound`). The policy is replaceable;
-Polhem replaces it with one that reads its own `[ApiAccessControl]` attribute.
+Every public one-parameter method of an object would otherwise be reachable from the network, including one added
+later for internal use. The default method policy, `JsonRpcNamingConventionPolicy`, admits a method `Action` only when
+its parameter type is named `{Action}Request` and its result type, or the result type of the task it returns,
+`{Action}Response`: the naming the Polhem framework uses for its API messages (Polhem ADR-007). A method that does not
+follow it is answered as if it did not exist (`DispatcherTests.DispatchAsync_UnconventionalMethod_ReturnsMethodNotFound`),
+and no method or type has to be registered. The policy is replaceable; Polhem replaces it with one that reads its own
+`[ApiAccessControl]` attribute.
 
 ### 4. The transport identity is set by the transport, never by the request
 
@@ -116,7 +126,7 @@ already reached it, so an older target would add a test matrix for a short time.
 - An application can use JSON-RPC 2.0 on ASP.NET Core with a single package reference, without taking Polhem.
 - Polhem's own JSON-RPC types move to these packages. What stays in Polhem is what is Polhem's: the payload envelope,
   codec negotiation, compression, encryption, replay protection, sessions and access control, implemented as filters,
-  interceptors, a target factory and a method policy.
+  interceptors, an object factory and a method policy.
 - A change to the shape of a request, a response, an error or an error code reaches the Polhem framework and the
   TypeScript client `polhem-connector-js`, which speak the same wire format.
 - The server cannot be published with Native AOT while it resolves methods by reflection. A source generator for method
@@ -132,3 +142,6 @@ already reached it, so an older target would add a test matrix for a short time.
   use Polhem would have no HTTP endpoint and would write the handling itself.
 - **Explicit method registration (`AddMethod<TParams, TResult>`) as the default.** It would make the server AOT-safe,
   but it is not the convention Polhem's business objects follow, and Polhem is the first consumer.
+- **A registry of names in the package (`AddTarget<T>("name")`) and an attribute that marks callable methods.** Tried
+  in the first implementation and removed before release: both were mechanisms Polhem does not have, so Polhem would
+  have had to bridge them instead of plugging in what it already has.
