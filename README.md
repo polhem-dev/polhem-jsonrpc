@@ -46,7 +46,7 @@ public sealed class AppObjectFactory : IJsonRpcObjectFactory
 public sealed class Calculator
 {
     // Callable because the parameter is AddRequest and the result AddResponse.
-    public AddResponse Add(AddRequest request) => new(request.A + request.B);
+    public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };
 }
 ```
 
@@ -55,7 +55,7 @@ Client:
 ```csharp
 using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
-var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
 ```
 
 ## Samples
@@ -64,6 +64,7 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(
 |--------|---------------|
 | [QuickStart.Server](samples/QuickStart.Server/README.md) | A server on ASP.NET Core minimal APIs |
 | [QuickStart.Client](samples/QuickStart.Client/README.md) | Calls, errors, notifications and batches from a console application |
+| [QuickStart.Contracts](samples/QuickStart.Contracts) | The request and response classes both sides share |
 
 ## Extension points
 

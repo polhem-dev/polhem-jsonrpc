@@ -1,4 +1,5 @@
 using Polhem.JsonRpc;
+using QuickStart.Contracts;
 
 namespace QuickStart.Server;
 
@@ -8,15 +9,15 @@ namespace QuickStart.Server;
 /// </summary>
 public sealed class Calculator
 {
-    public AddResponse Add(AddRequest request) => new(request.A + request.B);
+    public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };
 
     public DivideResponse Divide(DivideRequest request) => request.Divisor == 0
         ? throw new JsonRpcErrorException(-32001, "Division by zero")
-        : new DivideResponse(request.Dividend / request.Divisor);
+        : new DivideResponse { Quotient = request.Dividend / request.Divisor };
 
     public LogResponse Log(LogRequest request)
     {
         Console.WriteLine($"Client says: {request.Message}");
-        return new LogResponse();
+        return new LogResponse { LoggedAt = DateTime.UtcNow };
     }
 }

@@ -10,6 +10,7 @@
     <Project Path="tests/Polhem.JsonRpc.UnitTests/Polhem.JsonRpc.UnitTests.csproj" />
   </Folder>
   <Folder Name="/samples/">
+    <Project Path="samples/QuickStart.Contracts/QuickStart.Contracts.csproj" />
     <Project Path="samples/QuickStart.Server/QuickStart.Server.csproj" />
     <Project Path="samples/QuickStart.Client/QuickStart.Client.csproj" />
   </Folder>

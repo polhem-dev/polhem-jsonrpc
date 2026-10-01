@@ -20,7 +20,7 @@ public sealed class AppObjectFactory : IJsonRpcObjectFactory
 public sealed class Calculator
 {
     // Callable because the parameter is AddRequest and the result AddResponse.
-    public AddResponse Add(AddRequest request) => new(request.A + request.B);
+    public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };
 }
 ```
 

@@ -34,10 +34,12 @@ The action is a method of the object (`Calculator.cs`). It is callable because i
 `{Action}Request` and its result `{Action}Response`; names are matched case-sensitively.
 
 ```csharp
-public AddResponse Add(AddRequest request) => new(request.A + request.B);
+public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };
 ```
 
 - `params` is deserialized into the request, and the response becomes `result`.
+- The request and response classes live in [QuickStart.Contracts](../QuickStart.Contracts), which the client
+  references too, so both sides use the same types.
 - Throw `JsonRpcErrorException` to answer with a specific error, as `Divide` does. Any other exception is answered with
   `-32603 Internal error`, without its message.
 

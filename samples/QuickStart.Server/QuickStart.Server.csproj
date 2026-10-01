@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <ProjectReference Include="..\QuickStart.Contracts\QuickStart.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.AspNetCore\Polhem.JsonRpc.AspNetCore.csproj" />
   </ItemGroup>
 

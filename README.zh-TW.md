@@ -46,7 +46,7 @@ public sealed class AppObjectFactory : IJsonRpcObjectFactory
 public sealed class Calculator
 {
     // 參數是 AddRequest、回傳是 AddResponse，所以可被呼叫。
-    public AddResponse Add(AddRequest request) => new(request.A + request.B);
+    public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };
 }
 ```
 
@@ -55,7 +55,7 @@ public sealed class Calculator
 ```csharp
 using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
-var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
 ```
 
 ## 範例
@@ -64,6 +64,7 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(
 |------|----------|
 | [QuickStart.Server](samples/QuickStart.Server/README.zh-TW.md) | 以 ASP.NET Core minimal API 架設伺服器 |
 | [QuickStart.Client](samples/QuickStart.Client/README.zh-TW.md) | 從主控台程式發出一般呼叫、處理錯誤、notification 與 batch |
+| [QuickStart.Contracts](samples/QuickStart.Contracts) | 兩端共用的 request 與 response 類別 |
 
 ## 擴充點
 

@@ -19,7 +19,7 @@ public sealed class AppObjectFactory : IJsonRpcObjectFactory
 
 public sealed class Calculator
 {
-    public AddResponse Add(AddRequest request) => new(request.A + request.B);   // {Action}Request -> {Action}Response
+    public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };   // {Action}Request -> {Action}Response
 }
 ```
 

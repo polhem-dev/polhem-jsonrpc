@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Polhem.JsonRpc.Client;
+using QuickStart.Contracts;
 using QuickStart.Server;
 
 namespace Polhem.JsonRpc.UnitTests;
@@ -21,14 +22,14 @@ public sealed class QuickStartSampleTests(WebApplicationFactory<Calculator> fact
     [DisplayName("QuickStart sample: Calculator.Add returns the sum")]
     public async Task Add_ReturnsSum()
     {
-        Assert.Equal(3, (await Connect().InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2)))!.Sum);
+        Assert.Equal(3, (await Connect().InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 }))!.Sum);
     }
 
     [Fact]
     [DisplayName("QuickStart sample: Calculator.Divide by zero answers with error -32001")]
     public async Task Divide_ByZero_ReturnsError()
     {
-        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => Connect().InvokeAsync<DivideResponse>("Calculator.Divide", new DivideRequest(1, 0)));
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => Connect().InvokeAsync<DivideResponse>("Calculator.Divide", new DivideRequest { Dividend = 1, Divisor = 0 }));
 
         Assert.Equal(-32001, ex.Code);
     }
@@ -38,11 +39,11 @@ public sealed class QuickStartSampleTests(WebApplicationFactory<Calculator> fact
     public async Task NotificationAndBatch_Work()
     {
         var rpc = Connect();
-        await rpc.NotifyAsync("Calculator.Log", new LogRequest("test"));
+        await rpc.NotifyAsync("Calculator.Log", new LogRequest { Message = "test" });
 
         var batch = rpc.CreateBatch();
-        var first = batch.Add<AddResponse>("Calculator.Add", new AddRequest(2, 3));
-        var second = batch.Add<AddResponse>("Calculator.Add", new AddRequest(4, 5));
+        var first = batch.Add<AddResponse>("Calculator.Add", new AddRequest { A = 2, B = 3 });
+        var second = batch.Add<AddResponse>("Calculator.Add", new AddRequest { A = 4, B = 5 });
         await batch.SendAsync();
 
         Assert.Equal(5, (await first)!.Sum);

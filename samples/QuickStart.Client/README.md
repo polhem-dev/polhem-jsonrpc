@@ -15,16 +15,17 @@ dotnet run --project samples/QuickStart.Client
 using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5080/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http));
 
-var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest(1, 2));   // a call
-await rpc.NotifyAsync("Calculator.Log", new LogRequest("Hello"));        // a notification: no answer
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });   // a call
+await rpc.NotifyAsync("Calculator.Log", new LogRequest { Message = "Hello" });        // a notification: no answer
 
 var batch = rpc.CreateBatch();                                         // a batch: one message
-var first = batch.Add<AddResponse>("Calculator.Add", new AddRequest(2, 3));
+var first = batch.Add<AddResponse>("Calculator.Add", new AddRequest { A = 2, B = 3 });
 await batch.SendAsync();
 Console.WriteLine((await first)!.Sum);
 ```
 
-An error answer is thrown as `JsonRpcErrorException`, with the server's code and message.
+An error answer is thrown as `JsonRpcErrorException`, with the server's code and message. The request and response
+classes come from [QuickStart.Contracts](../QuickStart.Contracts), the project the server uses too.
 
 The client package also runs with Native AOT, on iOS, Android and WebAssembly. There, set
 `JsonRpcClientOptions.SerializerOptions` to options whose `TypeInfoResolver` is a source-generated

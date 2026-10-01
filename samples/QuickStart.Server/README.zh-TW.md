@@ -34,10 +34,11 @@ Action 是物件上的方法（`Calculator.cs`）。參數型別名為 `{Action}
 它就能被呼叫；名稱比對區分大小寫。
 
 ```csharp
-public AddResponse Add(AddRequest request) => new(request.A + request.B);
+public AddResponse Add(AddRequest request) => new() { Sum = request.A + request.B };
 ```
 
 - `params` 會反序列化成 request，回傳的 response 成為 `result`。
+- request 與 response 類別放在 [QuickStart.Contracts](../QuickStart.Contracts)，用戶端也引用它，兩端用同一套型別。
 - 要回傳特定錯誤就丟 `JsonRpcErrorException`，像 `Divide` 那樣。其他例外一律回 `-32603 Internal error`，
   不會帶出例外訊息。
 

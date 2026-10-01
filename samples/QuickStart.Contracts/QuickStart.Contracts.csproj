@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The request and response messages, shared by the server and the client so that both sides use the same types. -->
+
+</Project>
