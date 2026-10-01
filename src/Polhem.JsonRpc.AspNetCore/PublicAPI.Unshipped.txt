@@ -1,1 +1,14 @@
 #nullable enable
+Polhem.JsonRpc.AspNetCore.JsonRpcEndpointRouteBuilderExtensions
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpHandler
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpHandler.HandleAsync(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> System.Threading.Tasks.Task!
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpHandler.JsonRpcHttpHandler(Polhem.JsonRpc.Server.JsonRpcDispatcher! dispatcher, Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions! options) -> void
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.JsonRpcHttpOptions() -> void
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.MaxRequestBodySize.get -> long
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.MaxRequestBodySize.set -> void
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.StatusCodeSelector.get -> System.Func<Polhem.JsonRpc.JsonRpcResponse!, int>?
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.StatusCodeSelector.set -> void
+Polhem.JsonRpc.AspNetCore.JsonRpcServiceCollectionExtensions
+static Polhem.JsonRpc.AspNetCore.JsonRpcEndpointRouteBuilderExtensions.MapJsonRpc(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+static Polhem.JsonRpc.AspNetCore.JsonRpcServiceCollectionExtensions.AddJsonRpcServer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Polhem.JsonRpc.Server.JsonRpcServerOptions!>! configure, System.Action<Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions!>? configureHttp = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

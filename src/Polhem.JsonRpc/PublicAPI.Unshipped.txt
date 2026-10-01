@@ -1,1 +1,84 @@
 #nullable enable
+Polhem.JsonRpc.IJsonRpcTransport
+Polhem.JsonRpc.IJsonRpcTransport.SendAsync(Polhem.JsonRpc.JsonRpcRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Polhem.JsonRpc.JsonRpcResponse?>!
+Polhem.JsonRpc.IJsonRpcTransport.SendBatchAsync(System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcRequest!>! requests, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!>!
+Polhem.JsonRpc.JsonRpcError
+Polhem.JsonRpc.JsonRpcError.Code.get -> int
+Polhem.JsonRpc.JsonRpcError.Data.get -> System.Text.Json.JsonElement?
+Polhem.JsonRpc.JsonRpcError.JsonRpcError(int code, string! message, System.Text.Json.JsonElement? data = null) -> void
+Polhem.JsonRpc.JsonRpcError.Message.get -> string!
+Polhem.JsonRpc.JsonRpcErrorCodes
+Polhem.JsonRpc.JsonRpcErrorException
+Polhem.JsonRpc.JsonRpcErrorException.Code.get -> int
+Polhem.JsonRpc.JsonRpcErrorException.Error.get -> Polhem.JsonRpc.JsonRpcError!
+Polhem.JsonRpc.JsonRpcErrorException.JsonRpcErrorException(Polhem.JsonRpc.JsonRpcError! error) -> void
+Polhem.JsonRpc.JsonRpcErrorException.JsonRpcErrorException(int code, string! message, System.Text.Json.JsonElement? data = null) -> void
+Polhem.JsonRpc.JsonRpcId
+Polhem.JsonRpc.JsonRpcId.Equals(Polhem.JsonRpc.JsonRpcId other) -> bool
+Polhem.JsonRpc.JsonRpcId.IsNone.get -> bool
+Polhem.JsonRpc.JsonRpcId.JsonRpcId() -> void
+Polhem.JsonRpc.JsonRpcId.Kind.get -> Polhem.JsonRpc.JsonRpcIdKind
+Polhem.JsonRpc.JsonRpcId.NumberValue.get -> long
+Polhem.JsonRpc.JsonRpcId.StringValue.get -> string!
+Polhem.JsonRpc.JsonRpcIdKind
+Polhem.JsonRpc.JsonRpcIdKind.None = 0 -> Polhem.JsonRpc.JsonRpcIdKind
+Polhem.JsonRpc.JsonRpcIdKind.Null = 1 -> Polhem.JsonRpc.JsonRpcIdKind
+Polhem.JsonRpc.JsonRpcIdKind.Number = 3 -> Polhem.JsonRpc.JsonRpcIdKind
+Polhem.JsonRpc.JsonRpcIdKind.String = 2 -> Polhem.JsonRpc.JsonRpcIdKind
+Polhem.JsonRpc.JsonRpcParsedRequest
+Polhem.JsonRpc.JsonRpcParsedRequest.Error.get -> Polhem.JsonRpc.JsonRpcError?
+Polhem.JsonRpc.JsonRpcParsedRequest.ErrorId.get -> Polhem.JsonRpc.JsonRpcId
+Polhem.JsonRpc.JsonRpcParsedRequest.IsValid.get -> bool
+Polhem.JsonRpc.JsonRpcParsedRequest.Request.get -> Polhem.JsonRpc.JsonRpcRequest?
+Polhem.JsonRpc.JsonRpcRequest
+Polhem.JsonRpc.JsonRpcRequest.Id.get -> Polhem.JsonRpc.JsonRpcId
+Polhem.JsonRpc.JsonRpcRequest.IsNotification.get -> bool
+Polhem.JsonRpc.JsonRpcRequest.JsonRpcRequest(string! method, System.Text.Json.JsonElement? parameters = null, Polhem.JsonRpc.JsonRpcId id = default(Polhem.JsonRpc.JsonRpcId)) -> void
+Polhem.JsonRpc.JsonRpcRequest.Method.get -> string!
+Polhem.JsonRpc.JsonRpcRequest.Params.get -> System.Text.Json.JsonElement?
+Polhem.JsonRpc.JsonRpcRequest.Params.set -> void
+Polhem.JsonRpc.JsonRpcRequestParseResult
+Polhem.JsonRpc.JsonRpcRequestParseResult.Entries.get -> System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcParsedRequest!>!
+Polhem.JsonRpc.JsonRpcRequestParseResult.IsBatch.get -> bool
+Polhem.JsonRpc.JsonRpcRequestParseResult.JsonRpcRequestParseResult(bool isBatch, System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcParsedRequest!>! entries) -> void
+Polhem.JsonRpc.JsonRpcResponse
+Polhem.JsonRpc.JsonRpcResponse.AdditionalMembers.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+Polhem.JsonRpc.JsonRpcResponse.AdditionalMembers.set -> void
+Polhem.JsonRpc.JsonRpcResponse.Error.get -> Polhem.JsonRpc.JsonRpcError?
+Polhem.JsonRpc.JsonRpcResponse.Id.get -> Polhem.JsonRpc.JsonRpcId
+Polhem.JsonRpc.JsonRpcResponse.IsSuccess.get -> bool
+Polhem.JsonRpc.JsonRpcResponse.Result.get -> System.Text.Json.JsonElement?
+Polhem.JsonRpc.JsonRpcResponse.Result.set -> void
+Polhem.JsonRpc.JsonRpcSerializer
+const Polhem.JsonRpc.JsonRpcErrorCodes.InternalError = -32603 -> int
+const Polhem.JsonRpc.JsonRpcErrorCodes.InvalidParams = -32602 -> int
+const Polhem.JsonRpc.JsonRpcErrorCodes.InvalidRequest = -32600 -> int
+const Polhem.JsonRpc.JsonRpcErrorCodes.MethodNotFound = -32601 -> int
+const Polhem.JsonRpc.JsonRpcErrorCodes.ParseError = -32700 -> int
+const Polhem.JsonRpc.JsonRpcErrorCodes.ServerErrorRangeEnd = -32000 -> int
+const Polhem.JsonRpc.JsonRpcErrorCodes.ServerErrorRangeStart = -32099 -> int
+override Polhem.JsonRpc.JsonRpcId.Equals(object? obj) -> bool
+override Polhem.JsonRpc.JsonRpcId.GetHashCode() -> int
+override Polhem.JsonRpc.JsonRpcId.ToString() -> string!
+static Polhem.JsonRpc.JsonRpcId.FromNumber(long value) -> Polhem.JsonRpc.JsonRpcId
+static Polhem.JsonRpc.JsonRpcId.FromString(string! value) -> Polhem.JsonRpc.JsonRpcId
+static Polhem.JsonRpc.JsonRpcId.None.get -> Polhem.JsonRpc.JsonRpcId
+static Polhem.JsonRpc.JsonRpcId.Null.get -> Polhem.JsonRpc.JsonRpcId
+static Polhem.JsonRpc.JsonRpcId.implicit operator Polhem.JsonRpc.JsonRpcId(long value) -> Polhem.JsonRpc.JsonRpcId
+static Polhem.JsonRpc.JsonRpcId.implicit operator Polhem.JsonRpc.JsonRpcId(string! value) -> Polhem.JsonRpc.JsonRpcId
+static Polhem.JsonRpc.JsonRpcId.operator !=(Polhem.JsonRpc.JsonRpcId left, Polhem.JsonRpc.JsonRpcId right) -> bool
+static Polhem.JsonRpc.JsonRpcId.operator ==(Polhem.JsonRpc.JsonRpcId left, Polhem.JsonRpc.JsonRpcId right) -> bool
+static Polhem.JsonRpc.JsonRpcParsedRequest.Invalid(Polhem.JsonRpc.JsonRpcError! error, Polhem.JsonRpc.JsonRpcId id) -> Polhem.JsonRpc.JsonRpcParsedRequest!
+static Polhem.JsonRpc.JsonRpcParsedRequest.Valid(Polhem.JsonRpc.JsonRpcRequest! request) -> Polhem.JsonRpc.JsonRpcParsedRequest!
+static Polhem.JsonRpc.JsonRpcResponse.Failure(Polhem.JsonRpc.JsonRpcId id, Polhem.JsonRpc.JsonRpcError! error) -> Polhem.JsonRpc.JsonRpcResponse!
+static Polhem.JsonRpc.JsonRpcResponse.Success(Polhem.JsonRpc.JsonRpcId id, System.Text.Json.JsonElement? result) -> Polhem.JsonRpc.JsonRpcResponse!
+static Polhem.JsonRpc.JsonRpcSerializer.ReadRequest(System.Text.Json.JsonElement element) -> Polhem.JsonRpc.JsonRpcParsedRequest!
+static Polhem.JsonRpc.JsonRpcSerializer.ReadRequests(System.ReadOnlyMemory<byte> utf8Json) -> Polhem.JsonRpc.JsonRpcRequestParseResult!
+static Polhem.JsonRpc.JsonRpcSerializer.ReadResponse(System.Text.Json.JsonElement element) -> Polhem.JsonRpc.JsonRpcResponse!
+static Polhem.JsonRpc.JsonRpcSerializer.ReadResponses(System.ReadOnlyMemory<byte> utf8Json) -> System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!
+static Polhem.JsonRpc.JsonRpcSerializer.SerializeRequest(Polhem.JsonRpc.JsonRpcRequest! request) -> byte[]!
+static Polhem.JsonRpc.JsonRpcSerializer.SerializeRequests(System.Collections.Generic.IEnumerable<Polhem.JsonRpc.JsonRpcRequest!>! requests) -> byte[]!
+static Polhem.JsonRpc.JsonRpcSerializer.SerializeResponse(Polhem.JsonRpc.JsonRpcResponse! response) -> byte[]!
+static Polhem.JsonRpc.JsonRpcSerializer.SerializeResponses(System.Collections.Generic.IEnumerable<Polhem.JsonRpc.JsonRpcResponse!>! responses) -> byte[]!
+static Polhem.JsonRpc.JsonRpcSerializer.WriteRequest(System.Text.Json.Utf8JsonWriter! writer, Polhem.JsonRpc.JsonRpcRequest! request) -> void
+static Polhem.JsonRpc.JsonRpcSerializer.WriteResponse(System.Text.Json.Utf8JsonWriter! writer, Polhem.JsonRpc.JsonRpcResponse! response) -> void

@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Dependency gate. The packages depend on nothing but .NET, and ASP.NET Core for Polhem.JsonRpc.AspNetCore
+    (maintainers/adr/adr-001-package-split-and-design.md, decision 1). Every package reference added here flows to
+    every consumer, mobile clients included, so one that reaches consumers fails the build.
+
+    Only references that flow to consumers count: a package with PrivateAssets="all" (SourceLink, analyzers) does not
+    appear in the nuspec. tests/Polhem.JsonRpc.UnitTests/DependencyGateTests.cs checks the referenced assemblies as
+    well, which also catches a dependency that arrives through a project reference.
+  -->
+  <Target Name="PolhemJsonRpcDependencyGate" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_PolhemJsonRpcConsumerPackage Include="@(PackageReference)" Condition="'%(PackageReference.PrivateAssets)' != 'all'" />
+      <_PolhemJsonRpcFramework Include="@(FrameworkReference)" Exclude="Microsoft.NETCore.App" />
+      <_PolhemJsonRpcFramework Remove="Microsoft.AspNetCore.App" Condition="'$(MSBuildProjectName)' == 'Polhem.JsonRpc.AspNetCore'" />
+    </ItemGroup>
+    <Error Code="JSONRPC9001"
+           Condition="'@(_PolhemJsonRpcConsumerPackage)' != '' or '@(_PolhemJsonRpcFramework)' != ''"
+           Text="$(MSBuildProjectName) must not depend on anything but .NET (and ASP.NET Core for Polhem.JsonRpc.AspNetCore), because every dependency flows to every consumer. Unexpected reference(s): @(_PolhemJsonRpcConsumerPackage, ', ')@(_PolhemJsonRpcFramework, ', '). If it is really needed, open an issue first and record the decision in an ADR under maintainers/adr/." />
+  </Target>
+
+</Project>
