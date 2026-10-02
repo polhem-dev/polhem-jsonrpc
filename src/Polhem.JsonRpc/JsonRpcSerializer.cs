@@ -241,19 +241,21 @@ public static class JsonRpcSerializer
     /// Serializes a response.
     /// </summary>
     /// <param name="response">The response.</param>
+    /// <param name="options">How to write it, or <c>null</c> for the defaults.</param>
     /// <returns>The response as UTF-8 JSON.</returns>
-    public static byte[] SerializeResponse(JsonRpcResponse response)
+    public static byte[] SerializeResponse(JsonRpcResponse response, JsonRpcWriteOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(response);
-        return Serialize(writer => WriteResponse(writer, response));
+        return Serialize(writer => WriteResponse(writer, response, options));
     }
 
     /// <summary>
     /// Serializes the responses to a batch.
     /// </summary>
     /// <param name="responses">The responses.</param>
+    /// <param name="options">How to write them, or <c>null</c> for the defaults.</param>
     /// <returns>The responses as a UTF-8 JSON array.</returns>
-    public static byte[] SerializeResponses(IEnumerable<JsonRpcResponse> responses)
+    public static byte[] SerializeResponses(IEnumerable<JsonRpcResponse> responses, JsonRpcWriteOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(responses);
         return Serialize(writer =>
@@ -261,7 +263,7 @@ public static class JsonRpcSerializer
             writer.WriteStartArray();
             foreach (var response in responses)
             {
-                WriteResponse(writer, response);
+                WriteResponse(writer, response, options);
             }
             writer.WriteEndArray();
         });
@@ -272,18 +274,29 @@ public static class JsonRpcSerializer
     /// </summary>
     /// <param name="writer">The writer.</param>
     /// <param name="response">The response.</param>
+    /// <param name="options">How to write it, or <c>null</c> for the defaults.</param>
     /// <remarks>
-    /// The <c>id</c> member is always written, as <c>null</c> when the response has no id.
-    /// <see cref="JsonRpcResponse.AdditionalMembers"/> are written after it; one named like a member the
-    /// specification defines is skipped.
+    /// Members are written in the order <c>jsonrpc</c>, <see cref="JsonRpcResponse.AdditionalMembers"/>,
+    /// <c>result</c> or <c>error</c>, <c>id</c>. An additional member named like a member the specification defines
+    /// is skipped. The <c>id</c> member is written as <c>null</c> when the response has no id, unless
+    /// <see cref="JsonRpcWriteOptions.OmitNullId"/> is set.
     /// </remarks>
-    public static void WriteResponse(Utf8JsonWriter writer, JsonRpcResponse response)
+    public static void WriteResponse(Utf8JsonWriter writer, JsonRpcResponse response, JsonRpcWriteOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(response);
 
         writer.WriteStartObject();
         writer.WriteString("jsonrpc", Version);
+        if (response.AdditionalMembers is { } additional)
+        {
+            foreach (var (name, value) in additional)
+            {
+                if (name is "jsonrpc" or "result" or "error" or "id") { continue; }
+                writer.WritePropertyName(name);
+                value.WriteTo(writer);
+            }
+        }
         if (response.Error is { } error)
         {
             writer.WritePropertyName("error");
@@ -310,17 +323,11 @@ public static class JsonRpcSerializer
             }
         }
 
-        writer.WritePropertyName("id");
-        WriteId(writer, response.Id);
-
-        if (response.AdditionalMembers is { } additional)
+        var hasId = response.Id.Kind is JsonRpcIdKind.String or JsonRpcIdKind.Number;
+        if (hasId || options?.OmitNullId != true)
         {
-            foreach (var (name, value) in additional)
-            {
-                if (name is "jsonrpc" or "result" or "error" or "id") { continue; }
-                writer.WritePropertyName(name);
-                value.WriteTo(writer);
-            }
+            writer.WritePropertyName("id");
+            WriteId(writer, response.Id);
         }
         writer.WriteEndObject();
     }

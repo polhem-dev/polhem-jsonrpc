@@ -102,8 +102,12 @@ needs nothing beyond HTTP: response compression on the server, automatic decompr
 
 ### 6. Defaults follow the specification; deviations are explicit options
 
-The internal error code is `-32603`, and a response carries only `jsonrpc`, `result` or `error`, and `id`. Two options
-let a host keep an older wire format: a different internal error code, and additional response members.
+The internal error code is `-32603`, a response carries only `jsonrpc`, `result` or `error`, and `id`, and `id` is
+always written, as `null` when it could not be determined. Options let a host keep an older wire format: a different
+internal error code (`JsonRpcServerOptions.InternalErrorCode`), additional response members, written right after
+`jsonrpc` (`JsonRpcRequestContext.ResponseMembers`), and leaving a null `id` out (`JsonRpcWriteOptions.OmitNullId`).
+With them, the Polhem framework's responses are written exactly as before
+(`SerializerTests.SerializeResponse_OmitNullId_LeavesNullIdOut`).
 
 ### 7. AOT is promised for the shared package and the client
 

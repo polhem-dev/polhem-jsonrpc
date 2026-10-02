@@ -18,7 +18,7 @@ Polhem.JsonRpc.Server.JsonRpcDispatchResult.HasContent.get -> bool
 Polhem.JsonRpc.Server.JsonRpcDispatchResult.IsBatch.get -> bool
 Polhem.JsonRpc.Server.JsonRpcDispatchResult.JsonRpcDispatchResult(bool isBatch, System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>! responses) -> void
 Polhem.JsonRpc.Server.JsonRpcDispatchResult.Responses.get -> System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!
-Polhem.JsonRpc.Server.JsonRpcDispatchResult.Serialize() -> byte[]?
+Polhem.JsonRpc.Server.JsonRpcDispatchResult.Serialize(Polhem.JsonRpc.JsonRpcWriteOptions? options = null) -> byte[]?
 Polhem.JsonRpc.Server.JsonRpcDispatcher
 Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchAsync(Polhem.JsonRpc.JsonRpcRequest! request, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Polhem.JsonRpc.JsonRpcResponse?>!
 Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchBatchAsync(System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcRequest!>! requests, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!>!

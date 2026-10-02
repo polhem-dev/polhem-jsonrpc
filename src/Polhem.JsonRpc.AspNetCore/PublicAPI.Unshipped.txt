@@ -9,6 +9,8 @@ Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.MaxRequestBodySize.get -> long
 Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.MaxRequestBodySize.set -> void
 Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.StatusCodeSelector.get -> System.Func<Polhem.JsonRpc.JsonRpcResponse!, int>?
 Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.StatusCodeSelector.set -> void
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.WriteOptions.get -> Polhem.JsonRpc.JsonRpcWriteOptions!
+Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.WriteOptions.set -> void
 Polhem.JsonRpc.AspNetCore.JsonRpcServiceCollectionExtensions
 static Polhem.JsonRpc.AspNetCore.JsonRpcEndpointRouteBuilderExtensions.MapJsonRpc(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
 static Polhem.JsonRpc.AspNetCore.JsonRpcServiceCollectionExtensions.AddJsonRpcServer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Polhem.JsonRpc.Server.JsonRpcServerOptions!>? configure = null, System.Action<Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions!>? configureHttp = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

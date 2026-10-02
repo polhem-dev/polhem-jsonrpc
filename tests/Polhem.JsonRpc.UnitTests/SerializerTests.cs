@@ -40,7 +40,7 @@ public class SerializerTests
     }
 
     [Fact]
-    [DisplayName("Serializer: additional members are written, but never in place of a standard member")]
+    [DisplayName("Serializer: additional members are written after jsonrpc, but never in place of a standard member")]
     public void SerializeResponse_AdditionalMembers_SkipsStandardNames()
     {
         var response = JsonRpcResponse.Success(1, JsonSerializer.SerializeToElement(5));
@@ -52,7 +52,29 @@ public class SerializerTests
 
         var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(response));
 
-        Assert.Equal("""{"jsonrpc":"2.0","result":5,"id":1,"method":"a.b"}""", json);
+        Assert.Equal("""{"jsonrpc":"2.0","method":"a.b","result":5,"id":1}""", json);
+    }
+
+    [Fact]
+    [DisplayName("Serializer: OmitNullId leaves a null id out, as the Polhem wire format does")]
+    public void SerializeResponse_OmitNullId_LeavesNullIdOut()
+    {
+        var response = JsonRpcResponse.Failure(JsonRpcId.Null, new JsonRpcError(-32601, "Method not found."));
+        response.AdditionalMembers = new Dictionary<string, JsonElement> { ["method"] = JsonSerializer.SerializeToElement("A.B") };
+
+        var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(response, new JsonRpcWriteOptions { OmitNullId = true }));
+
+        Assert.Equal("""{"jsonrpc":"2.0","method":"A.B","error":{"code":-32601,"message":"Method not found."}}""", json);
+    }
+
+    [Fact]
+    [DisplayName("Serializer: OmitNullId still writes an id that is a string or a number")]
+    public void SerializeResponse_OmitNullIdWithId_WritesId()
+    {
+        var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(
+            JsonRpcResponse.Success("x", null), new JsonRpcWriteOptions { OmitNullId = true }));
+
+        Assert.Equal("""{"jsonrpc":"2.0","result":null,"id":"x"}""", json);
     }
 
     [Fact]
