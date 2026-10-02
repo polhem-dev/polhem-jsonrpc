@@ -8,6 +8,8 @@ format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-02
+
 ### Added
 
 - `Polhem.JsonRpc`: request, response, error and id types, the standard error codes, `JsonRpcSerializer` (reads and
@@ -15,7 +17,14 @@ format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - `Polhem.JsonRpc.Server`: `JsonRpcDispatcher` with batches and notifications. A method name `ProgId.Action` calls
   the action on the object the application's `IJsonRpcObjectFactory` creates for the ProgId; an action is callable
   when its parameter is named `{Action}Request` and its result `{Action}Response`. Filters, exception mapping and
-  `InProcessTransport`.
-- `Polhem.JsonRpc.AspNetCore`: `AddJsonRpcServer`, `MapJsonRpc` and `JsonRpcHttpHandler`.
+  `InProcessTransport`. A method's return value is serialized after the filters have run, so a filter can write the
+  result in its own form from `ReturnValue`.
+- `Polhem.JsonRpc.AspNetCore`: `AddJsonRpcServer`, `MapJsonRpc` and `JsonRpcHttpHandler`. `AddJsonRpcServer` builds
+  on server and HTTP options registered before it, so a framework can set them up and an application add to them.
+- Options for a host that keeps an older wire format: `InternalErrorCode`, `ResponseMembers`, `OmitNullId` and
+  `StatusCodeSelector`.
 - `Polhem.JsonRpc.Client`: `JsonRpcConnector` with calls, notifications and batches, `HttpTransport` and
   interceptors. It supports trimming and Native AOT.
+
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/releases/tag/v0.1.0
