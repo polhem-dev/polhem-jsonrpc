@@ -16,4 +16,13 @@
 
   <!-- Each sample is a standalone project that a reader opens on its own, so samples may repeat code on purpose. -->
   <Property Name="sonar.cpd.exclusions">samples/**</Property>
+
+  <!-- S1075 (hardcoded URI) is ignored in samples and tests only. A sample needs a default endpoint to run against
+       (QuickStart.Client takes another one as its first argument), and the AOT smoke test posts to a fake address
+       that its own HttpMessageHandler answers, without a network. Package code is still checked. -->
+  <Property Name="sonar.issue.ignore.multicriteria">s1075samples,s1075tests</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.s1075samples.ruleKey">csharpsquid:S1075</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.s1075samples.resourceKey">samples/**/*</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.s1075tests.ruleKey">csharpsquid:S1075</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.s1075tests.resourceKey">tests/**/*</Property>
 </SonarQubeAnalysisProperties>

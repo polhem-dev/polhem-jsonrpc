@@ -116,7 +116,7 @@ public sealed class JsonRpcHttpHandler
         while ((read = await body.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
         {
             if (buffer.Length + read > limit) { return null; }
-            buffer.Write(chunk, 0, read);
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
         return buffer.ToArray();
     }
