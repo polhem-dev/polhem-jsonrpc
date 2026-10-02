@@ -58,6 +58,21 @@ var rpc = new JsonRpcConnector(new HttpTransport(http));
 var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
 ```
 
+## How a method is found
+
+A method name has the form `ProgId.Action`, for example `Calculator.Add`. No method is registered: the server finds
+it by these rules.
+
+| Step | Rule |
+|------|------|
+| Name | `ProgId.Action`. A ProgId holds letters, digits, underscores and hyphens; an action letters, digits and underscores; each at most 64 characters. The action is matched case-sensitively; the ProgId is passed to the factory as written. |
+| Object | The application's `IJsonRpcObjectFactory.CreateObject(progId, context)` creates the object the call runs on. `null` means the ProgId is unknown. After the call the object is passed to `ReleaseObjectAsync`. |
+| Action | A public, non-generic instance method of that object with exactly one parameter. A name with more than one such method is ambiguous and not found. |
+| Convention | The method is callable only when its parameter type is named `{Action}Request` and its return type, or the result of the `Task<T>` / `ValueTask<T>` it returns, `{Action}Response`: `AddResponse Add(AddRequest request)`. Any other public method is answered as if it did not exist. Replace the rule with `JsonRpcServerOptions.MethodPolicy`. |
+| Parameters | `params` must be a JSON object, deserialized into the request (camelCase names by default). An absent `params` binds `null`; an array is answered with `-32602 Invalid params`. |
+| Result | The response object becomes `result`. |
+| Errors | An unknown name, object or action is answered with `-32601 Method not found`. Throw `JsonRpcErrorException` to answer with your own code and message; any other exception is answered with `-32603 Internal error`, without its message. |
+
 ## Samples
 
 | Sample | What it shows |
