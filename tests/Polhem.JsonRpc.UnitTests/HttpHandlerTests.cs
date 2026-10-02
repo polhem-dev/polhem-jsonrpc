@@ -139,6 +139,24 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(["framework", "application"], order);
     }
 
+    [Fact]
+    [DisplayName("HTTP: AddJsonRpcServer applies configureHttp to HTTP options a framework registered first")]
+    public void AddJsonRpcServer_RegisteredHttpOptions_AreSharedAndExtended()
+    {
+        var services = new ServiceCollection();
+        var frameworkHttp = new JsonRpcHttpOptions();
+        frameworkHttp.WriteOptions.OmitNullId = true;
+        services.AddSingleton(frameworkHttp);
+
+        services.AddJsonRpcServer(configureHttp: http => http.MaxRequestBodySize = 123);
+        using var provider = services.BuildServiceProvider();
+
+        var shared = provider.GetRequiredService<JsonRpcHttpOptions>();
+        Assert.Same(frameworkHttp, shared);
+        Assert.True(shared.WriteOptions.OmitNullId);
+        Assert.Equal(123, shared.MaxRequestBodySize);
+    }
+
     private sealed class NamedFilter(string name, List<string> order) : IJsonRpcFilter
     {
         public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)

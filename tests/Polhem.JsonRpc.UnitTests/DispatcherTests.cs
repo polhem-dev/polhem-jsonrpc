@@ -236,6 +236,26 @@ public class DispatcherTests
     }
 
     [Fact]
+    [DisplayName("A filter can answer from the returned object, so a result the default options cannot write never reaches them")]
+    public async Task DispatchAsync_FilterWritesResultFromReturnValue_SkipsDefaultSerialization()
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new DescribeFilter()));
+
+        var response = await CallAsync(dispatcher, "Spec.Describe", """{"text": "x"}""");
+
+        Assert.Equal("String:x", response.Result!.Value.GetString());
+    }
+
+    [Fact]
+    [DisplayName("Without such a filter, a result the default options cannot write is an internal error")]
+    public async Task DispatchAsync_UnserializableResultWithoutFilter_ReturnsInternalError()
+    {
+        var response = await CallAsync(DispatcherFixture.Create(), "Spec.Describe", """{"text": "x"}""");
+
+        Assert.Equal(JsonRpcErrorCodes.InternalError, response.Error!.Code);
+    }
+
+    [Fact]
     [DisplayName("Response members added by a filter are written next to the standard ones")]
     public async Task DispatchAsync_ResponseMembers_AreAdded()
     {
@@ -323,7 +343,17 @@ public class DispatcherTests
         {
             context.Request.Params = SealedPayload.Open(context.Request.Params!.Value);
             await next(context);
-            context.Result = SealedPayload.Seal(context.Result!.Value);
+            context.Result = SealedPayload.Seal(context.GetResult()!.Value);
+        }
+    }
+
+    private sealed class DescribeFilter : IJsonRpcFilter
+    {
+        public async ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            await next(context);
+            var response = (DescribeResponse)context.ReturnValue!;
+            context.Result = JsonSerializer.SerializeToElement($"{response.Kind.Name}:{response.Text}");
         }
     }
 

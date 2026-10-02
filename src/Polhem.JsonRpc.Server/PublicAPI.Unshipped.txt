@@ -36,6 +36,7 @@ Polhem.JsonRpc.Server.JsonRpcNamingConventionPolicy.IsCallable(System.Reflection
 Polhem.JsonRpc.Server.JsonRpcNamingConventionPolicy.JsonRpcNamingConventionPolicy() -> void
 Polhem.JsonRpc.Server.JsonRpcRequestContext
 Polhem.JsonRpc.Server.JsonRpcRequestContext.CancellationToken.get -> System.Threading.CancellationToken
+Polhem.JsonRpc.Server.JsonRpcRequestContext.GetResult() -> System.Text.Json.JsonElement?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Items.get -> System.Collections.Generic.IDictionary<string!, object?>!
 Polhem.JsonRpc.Server.JsonRpcRequestContext.JsonRpcRequestContext(Polhem.JsonRpc.JsonRpcRequest! request, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken) -> void
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Method.get -> Polhem.JsonRpc.Server.JsonRpcMethod?
@@ -43,6 +44,10 @@ Polhem.JsonRpc.Server.JsonRpcRequestContext.Request.get -> Polhem.JsonRpc.JsonRp
 Polhem.JsonRpc.Server.JsonRpcRequestContext.ResponseMembers.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>!
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Result.get -> System.Text.Json.JsonElement?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Result.set -> void
+Polhem.JsonRpc.Server.JsonRpcRequestContext.ReturnType.get -> System.Type?
+Polhem.JsonRpc.Server.JsonRpcRequestContext.ReturnType.set -> void
+Polhem.JsonRpc.Server.JsonRpcRequestContext.ReturnValue.get -> object?
+Polhem.JsonRpc.Server.JsonRpcRequestContext.ReturnValue.set -> void
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Services.get -> System.IServiceProvider?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Transport.get -> Polhem.JsonRpc.Server.JsonRpcTransportInfo!
 Polhem.JsonRpc.Server.JsonRpcServerOptions

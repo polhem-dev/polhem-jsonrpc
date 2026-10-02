@@ -24,7 +24,8 @@ public static class JsonRpcServiceCollectionExtensions
     /// <see cref="JsonRpcServerOptions"/> already registered with the services as an instance are used, and
     /// <paramref name="configure"/> is applied to them. A framework that sets up its own object factory, method policy
     /// and filters registers its options first; the application's <paramref name="configure"/> then adds to them,
-    /// and filters it adds run inside the framework's.
+    /// and filters it adds run inside the framework's. <see cref="JsonRpcHttpOptions"/> registered the same way are
+    /// shared with <paramref name="configureHttp"/>.
     /// </para>
     /// </remarks>
     [RequiresUnreferencedCode(JsonRpcEndpointRouteBuilderExtensions.ReflectionMessage)]
@@ -45,10 +46,16 @@ public static class JsonRpcServiceCollectionExtensions
             services.AddSingleton(options);
         }
         configure?.Invoke(options);
-        var httpOptions = new JsonRpcHttpOptions();
+        var httpOptions = services
+            .LastOrDefault(descriptor => descriptor.ServiceType == typeof(JsonRpcHttpOptions))
+            ?.ImplementationInstance as JsonRpcHttpOptions;
+        if (httpOptions is null)
+        {
+            httpOptions = new JsonRpcHttpOptions();
+            services.AddSingleton(httpOptions);
+        }
         configureHttp?.Invoke(httpOptions);
 
-        services.AddSingleton(httpOptions);
         services.TryAddSingleton(provider =>
         {
             options.ObjectFactory ??= provider.GetRequiredService<IJsonRpcObjectFactory>();
