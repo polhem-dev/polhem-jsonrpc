@@ -130,7 +130,7 @@ public sealed class JsonRpcDispatcher
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(transport);
-        var context = new JsonRpcRequestContext(request, transport, cancellationToken);
+        var context = new JsonRpcRequestContext(request, transport, cancellationToken) { SerializerOptions = _serializerOptions };
 
         JsonRpcResponse response;
         object? instance = null;
@@ -150,7 +150,7 @@ public sealed class JsonRpcDispatcher
             context.Method = new JsonRpcMethod(progId, action, instance, method);
 
             await RunFiltersAsync(context, 0).ConfigureAwait(false);
-            response = JsonRpcResponse.Success(request.Id, context.Result);
+            response = JsonRpcResponse.Success(request.Id, context.GetResult());
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -190,9 +190,8 @@ public sealed class JsonRpcDispatcher
         var method = context.Method!;
         var argument = _binder.Bind(context);
         var (value, valueType) = await InvokeMethodAsync(method.MethodInfo, method.Instance, argument).ConfigureAwait(false);
-        context.Result = valueType is null || value is null
-            ? null
-            : JsonSerializer.SerializeToElement(value, _serializerOptions.GetTypeInfo(valueType));
+        context.ReturnValue = value;
+        context.ReturnType = valueType;
     }
 
     // Exact, case-sensitive name match, like the Polhem framework's `Type.GetMethod(action)`. A name with more than

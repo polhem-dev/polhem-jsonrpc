@@ -31,6 +31,18 @@ public sealed record MismatchRequest(string Text);
 
 public sealed record EchoArgs(string Text);
 
+public sealed record DescribeRequest(string Text);
+
+/// <summary>
+/// A response the default serializer options cannot write: System.Text.Json refuses <see cref="System.Type"/>.
+/// </summary>
+public sealed class DescribeResponse
+{
+    public Type Kind { get; set; } = typeof(string);
+
+    public string Text { get; set; } = string.Empty;
+}
+
 /// <summary>
 /// The methods of the JSON-RPC 2.0 specification's examples, plus shapes the dispatcher must handle. The ProgId
 /// is <c>Spec</c>.
@@ -68,6 +80,8 @@ public sealed class SpecTarget
 
     // Not callable under the naming convention: the result is not named MismatchResponse.
     public FailResponse Mismatch(MismatchRequest request) => new();
+
+    public DescribeResponse Describe(DescribeRequest request) => new() { Text = request.Text };
 
     // Not callable under the naming convention: the parameter is not named EchoRequest.
     public string Echo(EchoArgs args) => args.Text;

@@ -180,7 +180,7 @@ public class ClientTests
         {
             context.Request.Params = SealedPayload.Open(context.Request.Params!.Value);
             await next(context);
-            context.Result = SealedPayload.Seal(context.Result!.Value);
+            context.Result = SealedPayload.Seal(context.GetResult()!.Value);
         }
     }
 
