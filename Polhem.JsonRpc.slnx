@@ -5,4 +5,13 @@
     <Project Path="src/Polhem.JsonRpc.AspNetCore/Polhem.JsonRpc.AspNetCore.csproj" />
     <Project Path="src/Polhem.JsonRpc.Client/Polhem.JsonRpc.Client.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Polhem.JsonRpc.AotSmoke/Polhem.JsonRpc.AotSmoke.csproj" />
+    <Project Path="tests/Polhem.JsonRpc.UnitTests/Polhem.JsonRpc.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/QuickStart.Contracts/QuickStart.Contracts.csproj" />
+    <Project Path="samples/QuickStart.Server/QuickStart.Server.csproj" />
+    <Project Path="samples/QuickStart.Client/QuickStart.Client.csproj" />
+  </Folder>
 </Solution>

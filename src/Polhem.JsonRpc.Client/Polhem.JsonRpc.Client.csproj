@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <Description>JSON-RPC 2.0 client: JsonRpcConnector with an HTTP transport, batches, notifications and request interceptors.</Description>
+    <!-- Runs on iOS, Android and WebAssembly. The trim and AOT analyzers turn every incompatible call into a build error. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

@@ -372,3 +372,9 @@ FodyWeavers.xsd
 
 # Personal instructions for Claude Code, kept out of version control
 CLAUDE.local.md
+
+# VS Code: the shared launch and build settings are committed, personal ones are not
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

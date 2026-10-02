@@ -30,6 +30,28 @@ jobs:
       - name: Test
         run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
 
+  # Native AOT: publishes the smoke test, which uses only Polhem.JsonRpc and Polhem.JsonRpc.Client, with Native AOT
+  # and runs it. Every AOT warning is an error, so a change that breaks AOT compatibility fails here even when the
+  # analyzers of a normal build do not see it.
+  aot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7  # v5.2.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish with Native AOT
+        run: dotnet publish tests/Polhem.JsonRpc.AotSmoke/Polhem.JsonRpc.AotSmoke.csproj --configuration Release --output aot-smoke
+
+      - name: Run
+        run: ./aot-smoke/Polhem.JsonRpc.AotSmoke
+
   # SonarCloud analysis. It runs apart from the build job above, because the scanner wraps the build and turns warnings
   # back into warnings, so the build job stays the gate for TreatWarningsAsErrors. Settings tied to the files of this
   # repository are in SonarQube.Analysis.xml.

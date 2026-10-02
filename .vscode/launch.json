@@ -1,0 +1,41 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run QuickStart.Server",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "prep-quickstart-server",
+            "program": "${workspaceFolder}/samples/QuickStart.Server/bin/Debug/net10.0/QuickStart.Server.dll",
+            "cwd": "${workspaceFolder}/samples/QuickStart.Server",
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5080"
+            },
+            "//justMyCode": "false so the debugger does not break on JsonRpcErrorException: Calculator.Divide throws it on purpose, and the dispatcher turns it into an error response.",
+            "justMyCode": false
+        },
+        {
+            "//": "Calls the server on http://localhost:5080/api. Start the server first, or use the 'Server + Client' compound.",
+            "name": "Run QuickStart.Client",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "prep-quickstart-client",
+            "program": "${workspaceFolder}/samples/QuickStart.Client/bin/Debug/net10.0/QuickStart.Client.dll",
+            "cwd": "${workspaceFolder}/samples/QuickStart.Client",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Run QuickStart (Server + Client)",
+            "configurations": [
+                "Run QuickStart.Server",
+                "Run QuickStart.Client"
+            ],
+            "stopAll": true
+        }
+    ]
+}

@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <Description>JSON-RPC 2.0 message types, error codes and the transport abstraction shared by Polhem.JsonRpc.Server and Polhem.JsonRpc.Client.</Description>
+    <!-- Runs on iOS, Android and WebAssembly. The trim and AOT analyzers turn every incompatible call into a build error. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
 </Project>

@@ -1,0 +1,120 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "${workspaceFolder}/Polhem.JsonRpc.slnx",
+                "--configuration",
+                "Release",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
+            "label": "test",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/Polhem.JsonRpc.slnx",
+                "--configuration",
+                "Release"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
+            "label": "build-quickstart-server",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "${workspaceFolder}/samples/QuickStart.Server/QuickStart.Server.csproj",
+                "--configuration",
+                "Debug",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
+        },
+        {
+            "label": "free-quickstart-port",
+            "type": "shell",
+            "command": "pids=$(lsof -ti tcp:5080); if [ -n \"$pids\" ]; then echo \"Killing stale QuickStart.Server on :5080 ($pids)\"; kill $pids; fi; exit 0",
+            "windows": {
+                "command": "$p=(Get-NetTCPConnection -LocalPort 5080 -State Listen -ErrorAction SilentlyContinue).OwningProcess; if ($p) { Write-Host \"Killing stale QuickStart.Server on :5080 ($p)\"; Stop-Process -Id $p -Force }; exit 0"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "prep-quickstart-server",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "build-quickstart-server",
+                "free-quickstart-port"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build-quickstart-client",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "${workspaceFolder}/samples/QuickStart.Client/QuickStart.Client.csproj",
+                "--configuration",
+                "Debug",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
+        },
+        {
+            "label": "wait-for-quickstart-server",
+            "type": "shell",
+            "command": "for i in $(seq 1 100); do curl -s -o /dev/null --max-time 1 http://localhost:5080/api && exit 0; sleep 0.3; done; echo 'Timed out waiting for QuickStart.Server on :5080'; exit 1",
+            "windows": {
+                "command": "for ($i=0; $i -lt 100; $i++) { if ((Test-NetConnection -ComputerName localhost -Port 5080 -InformationLevel Quiet -WarningAction SilentlyContinue)) { exit 0 }; Start-Sleep -Milliseconds 300 }; Write-Host 'Timed out waiting for QuickStart.Server on :5080'; exit 1"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "prep-quickstart-client",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "build-quickstart-client",
+                "wait-for-quickstart-server"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
