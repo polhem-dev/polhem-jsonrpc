@@ -8,4 +8,4 @@ builder.Services.AddJsonRpcServer();
 
 var app = builder.Build();
 app.MapJsonRpc("/api");
-app.Run();
+await app.RunAsync();

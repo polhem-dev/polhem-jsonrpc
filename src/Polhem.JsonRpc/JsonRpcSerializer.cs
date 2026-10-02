@@ -17,6 +17,11 @@ public static class JsonRpcSerializer
 {
     private const string Version = "2.0";
 
+    private const string JsonRpcMember = "jsonrpc";
+    private const string ResultMember = "result";
+    private const string ErrorMember = "error";
+    private const string IdMember = "id";
+
     // Error messages are protocol text sent to the caller, so they are fixed and never echo the input.
     private const string ParseErrorMessage = "Parse error";
     private const string InvalidRequestMessage = "Invalid Request";
@@ -77,12 +82,12 @@ public static class JsonRpcSerializer
 
         // The id is read first, so that an otherwise invalid request is still answered with its own id.
         var id = JsonRpcId.None;
-        if (element.TryGetProperty("id", out var idElement) && !TryReadId(idElement, out id))
+        if (element.TryGetProperty(IdMember, out var idElement) && !TryReadId(idElement, out id))
         {
             return InvalidRequest(JsonRpcId.Null);
         }
 
-        if (!element.TryGetProperty("jsonrpc", out var version)
+        if (!element.TryGetProperty(JsonRpcMember, out var version)
             || version.ValueKind != JsonValueKind.String
             || !version.ValueEquals(Version))
         {
@@ -150,7 +155,7 @@ public static class JsonRpcSerializer
         }
 
         var id = JsonRpcId.Null;
-        if (element.TryGetProperty("id", out var idElement) && !TryReadId(idElement, out id))
+        if (element.TryGetProperty(IdMember, out var idElement) && !TryReadId(idElement, out id))
         {
             throw new JsonException("The id of a JSON-RPC response must be a string, an integer or null.");
         }
@@ -158,8 +163,8 @@ public static class JsonRpcSerializer
         Dictionary<string, JsonElement>? additional = null;
         foreach (var property in element.EnumerateObject())
         {
-            if (property.NameEquals("jsonrpc") || property.NameEquals("result")
-                || property.NameEquals("error") || property.NameEquals("id"))
+            if (property.NameEquals(JsonRpcMember) || property.NameEquals(ResultMember)
+                || property.NameEquals(ErrorMember) || property.NameEquals(IdMember))
             {
                 continue;
             }
@@ -168,13 +173,13 @@ public static class JsonRpcSerializer
         }
 
         JsonRpcResponse response;
-        if (element.TryGetProperty("error", out var errorElement) && errorElement.ValueKind != JsonValueKind.Null)
+        if (element.TryGetProperty(ErrorMember, out var errorElement) && errorElement.ValueKind != JsonValueKind.Null)
         {
             response = JsonRpcResponse.Failure(id, ReadError(errorElement));
         }
         else
         {
-            JsonElement? result = element.TryGetProperty("result", out var resultElement) ? resultElement.Clone() : null;
+            JsonElement? result = element.TryGetProperty(ResultMember, out var resultElement) ? resultElement.Clone() : null;
             response = JsonRpcResponse.Success(id, result);
         }
         response.AdditionalMembers = additional;
@@ -222,7 +227,7 @@ public static class JsonRpcSerializer
         ArgumentNullException.ThrowIfNull(request);
 
         writer.WriteStartObject();
-        writer.WriteString("jsonrpc", Version);
+        writer.WriteString(JsonRpcMember, Version);
         writer.WriteString("method", request.Method);
         if (request.Params is { } parameters)
         {
@@ -231,7 +236,7 @@ public static class JsonRpcSerializer
         }
         if (!request.Id.IsNone)
         {
-            writer.WritePropertyName("id");
+            writer.WritePropertyName(IdMember);
             WriteId(writer, request.Id);
         }
         writer.WriteEndObject();
@@ -287,19 +292,19 @@ public static class JsonRpcSerializer
         ArgumentNullException.ThrowIfNull(response);
 
         writer.WriteStartObject();
-        writer.WriteString("jsonrpc", Version);
+        writer.WriteString(JsonRpcMember, Version);
         if (response.AdditionalMembers is { } additional)
         {
             foreach (var (name, value) in additional)
             {
-                if (name is "jsonrpc" or "result" or "error" or "id") { continue; }
+                if (name is JsonRpcMember or ResultMember or ErrorMember or IdMember) { continue; }
                 writer.WritePropertyName(name);
                 value.WriteTo(writer);
             }
         }
         if (response.Error is { } error)
         {
-            writer.WritePropertyName("error");
+            writer.WritePropertyName(ErrorMember);
             writer.WriteStartObject();
             writer.WriteNumber("code", error.Code);
             writer.WriteString("message", error.Message);
@@ -312,7 +317,7 @@ public static class JsonRpcSerializer
         }
         else
         {
-            writer.WritePropertyName("result");
+            writer.WritePropertyName(ResultMember);
             if (response.Result is { } result)
             {
                 result.WriteTo(writer);
@@ -326,7 +331,7 @@ public static class JsonRpcSerializer
         var hasId = response.Id.Kind is JsonRpcIdKind.String or JsonRpcIdKind.Number;
         if (hasId || options?.OmitNullId != true)
         {
-            writer.WritePropertyName("id");
+            writer.WritePropertyName(IdMember);
             WriteId(writer, response.Id);
         }
         writer.WriteEndObject();
