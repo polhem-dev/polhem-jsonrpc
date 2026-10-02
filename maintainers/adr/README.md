@@ -8,3 +8,4 @@ implementation evolves: when a decision is overturned, it is marked "Superseded"
 | # | Decision | Status |
 |---|----------|--------|
 | [001](adr-001-package-split-and-design.md) | Package split and core design of Polhem.JsonRpc | ✅ Accepted |
+| [002](adr-002-payload-packages.md) | Optional payload packages for encoding, encryption and replay protection | ✅ Accepted |

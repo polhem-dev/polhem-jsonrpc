@@ -100,6 +100,9 @@ Filters on the server and interceptors on the client can read and rewrite the ra
 binding and after serialization. A host that encrypts or compresses its payloads does it there. A host that does not
 needs nothing beyond HTTP: response compression on the server, automatic decompression in `HttpClient`, and HTTPS.
 
+> Amended by [ADR-002](adr-002-payload-packages.md): the core packages still carry none of this, but Polhem's payload
+> envelope, compression, encryption and replay protection are offered as two optional packages.
+
 ### 6. Defaults follow the specification; deviations are explicit options
 
 The internal error code is `-32603`, a response carries only `jsonrpc`, `result` or `error`, and `id`, and `id` is
