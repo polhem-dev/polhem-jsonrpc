@@ -80,6 +80,16 @@ foreach (var format in new[] { PayloadFormat.Encoded, PayloadFormat.Encrypted })
     if (processor.Unwrap(wrapped, key) is not PayloadArgs { Name: "smoke", Count: 7 }) { failures.Add($"the {format} payload did not round-trip"); }
 }
 var plain = processor.Unwrap(processor.Wrap(new PayloadArgs("plain", 1), PayloadFormat.Plain));
+
+// The documented payload flow: the connector sends what Wrap returns, a JsonElement the application's context does not
+// list, as a single call and in a batch.
+var wrappedArgs = processor.Wrap(new PayloadArgs("sent", 3), PayloadFormat.Encoded);
+var echoed = await rpc.InvokeAsync<JsonElement>("payload.echo", wrappedArgs);
+if (processor.Unwrap(echoed) is not PayloadArgs { Name: "sent", Count: 3 }) { failures.Add("the wrapped call did not round-trip"); }
+var payloadBatch = rpc.CreateBatch();
+var batchedEcho = payloadBatch.Add<JsonElement>("payload.echo", wrappedArgs);
+await payloadBatch.SendAsync();
+if (processor.Unwrap(await batchedEcho) is not PayloadArgs { Name: "sent", Count: 3 }) { failures.Add("the wrapped batch call did not round-trip"); }
 if (plain is not JsonElement { ValueKind: JsonValueKind.Object }) { failures.Add("the plain payload did not round-trip"); }
 
 // A reader that names the type needs nothing registered, in either an encoded or a plain envelope.

@@ -175,7 +175,7 @@ public class ClientTests
         await Assert.ThrowsAsync<JsonRpcErrorException>(() => connector.InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
     }
 
-    [Fact(DisplayName = "Client: the non-generic InvokeAsync and InvokeAsync<JsonElement> need no JsonElement in a source-generated context")]
+    [Fact(DisplayName = "Client: JsonElement parameters and results need no JsonElement in a source-generated context, as the payload flow sends them")]
     public async Task InvokeAsync_JsonElementWithSourceGeneratedContext_NeedsNoMetadata()
     {
         var options = new JsonRpcClientOptions
@@ -185,11 +185,17 @@ public class ClientTests
         var connector = InProcess(options);
 
         await connector.InvokeAsync("Spec.Subtract", new SubtractRequest(5, 3), CancellationToken.None);
+        var asElement = await connector.InvokeAsync<JsonElement>("Spec.Subtract", DispatcherFixture.Element("""{"minuend": 5, "subtrahend": 3}"""));
+        var batch = connector.CreateBatch();
+        var batched = batch.Add<JsonElement>("Spec.Subtract", DispatcherFixture.Element("""{"minuend": 5, "subtrahend": 3}"""));
+        await batch.SendAsync();
         var element = await connector.InvokeAsync<JsonElement>("Spec.Subtract", new SubtractRequest(5, 3));
         var nullable = await connector.InvokeAsync<JsonElement?>("Spec.Subtract", new SubtractRequest(5, 3));
 
         Assert.Equal(2, element.GetProperty("difference").GetInt32());
         Assert.Equal(2, nullable!.Value.GetProperty("difference").GetInt32());
+        Assert.Equal(2, asElement.GetProperty("difference").GetInt32());
+        Assert.Equal(2, (await batched).GetProperty("difference").GetInt32());
     }
 
     [Fact(DisplayName = "HTTP transport: an error object in a 4xx body is read as a JSON-RPC error")]

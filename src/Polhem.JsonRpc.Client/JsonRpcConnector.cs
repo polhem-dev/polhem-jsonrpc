@@ -102,7 +102,11 @@ public sealed class JsonRpcConnector
         JsonElement? element = null;
         if (parameters is not null)
         {
-            var value = JsonSerializer.SerializeToElement(parameters, _serializerOptions.GetTypeInfo(parameters.GetType()));
+            // A JsonElement is already JSON, as PayloadProcessor.Wrap returns it; serializing it would need the application's
+            // serializer context to list JsonElement, which nothing tells an application under Native AOT to do.
+            var value = parameters is JsonElement json
+                ? json
+                : JsonSerializer.SerializeToElement(parameters, _serializerOptions.GetTypeInfo(parameters.GetType()));
             if (value.ValueKind is not (JsonValueKind.Object or JsonValueKind.Array))
             {
                 throw new ArgumentException("Parameters must serialize to a JSON object or array.", nameof(parameters));
