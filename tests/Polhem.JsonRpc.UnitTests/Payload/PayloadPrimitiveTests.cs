@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Security.Cryptography;
 using Polhem.JsonRpc.Payload;
@@ -44,6 +45,39 @@ public class PayloadPrimitiveTests
         Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, RandomNumberGenerator.GetBytes(64)));
     }
 
+    [Theory]
+    [DisplayName("AES-CBC-HMAC: data whose length fields do not fit it is refused as a cryptographic error, never an out-of-range")]
+    [InlineData("shorter than the minimum")]
+    [InlineData("last byte missing")]
+    [InlineData("IV length 0")]
+    [InlineData("IV length 17")]
+    [InlineData("IV length beyond the data")]
+    [InlineData("cipher length 0")]
+    [InlineData("cipher length negative")]
+    [InlineData("cipher length beyond the data")]
+    public void AesCbcHmac_Decrypt_MalformedLayout_ThrowsCryptographicException(string malformation)
+    {
+        var encryptor = new AesCbcHmacPayloadEncryptor();
+        var key = RandomNumberGenerator.GetBytes(AesCbcHmacPayloadEncryptor.KeySize);
+        // Layout: IV length (4, little-endian), IV, cipher length (4, little-endian), cipher, HMAC (32).
+        var data = encryptor.Encrypt(new byte[100], key);
+        const int CipherLengthOffset = 4 + 16;
+        var malformed = malformation switch
+        {
+            "shorter than the minimum" => data[..40],
+            "last byte missing" => data[..^1],
+            "IV length 0" => WithInt32(data, 0, 0),
+            "IV length 17" => WithInt32(data, 0, 17),
+            "IV length beyond the data" => WithInt32(data, 0, 1000),
+            "cipher length 0" => WithInt32(data, CipherLengthOffset, 0),
+            "cipher length negative" => WithInt32(data, CipherLengthOffset, -1),
+            "cipher length beyond the data" => WithInt32(data, CipherLengthOffset, int.MaxValue),
+            _ => throw new ArgumentOutOfRangeException(nameof(malformation)),
+        };
+
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(malformed, key));
+    }
+
     [Fact]
     [DisplayName("Frame: data shorter than a frame or of another version is refused")]
     public void Frame_Extract_Invalid_ThrowsReplayRejected()
@@ -86,5 +120,12 @@ public class PayloadPrimitiveTests
 
         Assert.True(registry.IsNameOf(VectorPing.PolhemTypeName, typeof(VectorPing)));
         Assert.False(registry.IsNameOf("Polhem.JsonRpc.UnitTests.Payload.VectorPing, Polhem.JsonRpc.UnitTests", typeof(VectorPing)));
+    }
+
+    private static byte[] WithInt32(byte[] data, int offset, int value)
+    {
+        var copy = (byte[])data.Clone();
+        BinaryPrimitives.WriteInt32LittleEndian(copy.AsSpan(offset), value);
+        return copy;
     }
 }

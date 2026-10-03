@@ -95,6 +95,64 @@ public class PayloadServerTests
         Assert.Equal(ReplayRejected, ex.Code);
     }
 
+    [Theory]
+    [DisplayName("Payload server: a frame is accepted up to the timestamp tolerance on either side of the server clock, and refused beyond it")]
+    [InlineData(-299, true)]
+    [InlineData(299, true)]
+    [InlineData(-301, false)]
+    [InlineData(301, false)]
+    public async Task Call_TimestampAtToleranceEdge_IsAcceptedOrRejected(int clientClockOffsetSeconds, bool accepted)
+    {
+        var serverNow = new DateTimeOffset(2026, 10, 3, 12, 0, 0, TimeSpan.Zero);
+        var (rpc, _) = Create(new TestPolicy(), new FixedClock(serverNow));
+        var client = new PayloadProcessor(new PayloadOptions
+        {
+            RequireFrame = true,
+            TypeResolver = Registry(),
+            TimeProvider = new FixedClock(serverNow.AddSeconds(clientClockOffsetSeconds)),
+        });
+        var parameters = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+
+        if (accepted)
+        {
+            var result = await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
+            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result, s_key)).Difference);
+        }
+        else
+        {
+            var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
+            Assert.Equal(ReplayRejected, ex.Code);
+        }
+    }
+
+    [Theory]
+    [DisplayName("Payload server: a call the method policy refuses is answered -32601 without fetching a key or decrypting")]
+    [InlineData("Spec.Subtract", 1)]
+    [InlineData("Spec.Echo", 0)]
+    public async Task Call_PolicyRefusedMethod_IsNotDecrypted(string method, int expectedDecryptions)
+    {
+        var encryptor = new CountingEncryptor();
+        var policy = new TestPolicy();
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), Encryptor = encryptor };
+        var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, policy));
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+        var parameters = new PayloadProcessor(payloadOptions)
+            .Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+
+        if (expectedDecryptions == 0)
+        {
+            var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(method, parameters));
+            Assert.Equal(JsonRpcErrorCodes.MethodNotFound, ex.Code);
+        }
+        else
+        {
+            await rpc.InvokeAsync<JsonElement>(method, parameters);
+        }
+
+        Assert.Equal(expectedDecryptions, encryptor.Decryptions);
+        Assert.Equal(expectedDecryptions, policy.KeyRequests);
+    }
+
     [Fact]
     [DisplayName("Payload server: an encrypted call fails when the application has no key for the caller")]
     public async Task Call_NoKey_IsRejected()
@@ -145,9 +203,9 @@ public class PayloadServerTests
     private static PayloadTypeRegistry Registry() => new PayloadTypeRegistry()
         .Register<SubtractRequest>().Register<SubtractResponse>().Register<UpperRequest>();
 
-    private static (JsonRpcConnector Rpc, PayloadProcessor Client) Create(TestPolicy policy)
+    private static (JsonRpcConnector Rpc, PayloadProcessor Client) Create(TestPolicy policy, TimeProvider? clock = null)
     {
-        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry() };
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = clock ?? TimeProvider.System };
         var dispatcher = DispatcherFixture.Create(options =>
         {
             options.UsePayload(payloadOptions, policy);
@@ -169,11 +227,39 @@ public class PayloadServerTests
 
         public bool UniqueSequence { get; init; }
 
-        public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context) => ValueTask.FromResult(Key);
+        public int KeyRequests { get; private set; }
+
+        public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context)
+        {
+            KeyRequests++;
+            return ValueTask.FromResult(Key);
+        }
 
         public string? GetReplayScope(JsonRpcRequestContext context) => ReplayScope;
 
         public bool RequiresUniqueSequence(JsonRpcRequestContext context) => UniqueSequence;
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class CountingEncryptor : IPayloadEncryptor
+    {
+        private readonly AesCbcHmacPayloadEncryptor _inner = new();
+
+        public int Decryptions { get; private set; }
+
+        public string Name => _inner.Name;
+
+        public byte[] Encrypt(byte[] bytes, byte[] key) => _inner.Encrypt(bytes, key);
+
+        public byte[] Decrypt(byte[] bytes, byte[] key)
+        {
+            Decryptions++;
+            return _inner.Decrypt(bytes, key);
+        }
     }
 
     private sealed class DelegateFilter(Func<JsonRpcRequestContext, JsonRpcFilterDelegate, ValueTask> invoke) : IJsonRpcFilter

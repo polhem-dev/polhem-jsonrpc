@@ -91,6 +91,20 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     }
 
     [Fact]
+    [DisplayName("HTTP: a body without Content-Length is cut off at MaxRequestBodySize and answered with 413")]
+    public async Task Post_TooLargeWithoutContentLength_Returns413()
+    {
+        var large = $$"""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "{{new string('x', 2048)}}"}, "id": 1}""";
+        using var content = new StringContent(large, Encoding.UTF8, "application/json");
+        content.Headers.ContentLength = null;
+
+        using var response = await _client!.PostAsync("/api", content);
+
+        Assert.Null(content.Headers.ContentLength);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+
+    [Fact]
     [DisplayName("HTTP: StatusCodeSelector chooses the status of a single response")]
     public async Task Post_StatusCodeSelector_ChoosesStatus()
     {

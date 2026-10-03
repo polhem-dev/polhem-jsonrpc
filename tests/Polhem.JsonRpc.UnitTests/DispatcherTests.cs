@@ -53,7 +53,7 @@ public class DispatcherTests
     }
 
     [Theory]
-    [DisplayName("Malformed names, static methods and overloaded names are not resolved")]
+    [DisplayName("Malformed or too long names, and methods that are static, overloaded, accessors, generic or declared by object, are not resolved")]
     [InlineData("Spec")]
     [InlineData(".Subtract")]
     [InlineData("Spec.")]
@@ -62,6 +62,10 @@ public class DispatcherTests
     [InlineData("Spec.Static")]
     [InlineData("Spec.Twice")]
     [InlineData("Spec.ToString")]
+    [InlineData("Spec.Equals")]
+    [InlineData("Spec.set_Label")]
+    [InlineData("Spec.Generic")]
+    [InlineData("Spec.LongActionNameThatFillsEveryOneOfTheSixtyFourCharactersAllowed_XY")]
     public async Task DispatchAsync_UnresolvableName_ReturnsMethodNotFound(string method)
     {
         var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
@@ -69,6 +73,18 @@ public class DispatcherTests
         var response = await CallAsync(dispatcher, method, """{"minuend": 1, "subtrahend": 1}""");
 
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+    }
+
+    [Fact]
+    [DisplayName("An action name of exactly 64 characters is resolved")]
+    public async Task DispatchAsync_ActionNameAtLengthLimit_CallsAction()
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
+
+        var response = await CallAsync(dispatcher, "Spec.LongActionNameThatFillsEveryOneOfTheSixtyFourCharactersAllowed_X",
+            """{"minuend": 5, "subtrahend": 3}""");
+
+        Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
     }
 
     [Fact]
@@ -284,6 +300,74 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InvalidRequest, answer.RootElement.GetProperty("error").GetProperty("code").GetInt32());
     }
 
+    [Theory]
+    [DisplayName("DispatchBatchAsync answers an empty batch or one larger than MaxBatchSize with a single -32600")]
+    [InlineData(0)]
+    [InlineData(3)]
+    public async Task DispatchBatchAsync_EmptyOrTooLarge_ReturnsSingleInvalidRequest(int count)
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.MaxBatchSize = 2);
+        var requests = Enumerable.Range(1, count)
+            .Select(i => new JsonRpcRequest("Spec.Subtract", DispatcherFixture.Element("""{"minuend": 1, "subtrahend": 1}"""), JsonRpcId.FromNumber(i)))
+            .ToList();
+
+        var responses = await dispatcher.DispatchBatchAsync(requests, DispatcherFixture.Http());
+
+        var response = Assert.Single(responses);
+        Assert.Equal(JsonRpcErrorCodes.InvalidRequest, response.Error!.Code);
+        Assert.Equal(JsonRpcId.Null, response.Id);
+    }
+
+    [Fact]
+    [DisplayName("A message nested deeper than the JSON reader allows is answered with -32700")]
+    public async Task DispatchMessageAsync_NestedTooDeep_ReturnsParseError()
+    {
+        var nested = new string('[', 70) + new string(']', 70);
+        var json = $$"""{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": {{nested}}}, "id": 1}""";
+
+        using var answer = await DispatcherFixture.RunAsync(DispatcherFixture.Create(), json);
+
+        Assert.Equal(JsonRpcErrorCodes.ParseError, answer!.RootElement.GetProperty("error").GetProperty("code").GetInt32());
+        Assert.Equal(JsonValueKind.Null, answer.RootElement.GetProperty("id").ValueKind);
+    }
+
+    [Fact]
+    [DisplayName("A call the caller cancelled propagates the cancellation instead of answering -32603")]
+    public async Task DispatchAsync_CallerCancelled_Throws()
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new CancellationObservingFilter()));
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+        var request = new JsonRpcRequest("Spec.Subtract", DispatcherFixture.Element("""{"minuend": 1, "subtrahend": 1}"""), JsonRpcId.FromNumber(1));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => dispatcher.DispatchAsync(request, DispatcherFixture.Http(), cancelled.Token));
+    }
+
+    [Fact]
+    [DisplayName("A cancellation the caller did not ask for is an internal error like any other exception")]
+    public async Task DispatchAsync_CancellationNotRequested_ReturnsInternalError()
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new CancellationObservingFilter()));
+
+        var response = await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.InternalError, response.Error!.Code);
+    }
+
+    [Fact]
+    [DisplayName("InProcessTransport marks its calls as in-process")]
+    public async Task InProcessTransport_SendAsync_MarksInProcess()
+    {
+        var seen = new List<JsonRpcTransportKind>();
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new KindRecordingFilter(seen)));
+        var request = new JsonRpcRequest("Spec.Subtract", DispatcherFixture.Element("""{"minuend": 1, "subtrahend": 1}"""), JsonRpcId.FromNumber(1));
+
+        await new InProcessTransport(dispatcher).SendAsync(request);
+
+        Assert.Equal([JsonRpcTransportKind.InProcess], seen);
+    }
+
     private sealed class AllowAllPolicy : IJsonRpcMethodPolicy
     {
         public bool IsCallable(MethodInfo method) => true;
@@ -332,6 +416,25 @@ public class DispatcherTests
             await next(context);
             var response = (DescribeResponse)context.ReturnValue!;
             context.Result = JsonSerializer.SerializeToElement($"{response.Kind.Name}:{response.Text}");
+        }
+    }
+
+    // Throws when the token is cancelled; with a live token it throws a cancellation the caller never asked for.
+    private sealed class CancellationObservingFilter : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            throw new OperationCanceledException();
+        }
+    }
+
+    private sealed class KindRecordingFilter(List<JsonRpcTransportKind> seen) : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            seen.Add(context.Transport.Kind);
+            return next(context);
         }
     }
 

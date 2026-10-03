@@ -23,6 +23,7 @@ public sealed class PayloadOptions
     private IPayloadEncryptor _encryptor = new AesCbcHmacPayloadEncryptor();
     private IPayloadTypeResolver _typeResolver = new PayloadTypeRegistry();
     private TimeSpan _frameTimestampTolerance = TimeSpan.FromMinutes(5);
+    private TimeProvider _timeProvider = TimeProvider.System;
 
     /// <summary>
     /// Gets or sets the options the value of a plain envelope is serialized and deserialized with. The default is the
@@ -104,6 +105,16 @@ public sealed class PayloadOptions
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
             _frameTimestampTolerance = value;
         }
+    }
+
+    /// <summary>
+    /// Gets or sets the clock a writer stamps frames with and a reader checks their timestamps against. The default is
+    /// <see cref="TimeProvider.System"/>.
+    /// </summary>
+    public TimeProvider TimeProvider
+    {
+        get => _timeProvider;
+        set => _timeProvider = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     /// <summary>

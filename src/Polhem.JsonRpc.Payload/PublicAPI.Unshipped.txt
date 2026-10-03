@@ -1,1 +1,3 @@
 #nullable enable
+Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.get -> System.TimeProvider!
+Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.set -> void

@@ -7,6 +7,11 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+
+- `PayloadOptions.TimeProvider`: the clock frames are stamped with and their timestamps checked against. It defaults to
+  the system clock, and `PayloadFilter` passes it to the in-memory replay store it creates.
+
 ## [1.0.0] - 2026-10-03
 
 ### Removed
