@@ -126,6 +126,23 @@ public sealed class SpecTarget
 }
 
 /// <summary>
+/// A record, whose compiler-generated <c>Equals(RecordTarget?)</c> has the shape of an action. The ProgId is
+/// <c>Record</c>.
+/// </summary>
+[SuppressMessage("Performance", "CA1822:Mark members as static",
+    Justification = "JSON-RPC actions are called on an instance; static methods are not resolved.")]
+public record RecordTarget
+{
+    public SubtractResponse Subtract(SubtractRequest request) => new(request.Minuend - request.Subtrahend);
+}
+
+/// <summary>
+/// A derived record: its <c>Equals(RecordTarget?)</c> overrides the base record's, and <c>Subtract</c> is inherited. The
+/// ProgId is <c>DerivedRecord</c>.
+/// </summary>
+public sealed record DerivedRecordTarget : RecordTarget;
+
+/// <summary>
 /// An object that records whether it was released. The ProgId is <c>Disposable</c>.
 /// </summary>
 public sealed class DisposableTarget : IDisposable

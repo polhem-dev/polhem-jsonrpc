@@ -76,8 +76,9 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest 
 | 物件 | 由應用程式的 `IJsonRpcObjectFactory.CreateObject(progId, context)` 建立呼叫要執行的物件，回傳 `null` 代表不認得這個 ProgId。呼叫結束後物件會交給 `ReleaseObjectAsync`。 |
 | Action | 該物件上公開、非泛型、恰好一個參數的實例方法。同名而符合條件的方法有一個以上時視為不明確，當作找不到。 |
 | 約定 | 參數型別名為 `{Action}Request`、回傳型別（或 `Task<T>`／`ValueTask<T>` 的結果型別）名為 `{Action}Response` 的方法才能被呼叫：`AddResponse Add(AddRequest request)`。其他公開方法一律當作不存在。要換規則就設定 `JsonRpcServerOptions.MethodPolicy`。 |
-| 參數 | `params` 必須是 JSON 物件，反序列化成 request（預設 camelCase 名稱）。沒有 `params` 時傳入 `null`；陣列回 `-32602 Invalid params`。 |
+| 參數 | `params` 必須是 JSON 物件，反序列化成 request（預設 camelCase 名稱）。沒有 `params` 或為陣列時回 `-32602 Invalid params`。 |
 | 結果 | 回傳的 response 物件成為 `result`。 |
+| Id | 字串、整數或 `null`，原樣回傳。帶小數或指數的數字（`1.0`、`1e2`），或超出 64 位元整數的數字，會回 `-32600 Invalid Request` 且 id 為 `null`，因為規格不建議使用這些值；請使用整數或字串。 |
 | 錯誤 | 名稱、物件或 action 找不到時回 `-32601 Method not found`。丟 `JsonRpcErrorException` 可回傳自訂的錯誤碼與訊息；其他例外一律回 `-32603 Internal error`，不帶出例外訊息。 |
 
 ## 範例

@@ -15,6 +15,8 @@ internal sealed class TestObjectFactory : IJsonRpcObjectFactory
     {
         "Spec" => new SpecTarget(),
         "Disposable" => new DisposableTarget(),
+        "Record" => new RecordTarget(),
+        "DerivedRecord" => new DerivedRecordTarget(),
         LongProgId => new SpecTarget(),
         LongProgId + "X" => new SpecTarget(),
         _ => null,

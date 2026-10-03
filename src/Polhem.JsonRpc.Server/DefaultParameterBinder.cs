@@ -1,12 +1,11 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Polhem.JsonRpc.Server;
 
 /// <summary>
-/// Deserializes a <c>params</c> object into the method's single parameter. An absent <c>params</c> binds
-/// <c>null</c> (the default value for a value type); an array is rejected, because a method has one parameter and
-/// positional parameters would have to be matched by position.
+/// Deserializes a <c>params</c> object into the method's single parameter. An absent <c>params</c> and an array are
+/// both invalid params: the method has one parameter to bind, and positional parameters would have to be matched by
+/// position.
 /// </summary>
 // NOTE: `PayloadParameterBinder` in Polhem.JsonRpc.Payload.Server applies the same rules to a plain payload value.
 // `PayloadServerTests.Call_PlainParamsOfWrongShape_ReturnsInvalidParamsLikeDefaultBinder` sends the same inputs to both.
@@ -17,12 +16,7 @@ internal sealed class DefaultParameterBinder(JsonSerializerOptions options) : IJ
     public object? Bind(JsonRpcRequestContext context)
     {
         var method = context.Method ?? throw new InvalidOperationException("The method is not resolved.");
-        if (context.Request.Params is not { } parameters)
-        {
-            return DefaultValueOf(method.ParameterType);
-        }
-
-        if (parameters.ValueKind != JsonValueKind.Object)
+        if (context.Request.Params is not { ValueKind: JsonValueKind.Object } parameters)
         {
             throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
         }
@@ -40,8 +34,4 @@ internal sealed class DefaultParameterBinder(JsonSerializerOptions options) : IJ
             throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
         }
     }
-
-    [UnconditionalSuppressMessage("Trimming", "IL2067",
-        Justification = "Binders run under JsonRpcDispatcher, whose constructor requires unreferenced code: the parameter type is read from the application's method by reflection, and keeping it is the application's part.")]
-    private static object? DefaultValueOf(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 }

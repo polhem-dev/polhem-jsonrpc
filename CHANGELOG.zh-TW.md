@@ -34,6 +34,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - **破壞性變更（binary）：** `JsonRpcTransportKind.Http` 改為 0、`InProcess` 改為 1，`Custom` 維持 2。`InProcess` 原本是預設值，
   自訂傳輸若沒有設定 kind，就會被當成 in-process，而主機可能給 in-process 比遠端呼叫更多信任。請以此版本重新編譯：
   以 1.0 編譯的程式碼仍用舊數值比較，會把每個 HTTP 呼叫當成 in-process。
+- 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
+- record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
 
 ### 修正
 
@@ -52,6 +54,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - 經過 trimming 的應用程式（例如 iOS head）不再從 `PayloadParameterBinder` 或 `DefaultParameterBinder` 收到 IL2072 警告。
   `Polhem.JsonRpc.Server`、`Polhem.JsonRpc.AspNetCore` 與 `Polhem.JsonRpc.Payload.Server` 現在會執行 trim analyzer，
   但仍不宣稱支援 trimming。
+- 以 UTF-8 BOM 開頭的請求或回應會被正常讀取，不再回 `-32700 Parse error`。
 
 ## [1.0.0] - 2026-10-03
 
