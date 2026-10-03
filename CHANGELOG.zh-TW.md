@@ -26,6 +26,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   在 `UsePayload` 之前設定的 `ExceptionMapper` 仍然優先；其他 payload 失敗維持 `-32603`，回應不會透露是哪一項檢查失敗。
 - `GzipPayloadCompressor` 另外拒絕解壓後超過壓縮前 100 倍的內容（`DefaultMaxCompressionRatio`），解壓後在 1 MiB 以內者除外。
   encoded 內容不需金鑰就會被解壓，只靠大小上限時，一個請求可以讓伺服器解壓遠多於它送出的資料量。
+- `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
+  其餘每次呼叫都重讀，因此在呼叫進行中新增 interceptor 可能擲出例外。
+- `JsonRpcConnector` 拒絕帶著另一個請求 id 的回應，也拒絕不產生 id 的 `IdGenerator`；批次拒絕 id 為 null 或與批次內重複的呼叫。
 
 ### 修正
 
@@ -36,6 +39,11 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   `-32603`，批次中其餘呼叫照常回應；原本就已失敗的呼叫保留它自己的錯誤。
 - 呼叫端取消的批次會在下一個呼叫之前停止，不再把剩下的呼叫全部跑完。
 - `MemoryPayloadReplayStore` 在呼叫抵達一個閒置 scope、而清理工作正好在移除它時，可能接受重放的序號。
+- 伺服器以單一錯誤回應整個批次時（例如批次過大），批次中的每個呼叫現在都以該錯誤失敗，而非「The server did not answer
+  this call of the batch」。
+- `IdGenerator` 產生重複 id 時，批次中會有一個 task 永遠不會完成。
+- 非泛型的 `InvokeAsync` 與 `InvokeAsync<JsonElement>` 不再需要在 source-generated 序列化 context 中列出 `JsonElement`，
+  因此可在 Native AOT 下使用；非泛型版本完全不讀取結果。
 
 ## [1.0.0] - 2026-10-03
 

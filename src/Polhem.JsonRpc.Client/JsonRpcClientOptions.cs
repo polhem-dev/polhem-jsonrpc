@@ -5,6 +5,10 @@ namespace Polhem.JsonRpc.Client;
 /// <summary>
 /// Settings for <see cref="JsonRpcConnector"/>.
 /// </summary>
+/// <remarks>
+/// The connector reads them when it is created; later changes to an options instance do not reach a connector that
+/// already exists.
+/// </remarks>
 public sealed class JsonRpcClientOptions
 {
     /// <summary>
@@ -21,6 +25,11 @@ public sealed class JsonRpcClientOptions
     /// <summary>
     /// Gets or sets a function that creates request ids, or <c>null</c> to number requests 1, 2, 3 and so on.
     /// </summary>
+    /// <remarks>
+    /// A call is refused when the function returns <see cref="JsonRpcId.None"/>, which would make it a notification, and
+    /// a batch refuses <see cref="JsonRpcId.Null"/> and an id already in the batch, because the answers are matched to
+    /// the calls by id.
+    /// </remarks>
     public Func<JsonRpcId>? IdGenerator { get; set; }
 
     /// <summary>

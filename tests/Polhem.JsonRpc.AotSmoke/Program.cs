@@ -7,10 +7,12 @@ using Polhem.JsonRpc.Payload;
 const string AddMethod = "math.add";
 
 // Exercises the client the way a mobile app would, with a source-generated serializer context, against a fake server.
+var counter = new CountingInterceptor();
 var options = new JsonRpcClientOptions
 {
     SerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web) { TypeInfoResolver = SmokeJsonContext.Default },
 };
+options.Interceptors.Add(counter);
 using var http = new HttpClient(new FakeServerHandler()) { BaseAddress = new Uri("https://smoke.test/api") };
 var rpc = new JsonRpcConnector(new HttpTransport(http), options);
 
@@ -35,6 +37,31 @@ var second = batch.Add<int>(AddMethod, new AddArgs(2, 2));
 batch.AddNotification(AddMethod, new AddArgs(0, 0));
 await batch.SendAsync();
 if (await first != 2 || await second != 4) { failures.Add("the batch returned the wrong results"); }
+
+// A result read as a JsonElement, or not read at all, needs no JsonElement in the application's context.
+await rpc.InvokeAsync(AddMethod, new AddArgs(1, 2), CancellationToken.None);
+var element = await rpc.InvokeAsync<JsonElement>(AddMethod, new AddArgs(3, 4));
+if (element.ValueKind != JsonValueKind.Number || element.GetInt32() != 7) { failures.Add("the JsonElement result was wrong"); }
+
+await rpc.NotifyAsync(AddMethod, new AddArgs(0, 0));
+
+// A batch the server refuses as a whole fails each call with the server's error.
+var refused = rpc.CreateBatch();
+var refusedCall = refused.Add<int>("math.refuse", new AddArgs(0, 0));
+await refused.SendAsync();
+try
+{
+    await refusedCall;
+    failures.Add("the refused batch call did not throw");
+}
+catch (JsonRpcErrorException ex) when (ex.Code == -32600)
+{
+    // Expected.
+}
+
+// Every request above passed through the interceptor: four calls, the three requests of the first batch, a
+// notification and the call of the refused batch.
+if (counter.Requests != 9) { failures.Add($"the interceptor saw {counter.Requests} requests"); }
 
 // The payload envelope round-trips in every format with source-generated metadata only.
 var payloadJson = new JsonSerializerOptions(JsonSerializerDefaults.Web) { TypeInfoResolver = SmokeJsonContext.Default };

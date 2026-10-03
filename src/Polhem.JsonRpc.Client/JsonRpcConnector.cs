@@ -8,14 +8,18 @@ namespace Polhem.JsonRpc.Client;
 /// Calls the methods of a JSON-RPC server.
 /// </summary>
 /// <remarks>
-/// The connector is thread-safe and meant to be shared. An error response is thrown as
+/// The connector is thread-safe and meant to be shared. It reads its <see cref="JsonRpcClientOptions"/> when it is
+/// created, interceptors included, so later changes to them do not reach it. An error response is thrown as
 /// <see cref="JsonRpcErrorException"/>, or as the exception <see cref="JsonRpcClientOptions.ErrorMapper"/> returns.
 /// </remarks>
 public sealed class JsonRpcConnector
 {
     private readonly IJsonRpcTransport _transport;
-    private readonly JsonRpcClientOptions _options;
     private readonly JsonSerializerOptions _serializerOptions;
+    private readonly Func<JsonRpcId>? _idGenerator;
+    private readonly TimeSpan? _timeout;
+    private readonly Func<JsonRpcError, Exception?>? _errorMapper;
+    private readonly IJsonRpcClientInterceptor[] _interceptors;
     private long _lastId;
 
     /// <summary>
@@ -27,8 +31,12 @@ public sealed class JsonRpcConnector
     {
         ArgumentNullException.ThrowIfNull(transport);
         _transport = transport;
-        _options = options ?? new JsonRpcClientOptions();
-        _serializerOptions = WithResolver(_options.SerializerOptions);
+        options ??= new JsonRpcClientOptions();
+        _serializerOptions = WithResolver(options.SerializerOptions);
+        _idGenerator = options.IdGenerator;
+        _timeout = options.Timeout;
+        _errorMapper = options.ErrorMapper;
+        _interceptors = [.. options.Interceptors];
     }
 
     /// <summary>
@@ -41,12 +49,7 @@ public sealed class JsonRpcConnector
     /// <returns>The result, or the default value when the method returns nothing.</returns>
     /// <exception cref="JsonRpcErrorException">The server answered with an error.</exception>
     public async Task<TResult?> InvokeAsync<TResult>(string method, object? parameters = null, CancellationToken cancellationToken = default)
-    {
-        var request = CreateRequest(method, parameters, isNotification: false);
-        var response = await SendAsync(request, cancellationToken).ConfigureAwait(false)
-            ?? throw new JsonException("The server did not answer the request.");
-        return ReadResult<TResult>(response);
-    }
+        => ReadResult<TResult>(await CallAsync(method, parameters, cancellationToken).ConfigureAwait(false));
 
     /// <summary>
     /// Calls a method that returns nothing, and waits for the server to confirm it ran.
@@ -56,8 +59,8 @@ public sealed class JsonRpcConnector
     /// <param name="cancellationToken">A token that cancels the call.</param>
     /// <returns>A task that completes when the server has answered.</returns>
     /// <exception cref="JsonRpcErrorException">The server answered with an error.</exception>
-    public Task InvokeAsync(string method, object? parameters, CancellationToken cancellationToken)
-        => InvokeAsync<JsonElement?>(method, parameters, cancellationToken);
+    public async Task InvokeAsync(string method, object? parameters, CancellationToken cancellationToken)
+        => ThrowIfError(await CallAsync(method, parameters, cancellationToken).ConfigureAwait(false));
 
     /// <summary>
     /// Sends a notification: a call the server does not answer, so its outcome is not known.
@@ -77,6 +80,21 @@ public sealed class JsonRpcConnector
     /// </summary>
     /// <returns>The batch. Add calls to it, then send it with <see cref="JsonRpcBatch.SendAsync"/>.</returns>
     public JsonRpcBatch CreateBatch() => new(this);
+
+    private async Task<JsonRpcResponse> CallAsync(string method, object? parameters, CancellationToken cancellationToken)
+    {
+        var request = CreateRequest(method, parameters, isNotification: false);
+        var response = await SendAsync(request, cancellationToken).ConfigureAwait(false)
+            ?? throw new JsonException("The server did not answer the request.");
+
+        // A null id is accepted: a server answers a request it could not read under one, and a response without an id,
+        // from a server that predates the specification, reads as one. Only the id of another request is refused.
+        if (response.Id != request.Id && response.Id != JsonRpcId.Null)
+        {
+            throw new JsonException("The server answered with the id of another request.");
+        }
+        return response;
+    }
 
     internal JsonRpcRequest CreateRequest(string method, object? parameters, bool isNotification)
     {
@@ -131,15 +149,27 @@ public sealed class JsonRpcConnector
 
     internal TResult? ReadResult<TResult>(JsonRpcResponse response)
     {
-        if (response.Error is { } error)
-        {
-            throw _options.ErrorMapper?.Invoke(error) ?? new JsonRpcErrorException(error);
-        }
+        ThrowIfError(response);
         if (response.Result is not { } result || result.ValueKind == JsonValueKind.Null)
         {
             return default;
         }
+
+        // Handed over as it is: deserializing into a JsonElement would need the application's serializer context to
+        // list JsonElement, which nothing tells an application under Native AOT to do.
+        if (typeof(TResult) == typeof(JsonElement) || typeof(TResult) == typeof(JsonElement?))
+        {
+            return (TResult)(object)result;
+        }
         return (TResult?)result.Deserialize(_serializerOptions.GetTypeInfo(typeof(TResult)));
+    }
+
+    private void ThrowIfError(JsonRpcResponse response)
+    {
+        if (response.Error is { } error)
+        {
+            throw _errorMapper?.Invoke(error) ?? new JsonRpcErrorException(error);
+        }
     }
 
     // `GetTypeInfo` does not fall back to reflection the way `JsonSerializer.Serialize(value, options)` does, so
@@ -155,11 +185,18 @@ public sealed class JsonRpcConnector
         return new JsonSerializerOptions(options) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() };
     }
 
-    private JsonRpcId NextId() => _options.IdGenerator?.Invoke() ?? JsonRpcId.FromNumber(Interlocked.Increment(ref _lastId));
+    private JsonRpcId NextId()
+    {
+        if (_idGenerator is null) { return JsonRpcId.FromNumber(Interlocked.Increment(ref _lastId)); }
+        var id = _idGenerator();
+        return id.IsNone
+            ? throw new InvalidOperationException("IdGenerator returned no id, which would make the call a notification.")
+            : id;
+    }
 
     private CancellationTokenSource? CreateTimeout(CancellationToken cancellationToken)
     {
-        if (_options.Timeout is not { } timeout) { return null; }
+        if (_timeout is not { } timeout) { return null; }
         var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         source.CancelAfter(timeout);
         return source;
@@ -167,7 +204,7 @@ public sealed class JsonRpcConnector
 
     private async ValueTask BeforeSendAsync(JsonRpcRequest request, CancellationToken cancellationToken)
     {
-        foreach (var interceptor in _options.Interceptors)
+        foreach (var interceptor in _interceptors)
         {
             await interceptor.OnRequestAsync(request, cancellationToken).ConfigureAwait(false);
         }
@@ -175,7 +212,7 @@ public sealed class JsonRpcConnector
 
     private async ValueTask AfterReceiveAsync(JsonRpcRequest request, JsonRpcResponse response, CancellationToken cancellationToken)
     {
-        foreach (var interceptor in _options.Interceptors)
+        foreach (var interceptor in _interceptors)
         {
             await interceptor.OnResponseAsync(request, response, cancellationToken).ConfigureAwait(false);
         }
