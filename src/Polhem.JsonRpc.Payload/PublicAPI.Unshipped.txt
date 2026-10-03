@@ -1,3 +1,6 @@
 #nullable enable
 Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.get -> System.TimeProvider!
 Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.set -> void
+const Polhem.JsonRpc.Payload.GzipPayloadCompressor.DefaultMaxCompressionRatio = 100 -> int
+Polhem.JsonRpc.Payload.GzipPayloadCompressor.GzipPayloadCompressor(long maxDecompressedBytes, int maxCompressionRatio) -> void
+Polhem.JsonRpc.Payload.GzipPayloadCompressor.MaxCompressionRatio.get -> int

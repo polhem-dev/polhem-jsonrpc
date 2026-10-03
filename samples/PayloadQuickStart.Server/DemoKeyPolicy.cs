@@ -1,3 +1,4 @@
+using Polhem.JsonRpc.Payload;
 using Polhem.JsonRpc.Payload.Server;
 using Polhem.JsonRpc.Server;
 
@@ -19,6 +20,9 @@ public sealed class DemoKeyPolicy(byte[] key) : IPayloadServerPolicy
         => context.Transport.Headers.TryGetValue("X-Client-Id", out var clientId) ? clientId : null;
 
     public bool RequiresUniqueSequence(JsonRpcRequestContext context) => true;
+
+    // Only an encrypted call has a frame the caller cannot forge, so only it is accepted.
+    public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadFormat.Encrypted;
 
     /// <summary>Reads the 64-byte demo key from its Base64 form.</summary>
     /// <param name="base64">The key, from the <c>PayloadDemoKey</c> setting or environment variable.</param>

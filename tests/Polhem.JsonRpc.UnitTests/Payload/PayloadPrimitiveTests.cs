@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Security.Cryptography;
+using System.Text;
 using Polhem.JsonRpc.Payload;
 
 namespace Polhem.JsonRpc.UnitTests.Payload;
@@ -14,6 +15,45 @@ public class PayloadPrimitiveTests
         var compressed = new GzipPayloadCompressor().Compress(new byte[4096]);
 
         Assert.Throws<InvalidDataException>(() => new GzipPayloadCompressor(1024).Decompress(compressed));
+    }
+
+    [Fact]
+    [DisplayName("Gzip: a body that expands more than the ratio allows is refused below the size limit")]
+    public void Gzip_DecompressBeyondRatio_Throws()
+    {
+        var compressed = new GzipPayloadCompressor().Compress(new byte[4 * 1024 * 1024]);
+
+        Assert.True(compressed.Length * GzipPayloadCompressor.DefaultMaxCompressionRatio < 4 * 1024 * 1024);
+        Assert.Throws<InvalidDataException>(() => new GzipPayloadCompressor().Decompress(compressed));
+    }
+
+    [Fact]
+    [DisplayName("Gzip: a body of up to 1 MiB is not refused for its ratio")]
+    public void Gzip_DecompressSmallBodyBeyondRatio_Succeeds()
+    {
+        var compressed = new GzipPayloadCompressor().Compress(new byte[1024 * 1024]);
+
+        Assert.Equal(1024 * 1024, new GzipPayloadCompressor().Decompress(compressed).Length);
+    }
+
+    [Fact]
+    [DisplayName("Gzip: a large JSON body of ordinary records is within the ratio")]
+    public void Gzip_DecompressLargeJson_Succeeds()
+    {
+        var json = Encoding.UTF8.GetBytes("[" + string.Join(",", Enumerable.Range(0, 100_000)
+            .Select(i => $$"""{"id":{{i}},"name":"Item {{i}}","price":{{i * 1.25}},"active":{{(i % 3 == 0 ? "true" : "false")}}}"""))
+            + "]");
+        var compressed = new GzipPayloadCompressor().Compress(json);
+
+        Assert.True(json.Length > 1024 * 1024);
+        Assert.Equal(json, new GzipPayloadCompressor().Decompress(compressed));
+    }
+
+    [Fact]
+    [DisplayName("Gzip: a ratio limit that is not positive is refused")]
+    public void Gzip_NotPositiveRatio_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new GzipPayloadCompressor(1024, 0));
     }
 
     [Fact]
