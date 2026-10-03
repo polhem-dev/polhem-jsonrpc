@@ -1,1 +1,27 @@
 #nullable enable
+Polhem.JsonRpc.Payload.Server.IPayloadReplayStore
+Polhem.JsonRpc.Payload.Server.IPayloadReplayStore.TryAcceptAsync(string! scope, long sequence, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy
+Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetKeyAsync(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> System.Threading.Tasks.ValueTask<byte[]?>
+Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetPayloadType(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> System.Type!
+Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetReplayScope(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> string?
+Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.RequiresUniqueSequence(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> bool
+Polhem.JsonRpc.Payload.Server.JsonRpcServerOptionsPayloadExtensions
+Polhem.JsonRpc.Payload.Server.MemoryPayloadReplayStore
+Polhem.JsonRpc.Payload.Server.MemoryPayloadReplayStore.Count.get -> int
+Polhem.JsonRpc.Payload.Server.MemoryPayloadReplayStore.MemoryPayloadReplayStore() -> void
+Polhem.JsonRpc.Payload.Server.MemoryPayloadReplayStore.MemoryPayloadReplayStore(System.TimeSpan lifetime, System.TimeProvider? clock = null) -> void
+Polhem.JsonRpc.Payload.Server.MemoryPayloadReplayStore.TryAcceptAsync(string! scope, long sequence, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Polhem.JsonRpc.Payload.Server.PayloadFilter
+Polhem.JsonRpc.Payload.Server.PayloadFilter.InvokeAsync(Polhem.JsonRpc.Server.JsonRpcRequestContext! context, Polhem.JsonRpc.Server.JsonRpcFilterDelegate! next) -> System.Threading.Tasks.ValueTask
+Polhem.JsonRpc.Payload.Server.PayloadFilter.PayloadFilter(Polhem.JsonRpc.Payload.PayloadOptions! options, Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy! policy, Polhem.JsonRpc.Payload.Server.IPayloadReplayStore? replayStore = null) -> void
+Polhem.JsonRpc.Payload.Server.PayloadParameterBinder
+Polhem.JsonRpc.Payload.Server.PayloadParameterBinder.Bind(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> object?
+Polhem.JsonRpc.Payload.Server.PayloadParameterBinder.PayloadParameterBinder(Polhem.JsonRpc.Payload.PayloadOptions! options) -> void
+Polhem.JsonRpc.Payload.Server.PayloadRequest
+Polhem.JsonRpc.Payload.Server.PayloadRequest.Codec.get -> string!
+Polhem.JsonRpc.Payload.Server.PayloadRequest.Format.get -> Polhem.JsonRpc.Payload.PayloadFormat
+Polhem.JsonRpc.Payload.Server.PayloadRequest.Frame.get -> Polhem.JsonRpc.Payload.PayloadFrame?
+Polhem.JsonRpc.Payload.Server.PayloadRequest.Value.get -> object?
+static Polhem.JsonRpc.Payload.Server.JsonRpcServerOptionsPayloadExtensions.UsePayload(this Polhem.JsonRpc.Server.JsonRpcServerOptions! options, Polhem.JsonRpc.Payload.PayloadOptions! payloadOptions, Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy! policy, Polhem.JsonRpc.Payload.Server.IPayloadReplayStore? replayStore = null) -> Polhem.JsonRpc.Server.JsonRpcServerOptions!
+static Polhem.JsonRpc.Payload.Server.PayloadRequest.Find(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> Polhem.JsonRpc.Payload.Server.PayloadRequest?

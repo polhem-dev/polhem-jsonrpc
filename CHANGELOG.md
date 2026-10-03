@@ -7,6 +7,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-03
+
 ### Removed
 
 - The options for an older wire format: `JsonRpcServerOptions.InternalErrorCode`, `JsonRpcRequestContext.ResponseMembers`,
@@ -45,5 +47,6 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `Polhem.JsonRpc.Client`: `JsonRpcConnector` with calls, notifications and batches, `HttpTransport` and
   interceptors. It supports trimming and Native AOT.
 
-[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/releases/tag/v0.1.0

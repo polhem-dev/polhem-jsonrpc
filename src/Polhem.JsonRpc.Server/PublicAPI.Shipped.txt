@@ -18,7 +18,7 @@ Polhem.JsonRpc.Server.JsonRpcDispatchResult.HasContent.get -> bool
 Polhem.JsonRpc.Server.JsonRpcDispatchResult.IsBatch.get -> bool
 Polhem.JsonRpc.Server.JsonRpcDispatchResult.JsonRpcDispatchResult(bool isBatch, System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>! responses) -> void
 Polhem.JsonRpc.Server.JsonRpcDispatchResult.Responses.get -> System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!
-Polhem.JsonRpc.Server.JsonRpcDispatchResult.Serialize(Polhem.JsonRpc.JsonRpcWriteOptions? options = null) -> byte[]?
+Polhem.JsonRpc.Server.JsonRpcDispatchResult.Serialize() -> byte[]?
 Polhem.JsonRpc.Server.JsonRpcDispatcher
 Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchAsync(Polhem.JsonRpc.JsonRpcRequest! request, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Polhem.JsonRpc.JsonRpcResponse?>!
 Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchBatchAsync(System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcRequest!>! requests, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!>!
@@ -41,7 +41,6 @@ Polhem.JsonRpc.Server.JsonRpcRequestContext.Items.get -> System.Collections.Gene
 Polhem.JsonRpc.Server.JsonRpcRequestContext.JsonRpcRequestContext(Polhem.JsonRpc.JsonRpcRequest! request, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken) -> void
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Method.get -> Polhem.JsonRpc.Server.JsonRpcMethod?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Request.get -> Polhem.JsonRpc.JsonRpcRequest!
-Polhem.JsonRpc.Server.JsonRpcRequestContext.ResponseMembers.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>!
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Result.get -> System.Text.Json.JsonElement?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Result.set -> void
 Polhem.JsonRpc.Server.JsonRpcRequestContext.ReturnType.get -> System.Type?
@@ -56,8 +55,6 @@ Polhem.JsonRpc.Server.JsonRpcServerOptions.ExceptionMapper.set -> void
 Polhem.JsonRpc.Server.JsonRpcServerOptions.Filters.get -> System.Collections.Generic.IList<Polhem.JsonRpc.Server.IJsonRpcFilter!>!
 Polhem.JsonRpc.Server.JsonRpcServerOptions.IncludeExceptionDetails.get -> bool
 Polhem.JsonRpc.Server.JsonRpcServerOptions.IncludeExceptionDetails.set -> void
-Polhem.JsonRpc.Server.JsonRpcServerOptions.InternalErrorCode.get -> int
-Polhem.JsonRpc.Server.JsonRpcServerOptions.InternalErrorCode.set -> void
 Polhem.JsonRpc.Server.JsonRpcServerOptions.JsonRpcServerOptions() -> void
 Polhem.JsonRpc.Server.JsonRpcServerOptions.MaxBatchSize.get -> int
 Polhem.JsonRpc.Server.JsonRpcServerOptions.MaxBatchSize.set -> void

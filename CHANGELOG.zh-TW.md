@@ -7,6 +7,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-03
+
 ### 移除
 
 - 為舊線上格式提供的選項：`JsonRpcServerOptions.InternalErrorCode`、`JsonRpcRequestContext.ResponseMembers`、
@@ -41,5 +43,6 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `Polhem.JsonRpc.Client`：`JsonRpcConnector`，支援一般呼叫、notification 與 batch，`HttpTransport` 與攔截器。
   支援 trimming 與 Native AOT。
 
-[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/releases/tag/v0.1.0
