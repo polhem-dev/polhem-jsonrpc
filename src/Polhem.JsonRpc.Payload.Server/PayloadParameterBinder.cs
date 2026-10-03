@@ -37,12 +37,26 @@ public sealed class PayloadParameterBinder : IJsonRpcParameterBinder
         {
             case null:
                 return DefaultValueOf(method.ParameterType);
+            case JsonElement { ValueKind: JsonValueKind.Null } when payload.Format == PayloadFormat.Plain:
+                return DefaultValueOf(method.ParameterType);
             case JsonElement element when payload.Format == PayloadFormat.Plain:
+                // The same rules as the dispatcher's own binder: the value must be an object, because positional
+                // parameters would have to be matched by position, and a value that does not fit is invalid params.
+                // `PayloadServerTests.Call_PlainParamsOfWrongShape_ReturnsInvalidParamsLikeDefaultBinder` holds them
+                // together.
+                if (element.ValueKind != JsonValueKind.Object)
+                {
+                    throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
+                }
                 try
                 {
                     return element.Deserialize(_options.SerializerOptions.GetTypeInfo(method.ParameterType));
                 }
                 catch (JsonException)
+                {
+                    throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
+                }
+                catch (NotSupportedException)
                 {
                     throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
                 }

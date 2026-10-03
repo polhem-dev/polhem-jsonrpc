@@ -33,6 +33,18 @@ public sealed record EchoArgs(string Text);
 
 public sealed record DescribeRequest(string Text);
 
+/// <summary>A parameter System.Text.Json cannot create: it throws <see cref="NotSupportedException"/>.</summary>
+public abstract record AbstractRequest(string Text);
+
+public sealed record AbstractResponse;
+
+/// <summary>A parameter a JSON array would bind to, so only the binder's own rule refuses positional params.</summary>
+[SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix",
+    Justification = "The naming convention requires the name {Action}Request.")]
+public sealed class NumbersRequest : List<int>;
+
+public sealed record NumbersResponse(int Count);
+
 /// <summary>
 /// A response the default serializer options cannot write: System.Text.Json refuses <see cref="System.Type"/>.
 /// </summary>
@@ -82,6 +94,10 @@ public sealed class SpecTarget
     public FailResponse Mismatch(MismatchRequest request) => new();
 
     public DescribeResponse Describe(DescribeRequest request) => new() { Text = request.Text };
+
+    public AbstractResponse Abstract(AbstractRequest request) => new();
+
+    public NumbersResponse Numbers(NumbersRequest request) => new(request.Count);
 
     // Not callable under the naming convention: the parameter is not named EchoRequest.
     public string Echo(EchoArgs args) => args.Text;
