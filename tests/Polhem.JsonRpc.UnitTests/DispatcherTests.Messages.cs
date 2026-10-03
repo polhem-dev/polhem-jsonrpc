@@ -68,6 +68,27 @@ public partial class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InternalError, response.Error!.Code);
     }
 
+    [Theory(DisplayName = "The calls of a batch share MessageItems, and calls sent one at a time do not")]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MessageItems_BatchOrSingle_SharedOnlyWithinTheMessage(bool asBatch)
+    {
+        var seen = new List<int>();
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new MessageCountingFilter(seen)));
+        const string Call = """{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": 1, "subtrahend": 1}, "id": 1}""";
+
+        if (asBatch)
+        {
+            await DispatcherFixture.RunAsync(dispatcher, $"[{Call},{Call},{Call}]");
+        }
+        else
+        {
+            for (var i = 0; i < 3; i++) { await DispatcherFixture.RunAsync(dispatcher, Call); }
+        }
+
+        Assert.Equal(asBatch ? [1, 2, 3] : [1, 1, 1], seen);
+    }
+
     [Fact(DisplayName = "A transport that leaves the kind at its default is HTTP, never in-process")]
     public void TransportKind_Default_IsNotInProcess()
     {
@@ -107,5 +128,16 @@ public partial class DispatcherTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
         Assert.Contains(first, SpecTarget.Updates);
         Assert.DoesNotContain(second, SpecTarget.Updates);
+    }
+
+    private sealed class MessageCountingFilter(List<int> seen) : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            var count = (context.MessageItems.TryGetValue("count", out var value) ? (int)value! : 0) + 1;
+            context.MessageItems["count"] = count;
+            seen.Add(count);
+            return next(context);
+        }
     }
 }

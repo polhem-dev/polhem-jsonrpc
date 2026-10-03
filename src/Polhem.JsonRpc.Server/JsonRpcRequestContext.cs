@@ -9,6 +9,7 @@ namespace Polhem.JsonRpc.Server;
 public sealed class JsonRpcRequestContext
 {
     private Dictionary<string, object?>? _items;
+    private IDictionary<string, object?>? _messageItems;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonRpcRequestContext"/> class.
@@ -97,4 +98,17 @@ public sealed class JsonRpcRequestContext
     /// <see cref="JsonRpcTransportInfo.Items"/>.
     /// </summary>
     public IDictionary<string, object?> Items => _items ??= new Dictionary<string, object?>(Transport.Items, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets values shared by every call of the message this call came in: the call alone, or all the calls of a batch.
+    /// A filter keeps here what it accounts for the whole message, such as a budget the calls of a batch draw on together.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="JsonRpcDispatcher"/> runs the calls of a batch one after another, so they never use it at the same time.
+    /// </remarks>
+    public IDictionary<string, object?> MessageItems
+    {
+        get => _messageItems ??= new Dictionary<string, object?>(StringComparer.Ordinal);
+        internal set => _messageItems = value;
+    }
 }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Polhem.JsonRpc.AspNetCore;
@@ -96,6 +97,31 @@ public sealed class HttpHandlerTests : IAsyncLifetime
 
         Assert.Null(content.Headers.ContentLength);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+
+    [Fact(DisplayName = "HTTP: a Content-Length the body does not match reserves no more memory than the bytes that arrive")]
+    public async Task HandleAsync_DeclaredLengthAboveBody_AllocatesByBytesReceived()
+    {
+        var handler = new JsonRpcHttpHandler(DispatcherFixture.Create(), new JsonRpcHttpOptions());
+        var body = Encoding.UTF8.GetBytes(Subtract);
+        await handler.HandleAsync(Context(body, declaredLength: body.Length));
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        await handler.HandleAsync(Context(body, declaredLength: 4 * 1024 * 1024));
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(allocated < 1024 * 1024, $"{allocated} bytes allocated for a {body.Length}-byte body.");
+
+        static DefaultHttpContext Context(byte[] body, long declaredLength)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Method = "POST";
+            context.Request.ContentType = "application/json";
+            context.Request.ContentLength = declaredLength;
+            context.Request.Body = new MemoryStream(body);
+            context.Response.Body = new MemoryStream();
+            return context;
+        }
     }
 
     [Fact(DisplayName = "HTTP: StatusCodeSelector chooses the status of a single response")]

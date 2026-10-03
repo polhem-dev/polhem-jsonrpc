@@ -74,6 +74,7 @@ public sealed class JsonRpcDispatcher
         var parsed = JsonRpcSerializer.ReadRequests(utf8Json, _maxBatchSize);
 
         var responses = new List<JsonRpcResponse>(parsed.Entries.Count);
+        var messageItems = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var entry in parsed.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -82,7 +83,7 @@ public sealed class JsonRpcDispatcher
                 responses.Add(JsonRpcResponse.Failure(entry.ErrorId, entry.Error));
                 continue;
             }
-            var response = await DispatchAsync(entry.Request, transport, cancellationToken).ConfigureAwait(false);
+            var response = await DispatchCoreAsync(entry.Request, transport, messageItems, cancellationToken).ConfigureAwait(false);
             if (response is not null) { responses.Add(response); }
         }
         return new JsonRpcDispatchResult(parsed.IsBatch, responses);
@@ -105,10 +106,11 @@ public sealed class JsonRpcDispatcher
         }
 
         var responses = new List<JsonRpcResponse>(requests.Count);
+        var messageItems = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var request in requests)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var response = await DispatchAsync(request, transport, cancellationToken).ConfigureAwait(false);
+            var response = await DispatchCoreAsync(request, transport, messageItems, cancellationToken).ConfigureAwait(false);
             if (response is not null) { responses.Add(response); }
         }
         return responses;
@@ -121,11 +123,16 @@ public sealed class JsonRpcDispatcher
     /// <param name="transport">What the transport knows about the call.</param>
     /// <param name="cancellationToken">A token that cancels the call.</param>
     /// <returns>The response, or <c>null</c> for a notification, which is not answered even when it fails.</returns>
-    public async Task<JsonRpcResponse?> DispatchAsync(JsonRpcRequest request, JsonRpcTransportInfo transport, CancellationToken cancellationToken = default)
+    public Task<JsonRpcResponse?> DispatchAsync(JsonRpcRequest request, JsonRpcTransportInfo transport, CancellationToken cancellationToken = default)
+        => DispatchCoreAsync(request, transport, messageItems: null, cancellationToken);
+
+    private async Task<JsonRpcResponse?> DispatchCoreAsync(JsonRpcRequest request, JsonRpcTransportInfo transport,
+        IDictionary<string, object?>? messageItems, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(transport);
         var context = new JsonRpcRequestContext(request, transport, cancellationToken) { SerializerOptions = _serializerOptions };
+        if (messageItems is not null) { context.MessageItems = messageItems; }
 
         JsonRpcResponse? response = null;
         object? instance = null;
@@ -213,9 +220,21 @@ public sealed class JsonRpcDispatcher
     // per object type, from the application's code only, so a name the caller makes up is looked up but never stored.
     // The table is built once per type under a Lazy, so the method policy is asked about each method once, not by every
     // request that happens to arrive first.
-    private MethodInfo? FindAction(Type type, string action) =>
-        _actions.GetOrAdd(type, static (key, self) => new Lazy<FrozenDictionary<string, MethodInfo>>(() => self.ResolveActions(key)), this)
-            .Value.GetValueOrDefault(action);
+    private MethodInfo? FindAction(Type type, string action)
+    {
+        var table = _actions.GetOrAdd(type, static (key, self) => new Lazy<FrozenDictionary<string, MethodInfo>>(() => self.ResolveActions(key)), this);
+        try
+        {
+            return table.Value.GetValueOrDefault(action);
+        }
+        catch (Exception)
+        {
+            // A Lazy keeps the exception of a build that failed, for example on an assembly that could not be loaded yet.
+            // Dropping the entry lets the next call to the type try again instead of failing for the dispatcher's life.
+            _actions.TryRemove(new KeyValuePair<Type, Lazy<FrozenDictionary<string, MethodInfo>>>(type, table));
+            throw;
+        }
+    }
 
     // The suppression sits on this method rather than on `FindAction`, which only hands it to the cache as a
     // delegate: the reflection runs here.

@@ -16,6 +16,8 @@ public sealed class JsonRpcHttpHandler
     private readonly JsonRpcDispatcher _dispatcher;
     private readonly JsonRpcHttpOptions _options;
 
+    private const int InitialBufferBytes = 64 * 1024;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonRpcHttpHandler"/> class.
     /// </summary>
@@ -108,11 +110,12 @@ public sealed class JsonRpcHttpHandler
         MediaTypeHeaderValue.TryParse(contentType, out var mediaType)
         && mediaType.MediaType.Equals(MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase);
 
-    // The body is read once into a buffer sized by Content-Length when there is one, and handed on without the copy
-    // ToArray would make. Content-Length is only a size hint: the count is still checked against the limit as it reads.
+    // The body is read once and handed on without the copy ToArray would make. Content-Length is what the caller claims,
+    // before it has sent anything: it only sizes the first buffer up to InitialBufferBytes, so memory grows with the
+    // bytes that actually arrive, and the count is checked against the limit as it reads.
     private static async Task<ReadOnlyMemory<byte>?> ReadBodyAsync(Stream body, long? length, long limit, CancellationToken cancellationToken)
     {
-        using var buffer = length is > 0 and <= int.MaxValue ? new MemoryStream((int)length.Value) : new MemoryStream();
+        using var buffer = new MemoryStream(length is > 0 ? (int)Math.Min(length.Value, InitialBufferBytes) : 0);
         var chunk = new byte[16 * 1024];
         int read;
         while ((read = await body.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
