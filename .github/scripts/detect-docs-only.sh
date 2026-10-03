@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Writes `build=false` to $GITHUB_OUTPUT when a pull request changes only `.md` files, and `build=true` otherwise.
+# Writes `build=false` to $GITHUB_OUTPUT when a pull request changes only `.md` files and none of them has a C# snippet,
+# and `build=true` otherwise.
 # Every job of build-ci.yml runs it right after checkout and gates its remaining steps on the result.
 #
 # `build` is a required check of the branch protection on `main`, so the pull_request trigger cannot carry a
@@ -21,9 +22,20 @@ if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ] && git rev-parse -q --verify 'H
   printf '%s\n' "$files"
   if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qv '\.md$'; then
     build=false
+    # A Markdown file with a C# snippet is checked by ReadmeSnippetTests, which reads it at test time, so a change to
+    # one builds. Both sides are looked at, so adding, changing or removing a snippet all count.
+    while IFS= read -r file; do
+      for rev in 'HEAD^1' HEAD; do
+        if git show "$rev:$file" 2>/dev/null | grep -q '^```csharp'; then
+          build=true
+          echo "$file has a C# snippet, which ReadmeSnippetTests checks."
+          break 2
+        fi
+      done
+    done <<< "$files"
   fi
 fi
 echo "build=$build" >> "$GITHUB_OUTPUT"
 if [ "$build" = false ]; then
-  echo "Only .md files changed: skipping this job's build steps (docs-check.yml checks the documents)"
+  echo "Only .md files without C# snippets changed: skipping this job's build steps (docs-check.yml checks the documents)"
 fi

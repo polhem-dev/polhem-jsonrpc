@@ -19,6 +19,7 @@ Show the current rules with `gh api repos/polhem-dev/polhem-jsonrpc/branches/mai
 
 The `pull_request` trigger of `build-ci.yml` has no `paths-ignore`; only its `push` trigger ignores `.md` files. A pull
 request that changes only `.md` files is recognized inside each job: every job of `build-ci.yml` starts, skips its build
-steps and reports success. The detection is a step of each job, not a job of its own: GitHub reports a job skipped by
+steps and reports success. A Markdown file with a C# snippet does not count, because `ReadmeSnippetTests` reads it at
+test time; a change to one builds and tests as usual. The detection is a step of each job, not a job of its own: GitHub reports a job skipped by
 `if:` as passing, so a failed detection job would let the pull request merge. The reasons are in the header of
 `.github/scripts/detect-docs-only.sh`.
