@@ -29,6 +29,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `GzipPayloadCompressor` also refuses a body that decompresses to more than 100 times its compressed size
   (`DefaultMaxCompressionRatio`), unless it decompresses to 1 MiB or less. An encoded body is decompressed without a
   key, so the size limit alone let a request make the server decompress far more than it sent.
+- `JsonRpcConnector` reads its `JsonRpcClientOptions` once, when it is created, interceptors included. Before, only
+  `SerializerOptions` was read then, and the rest on every call, so adding an interceptor while calls ran could throw.
+- `JsonRpcConnector` refuses a response that carries the id of another request, and an `IdGenerator` that returns no
+  id. A batch refuses a call whose id is null or already in the batch.
 
 ### Fixed
 
@@ -41,6 +45,11 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - A batch whose caller cancels stops before its next call instead of running every remaining call.
 - `MemoryPayloadReplayStore` could accept a replayed sequence number when a call reached an idle scope while a sweep
   was removing it.
+- When the server answers a whole batch with one error (too large, for instance), each call of the batch now fails with
+  that error, instead of "The server did not answer this call of the batch".
+- A batch whose `IdGenerator` repeated an id left a task that never completed.
+- The non-generic `InvokeAsync` and `InvokeAsync<JsonElement>` no longer need `JsonElement` in a source-generated
+  serializer context, so they work under Native AOT; the non-generic one does not read the result at all.
 
 ## [1.0.0] - 2026-10-03
 

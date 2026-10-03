@@ -5,7 +5,8 @@ namespace Polhem.JsonRpc.Client;
 /// </summary>
 /// <remarks>
 /// <see cref="Add{TResult}"/> returns a task for each call's result. The tasks complete when
-/// <see cref="SendAsync"/> has received the answer; a call that failed throws when its task is awaited. A batch is
+/// <see cref="SendAsync"/> has received the answer; a call that failed throws when its task is awaited. A call the
+/// server did not answer fails with the error the server answered the whole batch with, when it sent one. A batch is
 /// sent once.
 /// </remarks>
 public sealed class JsonRpcBatch
@@ -29,6 +30,12 @@ public sealed class JsonRpcBatch
     {
         EnsureNotSent();
         var request = _connector.CreateRequest(method, parameters, isNotification: false);
+        // The answers are matched to the calls by id, so a call whose id cannot be told apart would never complete.
+        if (request.Id == JsonRpcId.Null || _completions.ContainsKey(request.Id))
+        {
+            throw new InvalidOperationException(
+                "Every call of a batch needs an id of its own, but IdGenerator returned null or an id already in the batch.");
+        }
         var completion = new TaskCompletionSource<TResult?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _requests.Add(request);
         _completions[request.Id] = response =>
@@ -89,6 +96,19 @@ public sealed class JsonRpcBatch
                 _failures.Remove(response.Id);
                 complete(response);
             }
+        }
+
+        // A server that refuses the batch as a whole, for instance because it is too large, answers with one error
+        // under a null id. That error is the answer of every call it did not answer.
+        if (_completions.Count > 0
+            && responses.FirstOrDefault(r => r.Id == JsonRpcId.Null && r.Error is not null) is { } batchError)
+        {
+            foreach (var complete in _completions.Values)
+            {
+                complete(batchError);
+            }
+            _completions.Clear();
+            _failures.Clear();
         }
         FailAll(new InvalidOperationException("The server did not answer this call of the batch."));
     }

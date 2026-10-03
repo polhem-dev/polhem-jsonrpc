@@ -128,6 +128,89 @@ public class ClientTests
     }
 
     [Fact]
+    [DisplayName("Client: a response carrying the id of another request is refused")]
+    public async Task InvokeAsync_ResponseWithAnotherId_Throws()
+    {
+        using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "result": 1, "id": 999}""")) { BaseAddress = new Uri("http://test/api") };
+
+        await Assert.ThrowsAsync<JsonException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("Any.Method", null));
+    }
+
+    [Fact]
+    [DisplayName("Client: an IdGenerator that returns no id is refused, because the call would become a notification")]
+    public async Task InvokeAsync_IdGeneratorReturnsNone_Throws()
+    {
+        var transport = new RecordingTransport();
+        var connector = new JsonRpcConnector(transport, new JsonRpcClientOptions { IdGenerator = () => JsonRpcId.None });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => connector.InvokeAsync<int>("Any.Method", null));
+        Assert.Null(transport.LastRequest);
+    }
+
+    [Theory]
+    [DisplayName("Client: a batch refuses a call whose id is null or already in the batch, so no task is left waiting")]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Batch_IdNotUnique_AddThrows(bool nullId)
+    {
+        var options = new JsonRpcClientOptions { IdGenerator = () => nullId ? JsonRpcId.Null : JsonRpcId.FromString("same") };
+        var batch = InProcess(options).CreateBatch();
+
+        if (!nullId) { batch.Add<SubtractResponse>("Spec.Subtract", new SubtractRequest(1, 1)); }
+
+        // Add throws before it returns a task, so the call is wrapped as an action rather than awaited.
+        Assert.Throws<InvalidOperationException>(() => { _ = batch.Add<SubtractResponse>("Spec.Subtract", new SubtractRequest(2, 1)); });
+    }
+
+    [Fact]
+    [DisplayName("Client: when the server refuses the whole batch with one error, each call fails with that error")]
+    public async Task Batch_RefusedAsAWhole_EachCallFailsWithServerError()
+    {
+        var batch = InProcess(configureServer: server => server.MaxBatchSize = 1).CreateBatch();
+        var first = batch.Add<SubtractResponse>("Spec.Subtract", new SubtractRequest(5, 1));
+        var second = batch.Add<SubtractResponse>("Spec.Subtract", new SubtractRequest(6, 1));
+
+        await batch.SendAsync();
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidRequest, (await Assert.ThrowsAsync<JsonRpcErrorException>(() => first)).Code);
+        Assert.Equal(JsonRpcErrorCodes.InvalidRequest, (await Assert.ThrowsAsync<JsonRpcErrorException>(() => second)).Code);
+    }
+
+    [Fact]
+    [DisplayName("Client: the options are read when the connector is created; an interceptor added later does not run")]
+    public async Task Connector_OptionsChangedAfterCreation_AreNotSeen()
+    {
+        var options = new JsonRpcClientOptions();
+        var connector = InProcess(options);
+        var late = new CountingInterceptor();
+
+        options.Interceptors.Add(late);
+        options.ErrorMapper = _ => new UnauthorizedAccessException();
+        await connector.InvokeAsync<SubtractResponse>("Spec.Subtract", new SubtractRequest(1, 1));
+
+        Assert.Equal(0, late.Requests);
+        await Assert.ThrowsAsync<JsonRpcErrorException>(() => connector.InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
+    }
+
+    [Fact]
+    [DisplayName("Client: the non-generic InvokeAsync and InvokeAsync<JsonElement> need no JsonElement in a source-generated context")]
+    public async Task InvokeAsync_JsonElementWithSourceGeneratedContext_NeedsNoMetadata()
+    {
+        var options = new JsonRpcClientOptions
+        {
+            SerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web) { TypeInfoResolver = ClientTestJsonContext.Default },
+        };
+        var connector = InProcess(options);
+
+        await connector.InvokeAsync("Spec.Subtract", new SubtractRequest(5, 3), CancellationToken.None);
+        var element = await connector.InvokeAsync<JsonElement>("Spec.Subtract", new SubtractRequest(5, 3));
+        var nullable = await connector.InvokeAsync<JsonElement?>("Spec.Subtract", new SubtractRequest(5, 3));
+
+        Assert.Equal(2, element.GetProperty("difference").GetInt32());
+        Assert.Equal(2, nullable!.Value.GetProperty("difference").GetInt32());
+    }
+
+    [Fact]
     [DisplayName("HTTP transport: an error object in a 4xx body is read as a JSON-RPC error")]
     public async Task HttpTransport_ErrorBodyWith401_IsRead()
     {
@@ -172,6 +255,20 @@ public class ClientTests
             response.Result = SealedPayload.Open(response.Result!.Value);
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class CountingInterceptor : IJsonRpcClientInterceptor
+    {
+        public int Requests { get; private set; }
+
+        public ValueTask OnRequestAsync(JsonRpcRequest request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnResponseAsync(JsonRpcRequest request, JsonRpcResponse response, CancellationToken cancellationToken) =>
+            ValueTask.CompletedTask;
     }
 
     private sealed class OpeningFilter : IJsonRpcFilter
