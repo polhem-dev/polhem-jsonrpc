@@ -107,7 +107,7 @@ public sealed class PayloadProcessor
         if (_options.RequireFrame)
         {
             // Put in front after encoding and before encryption, so the HMAC covers the frame.
-            bytes = new PayloadFrame(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), sequence).Prepend(bytes);
+            bytes = new PayloadFrame(_options.TimeProvider.GetUtcNow().ToUnixTimeMilliseconds(), sequence).Prepend(bytes);
         }
 
         if (format == PayloadFormat.Encrypted)

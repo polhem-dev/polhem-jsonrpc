@@ -93,6 +93,20 @@ public sealed class SpecTarget
     public SubtractResponse Twice(SubtractRequest request) => new(request.Minuend * 2);
 
     public SubtractResponse Twice(UpdateRequest request) => new(request.Text.Length * 2);
+
+    // Not resolvable: `set_Label` is an accessor.
+    public string Label { get; set; } = string.Empty;
+
+    // Not resolvable: generic.
+    public T Generic<T>(T value) => value;
+
+    // The longest action name a method name may carry.
+    public SubtractResponse LongActionNameThatFillsEveryOneOfTheSixtyFourCharactersAllowed_X(SubtractRequest request) =>
+        new(request.Minuend - request.Subtrahend);
+
+    // Not resolvable: one character over the limit.
+    public SubtractResponse LongActionNameThatFillsEveryOneOfTheSixtyFourCharactersAllowed_XY(SubtractRequest request) =>
+        new(request.Minuend - request.Subtrahend);
 }
 
 /// <summary>

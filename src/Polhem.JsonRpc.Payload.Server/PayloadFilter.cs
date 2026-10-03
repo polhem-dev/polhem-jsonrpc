@@ -25,7 +25,7 @@ public sealed class PayloadFilter : IJsonRpcFilter
         ArgumentNullException.ThrowIfNull(options);
         _processor = new PayloadProcessor(options);
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _replayStore = replayStore ?? new MemoryPayloadReplayStore(options.FrameTimestampTolerance * 2);
+        _replayStore = replayStore ?? new MemoryPayloadReplayStore(options.FrameTimestampTolerance * 2, options.TimeProvider);
     }
 
     /// <inheritdoc/>
@@ -59,7 +59,7 @@ public sealed class PayloadFilter : IJsonRpcFilter
 
     private void ValidateTimestamp(PayloadFrame frame)
     {
-        long driftMs = Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - frame.TimestampMs);
+        long driftMs = Math.Abs(_processor.Options.TimeProvider.GetUtcNow().ToUnixTimeMilliseconds() - frame.TimestampMs);
         if (driftMs > _processor.Options.FrameTimestampTolerance.TotalMilliseconds)
         {
             throw new ReplayRejectedException(

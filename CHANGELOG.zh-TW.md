@@ -7,6 +7,11 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+### 新增
+
+- `PayloadOptions.TimeProvider`：寫入 frame 時間戳與檢查時間戳所用的時鐘，預設為系統時鐘；`PayloadFilter` 自行建立的記憶體
+  replay store 也使用它。
+
 ## [1.0.0] - 2026-10-03
 
 ### 移除

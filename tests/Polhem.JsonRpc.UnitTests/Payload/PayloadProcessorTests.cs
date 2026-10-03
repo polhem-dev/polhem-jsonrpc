@@ -204,6 +204,21 @@ public class PayloadProcessorTests
     }
 
     [Fact]
+    [DisplayName("Processor: the unencrypted encryptor is refused when opening, too, unless it is allowed explicitly")]
+    public void Open_NoEncryptorNotAllowed_Throws()
+    {
+        var options = CreateOptions(false);
+        options.Encryptor = NoPayloadEncryptor.Instance;
+        options.AllowNoEncryption = true;
+        var envelope = new PayloadProcessor(options).Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key);
+
+        options.AllowNoEncryption = false;
+
+        Assert.Throws<InvalidOperationException>(
+            () => new PayloadProcessor(options).OpenRequest(envelope, typeof(VectorPing), s_key, out _));
+    }
+
+    [Fact]
     [DisplayName("Processor: a body that cannot be decoded is reported as one decoding error")]
     public void Open_UndecodableBody_ThrowsInvalidOperationWithInner()
     {

@@ -119,7 +119,9 @@ public class ReplayWindowTests
             await store.TryAcceptAsync(Scope, 100 + minute);
         }
 
-        Assert.False(await store.TryAcceptAsync(Scope, 129));
+        // 100 was accepted 30 minutes ago, three lifetimes back. A store that forgot the scope would accept it again;
+        // the last number sent would be refused by any window, so it proves nothing.
+        Assert.False(await store.TryAcceptAsync(Scope, 100));
     }
 
     private sealed class ManualClock : TimeProvider
