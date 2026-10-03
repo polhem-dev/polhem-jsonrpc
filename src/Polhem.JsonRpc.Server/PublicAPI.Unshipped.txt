@@ -1,6 +1,1 @@
 #nullable enable
-*REMOVED*Polhem.JsonRpc.Server.JsonRpcDispatchResult.Serialize(Polhem.JsonRpc.JsonRpcWriteOptions? options = null) -> byte[]?
-*REMOVED*Polhem.JsonRpc.Server.JsonRpcRequestContext.ResponseMembers.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>!
-*REMOVED*Polhem.JsonRpc.Server.JsonRpcServerOptions.InternalErrorCode.get -> int
-*REMOVED*Polhem.JsonRpc.Server.JsonRpcServerOptions.InternalErrorCode.set -> void
-Polhem.JsonRpc.Server.JsonRpcDispatchResult.Serialize() -> byte[]?

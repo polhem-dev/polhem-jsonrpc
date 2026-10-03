@@ -1,13 +1,1 @@
 #nullable enable
-*REMOVED*Polhem.JsonRpc.JsonRpcResponse.AdditionalMembers.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
-*REMOVED*Polhem.JsonRpc.JsonRpcResponse.AdditionalMembers.set -> void
-*REMOVED*Polhem.JsonRpc.JsonRpcWriteOptions
-*REMOVED*Polhem.JsonRpc.JsonRpcWriteOptions.JsonRpcWriteOptions() -> void
-*REMOVED*Polhem.JsonRpc.JsonRpcWriteOptions.OmitNullId.get -> bool
-*REMOVED*Polhem.JsonRpc.JsonRpcWriteOptions.OmitNullId.set -> void
-*REMOVED*static Polhem.JsonRpc.JsonRpcSerializer.SerializeResponse(Polhem.JsonRpc.JsonRpcResponse! response, Polhem.JsonRpc.JsonRpcWriteOptions? options = null) -> byte[]!
-*REMOVED*static Polhem.JsonRpc.JsonRpcSerializer.SerializeResponses(System.Collections.Generic.IEnumerable<Polhem.JsonRpc.JsonRpcResponse!>! responses, Polhem.JsonRpc.JsonRpcWriteOptions? options = null) -> byte[]!
-*REMOVED*static Polhem.JsonRpc.JsonRpcSerializer.WriteResponse(System.Text.Json.Utf8JsonWriter! writer, Polhem.JsonRpc.JsonRpcResponse! response, Polhem.JsonRpc.JsonRpcWriteOptions? options = null) -> void
-static Polhem.JsonRpc.JsonRpcSerializer.SerializeResponse(Polhem.JsonRpc.JsonRpcResponse! response) -> byte[]!
-static Polhem.JsonRpc.JsonRpcSerializer.SerializeResponses(System.Collections.Generic.IEnumerable<Polhem.JsonRpc.JsonRpcResponse!>! responses) -> byte[]!
-static Polhem.JsonRpc.JsonRpcSerializer.WriteResponse(System.Text.Json.Utf8JsonWriter! writer, Polhem.JsonRpc.JsonRpcResponse! response) -> void
