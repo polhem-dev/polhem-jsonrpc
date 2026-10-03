@@ -27,7 +27,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   先前每次呼叫都以 `-32603` 失敗，或由主機的 `ExceptionMapper` 轉換該例外。
 - **wire 可見：** `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
-- **wire 可見：** `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼，或低於方法最低格式的呼叫）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
+- **wire 可見：** `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼、低於方法最低格式的呼叫，或在檢查唯一序號時被拒絕的未加密呼叫）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
   在 `UsePayload` 之前設定的 `ExceptionMapper` 仍然優先；其他 payload 失敗維持 `-32603`，回應不會透露是哪一項檢查失敗。
 - **行為變更：** `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
   其餘每次呼叫都重讀，因此在呼叫進行中新增 interceptor 可能擲出例外。

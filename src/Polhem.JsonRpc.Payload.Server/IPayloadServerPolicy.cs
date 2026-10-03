@@ -11,10 +11,12 @@ namespace Polhem.JsonRpc.Payload.Server;
 /// and <see cref="JsonRpcRequestContext.Items"/> carry what an earlier filter or the object
 /// factory established about the caller.
 /// <para>
-/// <see cref="GetKeyAsync"/> is asked only for an encrypted call. <see cref="RequiresUniqueSequence"/> and
-/// <see cref="GetReplayScope"/> are asked about a plain or encoded call too, when frames are required, and then before
-/// any key; for an encrypted call they are asked after it. Answer them from the context alone, not from state
-/// <see cref="GetKeyAsync"/> leaves behind (<c>PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused</c>).
+/// <see cref="GetKeyAsync"/> is asked only for an encrypted call. When frames are required,
+/// <see cref="RequiresUniqueSequence"/> is asked about a plain or encoded call too, before any key, and
+/// <see cref="GetReplayScope"/> only when it answers <see langword="true"/>. For an encrypted call the order is the
+/// other way round and after the key: <see cref="GetReplayScope"/> is asked for every call with a frame, and
+/// <see cref="RequiresUniqueSequence"/> only when it answers a scope. Answer them from the context alone, not from state <see cref="GetKeyAsync"/> leaves behind
+/// (<c>PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused</c>).
 /// </para>
 /// </remarks>
 public interface IPayloadServerPolicy
@@ -28,9 +30,10 @@ public interface IPayloadServerPolicy
     /// Gets the scope a sequence number must be unique in, usually the caller's session.
     /// </summary>
     /// <remarks>
-    /// IMPORTANT: take the scope from something the call's key authenticates, such as the session the key belongs to.
-    /// A scope read from an unauthenticated header lets a captured call be replayed under a new scope, where its
-    /// sequence number has not been seen.
+    /// IMPORTANT: take the scope from the caller's session as an earlier filter or the object factory authenticated it,
+    /// the session whose key encrypts the caller's calls, and read it from the context, not from <see cref="GetKeyAsync"/>:
+    /// it is asked about plain and encoded calls, for which no key is asked. A scope read from an unauthenticated header
+    /// lets a captured call be replayed under a new scope, where its sequence number has not been seen.
     /// </remarks>
     /// <param name="context">The request context.</param>
     /// <returns>The scope, or <see langword="null"/> when sequence numbers are not checked for this caller.</returns>
