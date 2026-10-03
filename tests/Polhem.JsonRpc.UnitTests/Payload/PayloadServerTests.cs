@@ -154,6 +154,21 @@ public class PayloadServerTests
     }
 
     [Theory]
+    [DisplayName("Payload server: a call with no value to bind is invalid params, as an absent params is without the payload packages")]
+    [InlineData(null)]
+    [InlineData("""{"format": 0}""")]
+    [InlineData("""{"format": 0, "value": null}""")]
+    public async Task Call_NoValue_ReturnsInvalidParams(string? parameters)
+    {
+        var (rpc, _) = Create(new TestPolicy());
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
+            parameters is null ? null : DispatcherFixture.Element(parameters)));
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
+    }
+
+    [Theory]
     [DisplayName("Payload server: a plain value of the wrong shape is invalid params, as it is without the payload packages")]
     [InlineData("Spec.Numbers", "[5, 3]")]
     [InlineData("Spec.Subtract", """{"minuend": "not a number"}""")]

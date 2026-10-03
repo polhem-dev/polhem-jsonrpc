@@ -15,6 +15,19 @@ public class SerializerTests
         Assert.Equal("""{"jsonrpc":"2.0","method":"a.b"}""", json);
     }
 
+    [Fact]
+    [DisplayName("Serializer: a request and a response that start with a UTF-8 byte order mark are read")]
+    public void Read_ByteOrderMark_IsIgnored()
+    {
+        byte[] bom = [0xEF, 0xBB, 0xBF];
+
+        var parsed = JsonRpcSerializer.ReadRequests((byte[])[.. bom, .. Encoding.UTF8.GetBytes("""{"jsonrpc":"2.0","method":"a.b","id":1}""")]);
+        var responses = JsonRpcSerializer.ReadResponses((byte[])[.. bom, .. Encoding.UTF8.GetBytes("""{"jsonrpc":"2.0","result":7,"id":1}""")]);
+
+        Assert.Equal("a.b", Assert.Single(parsed.Entries).Request!.Method);
+        Assert.Equal(7, Assert.Single(responses).Result!.Value.GetInt32());
+    }
+
     [Theory]
     [DisplayName("Serializer: a batch larger than the limit is read as a single invalid request, and one within it as a batch")]
     [InlineData(2, false)]

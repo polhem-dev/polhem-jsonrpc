@@ -51,7 +51,7 @@ public static class JsonRpcSerializer
         JsonDocument document;
         try
         {
-            document = JsonDocument.Parse(utf8Json);
+            document = JsonDocument.Parse(WithoutByteOrderMark(utf8Json));
         }
         catch (JsonException)
         {
@@ -135,7 +135,7 @@ public static class JsonRpcSerializer
     /// <exception cref="JsonException">The content is not a JSON-RPC response.</exception>
     public static IReadOnlyList<JsonRpcResponse> ReadResponses(ReadOnlyMemory<byte> utf8Json)
     {
-        using var document = JsonDocument.Parse(utf8Json);
+        using var document = JsonDocument.Parse(WithoutByteOrderMark(utf8Json));
         var root = document.RootElement;
         if (root.ValueKind != JsonValueKind.Array)
         {
@@ -385,4 +385,9 @@ public static class JsonRpcSerializer
         }
         return buffer.WrittenSpan.ToArray();
     }
+
+    // RFC 8259 lets a parser ignore a UTF-8 byte order mark, and some HTTP clients send one; JsonDocument does not
+    // skip it.
+    private static ReadOnlyMemory<byte> WithoutByteOrderMark(ReadOnlyMemory<byte> utf8Json)
+        => utf8Json.Span.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]) ? utf8Json[3..] : utf8Json;
 }

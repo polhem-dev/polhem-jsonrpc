@@ -39,6 +39,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   default value, so a custom transport that left the kind unset was treated as in process, which a host may trust more
   than a remote caller. Recompile against this version: code compiled against 1.0 compares with the old numbers and
   takes every HTTP call for an in-process one.
+- A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
+  bind `null`, so the method usually failed and the caller got `-32603`.
+- A record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.
 
 ### Fixed
 
@@ -59,6 +62,7 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - A trimmed application, such as an iOS head, no longer gets warning IL2072 from `PayloadParameterBinder` or
   `DefaultParameterBinder`. `Polhem.JsonRpc.Server`, `Polhem.JsonRpc.AspNetCore` and `Polhem.JsonRpc.Payload.Server`
   now run the trim analyzer, though they still do not claim to support trimming.
+- A request or response that starts with a UTF-8 byte order mark is read instead of answered with `-32700 Parse error`.
 
 ## [1.0.0] - 2026-10-03
 

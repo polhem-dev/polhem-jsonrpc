@@ -43,8 +43,13 @@ public sealed class JsonRpcMethod
 
     /// <summary>
     /// Determines whether a method has the shape an action needs: public, an instance method, not generic, not a
-    /// property or event accessor, not declared by <see cref="object"/>, and exactly one parameter.
+    /// property or event accessor, not declared by <see cref="object"/>, not an <c>Equals</c> that compares the type
+    /// with its own kind (the <see cref="IEquatable{T}"/> method a record declares), and exactly one parameter.
     /// </summary>
+    /// <remarks>
+    /// Public methods a type inherits from its base types are resolvable, as they are for the Polhem framework's
+    /// <c>Type.GetMethod</c>.
+    /// </remarks>
     /// <param name="method">The method.</param>
     /// <returns><c>true</c> when the method can be resolved as an action.</returns>
     public static bool IsResolvableAction(MethodInfo method)
@@ -54,7 +59,9 @@ public sealed class JsonRpcMethod
             && !method.IsStatic
             && !method.IsSpecialName
             && !method.IsGenericMethod
-            && method.GetParameters().Length == 1
-            && method.GetBaseDefinition().DeclaringType != typeof(object);
+            && method.GetParameters() is [var parameter]
+            && method.GetBaseDefinition().DeclaringType != typeof(object)
+            && !(method.Name == nameof(Equals) && method.DeclaringType is { } declaring
+                && parameter.ParameterType.IsAssignableFrom(declaring));
     }
 }

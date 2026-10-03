@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Polhem.JsonRpc.Server;
 
@@ -36,9 +35,9 @@ public sealed class PayloadParameterBinder : IJsonRpcParameterBinder
         switch (payload.Value)
         {
             case null:
-                return DefaultValueOf(method.ParameterType);
-            case JsonElement { ValueKind: JsonValueKind.Null } when payload.Format == PayloadFormat.Plain:
-                return DefaultValueOf(method.ParameterType);
+            case JsonElement { ValueKind: JsonValueKind.Null }:
+                // No value to bind: the same as an absent `params` without the payload packages.
+                throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
             case JsonElement element when payload.Format == PayloadFormat.Plain:
                 // The same rules as the dispatcher's own binder: the value must be an object, because positional
                 // parameters would have to be matched by position, and a value that does not fit is invalid params.
@@ -66,8 +65,4 @@ public sealed class PayloadParameterBinder : IJsonRpcParameterBinder
                 throw new InvalidOperationException("The decoded payload is not of the parameter type of the method.");
         }
     }
-
-    [UnconditionalSuppressMessage("Trimming", "IL2067",
-        Justification = "Binders run under JsonRpcDispatcher, whose constructor requires unreferenced code: the parameter type is read from the application's method by reflection, and keeping it is the application's part.")]
-    private static object? DefaultValueOf(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 }

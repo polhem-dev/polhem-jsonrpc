@@ -76,6 +76,16 @@ onto it without a second mechanism. It follows the executor step by step:
 7. The object is released through `IJsonRpcObjectFactory.ReleaseObjectAsync` after the call, whether it succeeded or
    failed.
 
+> Amended for 1.1.0 (2026-10-03):
+>
+> - Step 3 also excludes an `Equals` whose parameter accepts the object's own type: the `IEquatable<T>` method every
+>   record declares, which otherwise had the shape of an action under a permissive policy
+>   (`DispatcherTests.DispatchAsync_RecordEquals_ReturnsMethodNotFound`). Public methods inherited from a base type
+>   remain resolvable, as with Polhem's `Type.GetMethod`
+>   (`DispatcherTests.DispatchAsync_InheritedMethod_CallsAction`).
+> - Step 6: an absent `params` is answered with `-32602 Invalid params` as well. It used to bind `null`, which a
+>   method then failed on with `-32603` (`DispatcherTests.DispatchMessageAsync_NoParams_ReturnsInvalidParams`).
+
 ### 3. A method is callable when its types follow the naming convention
 
 Every public one-parameter method of an object would otherwise be reachable from the network, including one added

@@ -75,6 +75,42 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
+    [Theory]
+    [DisplayName("A record's Equals is not an action, even under a policy that admits every method")]
+    [InlineData("Record.Equals")]
+    [InlineData("DerivedRecord.Equals")]
+    public async Task DispatchAsync_RecordEquals_ReturnsMethodNotFound(string method)
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
+
+        var response = await CallAsync(dispatcher, method, """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+    }
+
+    [Theory]
+    [DisplayName("A public method inherited from a base type is an action, as with Polhem's Type.GetMethod")]
+    [InlineData("Record.Subtract")]
+    [InlineData("DerivedRecord.Subtract")]
+    public async Task DispatchAsync_InheritedMethod_CallsAction(string method)
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
+
+        var response = await CallAsync(dispatcher, method, """{"minuend": 5, "subtrahend": 3}""");
+
+        Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
+    }
+
+    [Fact]
+    [DisplayName("A request without params is answered with -32602, because the method has a parameter to bind")]
+    public async Task DispatchMessageAsync_NoParams_ReturnsInvalidParams()
+    {
+        using var answer = await DispatcherFixture.RunAsync(DispatcherFixture.Create(),
+            """{"jsonrpc": "2.0", "method": "Spec.Subtract", "id": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, answer!.RootElement.GetProperty("error").GetProperty("code").GetInt32());
+    }
+
     [Fact]
     [DisplayName("An action name of exactly 64 characters is resolved")]
     public async Task DispatchAsync_ActionNameAtLengthLimit_CallsAction()

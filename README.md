@@ -78,8 +78,9 @@ it by these rules.
 | Object | The application's `IJsonRpcObjectFactory.CreateObject(progId, context)` creates the object the call runs on. `null` means the ProgId is unknown. After the call the object is passed to `ReleaseObjectAsync`. |
 | Action | A public, non-generic instance method of that object with exactly one parameter. A name with more than one such method is ambiguous and not found. |
 | Convention | The method is callable only when its parameter type is named `{Action}Request` and its return type, or the result of the `Task<T>` / `ValueTask<T>` it returns, `{Action}Response`: `AddResponse Add(AddRequest request)`. Any other public method is answered as if it did not exist. Replace the rule with `JsonRpcServerOptions.MethodPolicy`. |
-| Parameters | `params` must be a JSON object, deserialized into the request (camelCase names by default). An absent `params` binds `null`; an array is answered with `-32602 Invalid params`. |
+| Parameters | `params` must be a JSON object, deserialized into the request (camelCase names by default). An absent `params` or an array is answered with `-32602 Invalid params`. |
 | Result | The response object becomes `result`. |
+| Id | A string, an integer or `null`, echoed as it came. A number with a fraction or an exponent (`1.0`, `1e2`), or one beyond a 64-bit integer, is answered with `-32600 Invalid Request` and a `null` id, because the specification discourages them; send integers or strings. |
 | Errors | An unknown name, object or action is answered with `-32601 Method not found`. Throw `JsonRpcErrorException` to answer with your own code and message; any other exception is answered with `-32603 Internal error`, without its message. |
 
 ## Samples
