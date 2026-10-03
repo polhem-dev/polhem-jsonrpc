@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Polhem.JsonRpc.Payload;
 
@@ -197,6 +198,32 @@ public class PayloadProcessorTests
 
         Assert.Throws<InvalidOperationException>(
             () => new PayloadProcessor(options).OpenRequest(envelope, typeof(VectorPing), s_key, out _));
+    }
+
+    [Fact(DisplayName = "Processor: an encoded body written without compression opens, as a future writer may send a small one")]
+    public void OpenRequest_UncompressedEncodedBody_Opens()
+    {
+        var envelope = new PayloadEnvelope
+        {
+            Format = PayloadFormat.Encoded,
+            Body = Encoding.UTF8.GetBytes("""{"clientName":"a","traceId":"b"}"""),
+            TypeName = VectorPing.PolhemTypeName,
+        };
+
+        var ping = Assert.IsType<VectorPing>(CreateProcessor(false).OpenRequest(envelope, typeof(VectorPing), null, out _));
+
+        Assert.Equal("a", ping.ClientName);
+    }
+
+    [Fact(DisplayName = "Processor: a result that compresses more than a hundredfold unwraps on the client")]
+    public void Unwrap_HighlyCompressibleResult_RoundTrips()
+    {
+        var processor = CreateProcessor(false);
+        var zeros = new byte[2 * 1024 * 1024];
+
+        var element = processor.Wrap(zeros, PayloadFormat.Encoded);
+
+        Assert.Equal(zeros, processor.Unwrap<byte[]>(element));
     }
 
     [Fact(DisplayName = "Processor: a body that cannot be decoded is reported as one decoding error")]

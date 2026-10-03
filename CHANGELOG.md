@@ -15,7 +15,6 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   its entries.
 - `IPayloadServerPolicy.GetMinimumFormat`: the lowest format a method accepts. A call in a lower format is answered
   `-32602` before a key is asked for or its body is read. The default accepts every format, as before.
-- `GzipPayloadCompressor.MaxCompressionRatio` and a constructor that sets it.
 
 ### Changed
 
@@ -26,9 +25,6 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `UsePayload` answers `InvalidPayloadException` (a malformed envelope) with `-32602 Invalid params` instead of
   `-32603 Internal error`. An `ExceptionMapper` set before `UsePayload` still answers first; every other payload failure
   stays `-32603`, so the answer does not say which check failed.
-- `GzipPayloadCompressor` also refuses a body that decompresses to more than 100 times its compressed size
-  (`DefaultMaxCompressionRatio`), unless it decompresses to 1 MiB or less. An encoded body is decompressed without a
-  key, so the size limit alone let a request make the server decompress far more than it sent.
 - `JsonRpcConnector` reads its `JsonRpcClientOptions` once, when it is created, interceptors included. Before, only
   `SerializerOptions` was read then, and the rest on every call, so adding an interceptor while calls ran could throw.
 - `JsonRpcConnector` refuses a response that carries the id of another request, and an `IdGenerator` that returns no
@@ -42,6 +38,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
   bind `null`, so the method usually failed and the caller got `-32603`.
 - A record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.
+- `GzipPayloadCompressor` reads a body that does not start with the gzip header as it is, uncompressed. This is the
+  first step towards leaving small bodies uncompressed: every reader has to accept them before a writer sends one.
+  The only limit on decompression stays `MaxDecompressedBytes` (50 MiB) per body; an encoded body is decompressed
+  without a key, so a deployment that cares requires encrypted calls with `IPayloadServerPolicy.GetMinimumFormat`.
 
 ### Fixed
 
@@ -65,6 +65,11 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - A request or response that starts with a UTF-8 byte order mark is read instead of answered with `-32700 Parse error`.
 - A frame timestamp whose distance from the server clock overflows a 64-bit integer is refused like any other
   timestamp outside the tolerance, instead of failing with an arithmetic overflow.
+- `PayloadFilter` reads `FrameTimestampTolerance` and `TimeProvider` once, when it is created, together with the
+  lifetime of the replay store they decide. A tolerance raised after `UsePayload` let a captured call be replayed
+  after its scope was forgotten.
+- Only an encrypted frame's sequence number is recorded. Anybody can write the frame of an encoded body, so a forged
+  encoded call could move a scope's window and lock out the genuine encrypted calls after it.
 
 ## [1.0.0] - 2026-10-03
 

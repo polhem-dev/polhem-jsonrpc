@@ -265,6 +265,44 @@ public class PayloadServerTests
         Assert.Equal(expectedCode, ex.Code);
     }
 
+    [Fact(DisplayName = "Payload server: a tolerance raised after UsePayload does not outlive the replay store that remembers the scope")]
+    public async Task Call_ToleranceRaisedAfterUsePayload_KeepsTheOriginal()
+    {
+        var serverNow = new DateTimeOffset(2026, 10, 3, 12, 0, 0, TimeSpan.Zero);
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = new FixedClock(serverNow) };
+        var dispatcher = DispatcherFixture.Create(options =>
+        {
+            options.UsePayload(payloadOptions, new TestPolicy());
+            options.ExceptionMapper = (exception, _) => exception is ReplayRejectedException ? new JsonRpcError(ReplayRejected, "Replay rejected") : null;
+        });
+        payloadOptions.FrameTimestampTolerance = TimeSpan.FromMinutes(30);
+        var client = new PayloadProcessor(new PayloadOptions
+        {
+            RequireFrame = true,
+            TypeResolver = Registry(),
+            TimeProvider = new FixedClock(serverNow.AddMinutes(-10)),
+        });
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
+            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1)));
+
+        Assert.Equal(ReplayRejected, ex.Code);
+    }
+
+    [Fact(DisplayName = "Payload server: a forged frame in an encoded call does not move the scope's window and lock out encrypted calls")]
+    public async Task Call_EncodedFrame_DoesNotMoveReplayWindow()
+    {
+        var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true });
+        await rpc.InvokeAsync<JsonElement>(Subtract,
+            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1_000_000));
+
+        var result = await rpc.InvokeAsync<JsonElement>(Subtract,
+            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
+
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result, s_key)).Difference);
+    }
+
     [Fact(DisplayName = "Payload server: an encrypted call fails when the application has no key for the caller")]
     public async Task Call_NoKey_IsRejected()
     {

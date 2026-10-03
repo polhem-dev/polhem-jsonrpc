@@ -14,7 +14,6 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`：批次超過上限時，在讀取任何項目之前就拒絕。
 - `IPayloadServerPolicy.GetMinimumFormat`：方法接受的最低格式。低於它的呼叫會在詢問金鑰或讀取內容之前就回 `-32602`。
   預設接受所有格式，與先前相同。
-- `GzipPayloadCompressor.MaxCompressionRatio`，以及設定它的建構子。
 
 ### 變更
 
@@ -24,8 +23,6 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
 - `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
   在 `UsePayload` 之前設定的 `ExceptionMapper` 仍然優先；其他 payload 失敗維持 `-32603`，回應不會透露是哪一項檢查失敗。
-- `GzipPayloadCompressor` 另外拒絕解壓後超過壓縮前 100 倍的內容（`DefaultMaxCompressionRatio`），解壓後在 1 MiB 以內者除外。
-  encoded 內容不需金鑰就會被解壓，只靠大小上限時，一個請求可以讓伺服器解壓遠多於它送出的資料量。
 - `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
   其餘每次呼叫都重讀，因此在呼叫進行中新增 interceptor 可能擲出例外。
 - `JsonRpcConnector` 拒絕帶著另一個請求 id 的回應，也拒絕不產生 id 的 `IdGenerator`；批次拒絕 id 為 null 或與批次內重複的呼叫。
@@ -36,6 +33,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   以 1.0 編譯的程式碼仍用舊數值比較，會把每個 HTTP 呼叫當成 in-process。
 - 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
 - record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
+- `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
+  所有讀取端都接受之後，寫出端才會送出未壓縮的內容。解壓的唯一上限仍是每個內容 `MaxDecompressedBytes`（50 MiB）；
+  encoded 內容不需金鑰就會被解壓，在意的部署請以 `IPayloadServerPolicy.GetMinimumFormat` 要求加密呼叫。
 
 ### 修正
 
@@ -56,6 +56,10 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   但仍不宣稱支援 trimming。
 - 以 UTF-8 BOM 開頭的請求或回應會被正常讀取，不再回 `-32700 Parse error`。
 - frame 時間戳與伺服器時鐘的差距超出 64 位元整數範圍時，會和其他超出容許範圍的時間戳一樣被拒絕，不再因算術溢位而失敗。
+- `PayloadFilter` 在建立時一次讀取 `FrameTimestampTolerance` 與 `TimeProvider`，與它們決定的 replay store 保存時間一致。
+  先前在 `UsePayload` 之後調高容許範圍，攔截到的呼叫可在其 scope 被遺忘後重送成功。
+- 只記錄加密 frame 的序號。encoded 內容的 frame 誰都能寫，偽造的 encoded 呼叫先前可推進 scope 的 window，
+  使之後合法的加密呼叫被拒。
 
 ## [1.0.0] - 2026-10-03
 

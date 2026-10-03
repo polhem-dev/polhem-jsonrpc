@@ -15,24 +15,23 @@ public class PayloadPrimitiveTests
         Assert.Throws<InvalidDataException>(() => new GzipPayloadCompressor(1024).Decompress(compressed));
     }
 
-    [Fact(DisplayName = "Gzip: a body that expands more than the ratio allows is refused below the size limit")]
-    public void Gzip_DecompressBeyondRatio_Throws()
+    [Fact(DisplayName = "Gzip: a body without the gzip header is read as it is, so a writer may leave it uncompressed")]
+    public void Gzip_DecompressUncompressedBody_ReturnsItAsIs()
     {
-        var compressed = new GzipPayloadCompressor().Compress(new byte[4 * 1024 * 1024]);
+        var json = Encoding.UTF8.GetBytes("""{"clientName":"vector"}""");
 
-        Assert.True(compressed.Length * GzipPayloadCompressor.DefaultMaxCompressionRatio < 4 * 1024 * 1024);
-        Assert.Throws<InvalidDataException>(() => new GzipPayloadCompressor().Decompress(compressed));
+        Assert.Equal(json, new GzipPayloadCompressor().Decompress(json));
     }
 
-    [Fact(DisplayName = "Gzip: a body of up to 1 MiB is not refused for its ratio")]
-    public void Gzip_DecompressSmallBodyBeyondRatio_Succeeds()
+    [Fact(DisplayName = "Gzip: a body that compresses very well decompresses up to the size limit")]
+    public void Gzip_DecompressHighlyCompressible_Succeeds()
     {
-        var compressed = new GzipPayloadCompressor().Compress(new byte[1024 * 1024]);
+        var zeros = new byte[4 * 1024 * 1024];
 
-        Assert.Equal(1024 * 1024, new GzipPayloadCompressor().Decompress(compressed).Length);
+        Assert.Equal(zeros.Length, new GzipPayloadCompressor().Decompress(new GzipPayloadCompressor().Compress(zeros)).Length);
     }
 
-    [Fact(DisplayName = "Gzip: a large JSON body of ordinary records is within the ratio")]
+    [Fact(DisplayName = "Gzip: a large JSON body of ordinary records round-trips")]
     public void Gzip_DecompressLargeJson_Succeeds()
     {
         var json = Encoding.UTF8.GetBytes("[" + string.Join(",", Enumerable.Range(0, 100_000)
@@ -42,12 +41,6 @@ public class PayloadPrimitiveTests
 
         Assert.True(json.Length > 1024 * 1024);
         Assert.Equal(json, new GzipPayloadCompressor().Decompress(compressed));
-    }
-
-    [Fact(DisplayName = "Gzip: a ratio limit that is not positive is refused")]
-    public void Gzip_NotPositiveRatio_Throws()
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new GzipPayloadCompressor(1024, 0));
     }
 
     [Fact(DisplayName = "AES-CBC-HMAC: the same data encrypts differently each time, because the IV is random")]

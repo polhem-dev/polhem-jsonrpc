@@ -15,8 +15,15 @@ public sealed class PayloadFilter : IJsonRpcFilter
     private readonly PayloadProcessor _processor;
     private readonly IPayloadServerPolicy _policy;
     private readonly IPayloadReplayStore _replayStore;
+    private readonly TimeProvider _clock;
+    private readonly TimeSpan _tolerance;
 
     /// <summary>Initializes a new instance.</summary>
+    /// <remarks>
+    /// <see cref="PayloadOptions.FrameTimestampTolerance"/> and <see cref="PayloadOptions.TimeProvider"/> are read here,
+    /// once, together with the lifetime of the in-memory replay store they decide: a tolerance raised later would let a
+    /// frame outlive the scope that remembers its sequence number.
+    /// </remarks>
     /// <param name="options">The payload settings shared with the clients.</param>
     /// <param name="policy">The application's answers about each call.</param>
     /// <param name="replayStore">Where sequence numbers are remembered; an in-memory store when <see langword="null"/>.</param>
@@ -25,7 +32,9 @@ public sealed class PayloadFilter : IJsonRpcFilter
         ArgumentNullException.ThrowIfNull(options);
         _processor = new PayloadProcessor(options);
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _replayStore = replayStore ?? new MemoryPayloadReplayStore(options.FrameTimestampTolerance * 2, options.TimeProvider);
+        _clock = options.TimeProvider;
+        _tolerance = options.FrameTimestampTolerance;
+        _replayStore = replayStore ?? new MemoryPayloadReplayStore(_tolerance * 2, _clock);
     }
 
     /// <inheritdoc/>
@@ -49,7 +58,12 @@ public sealed class PayloadFilter : IJsonRpcFilter
         if (frame != null)
         {
             ValidateTimestamp(frame);
-            await ValidateSequenceAsync(context, frame).ConfigureAwait(false);
+            // Only an encrypted frame is covered by the HMAC. Anybody can write the frame of an encoded body, so recording
+            // its sequence number would let a forged call move the scope's window and lock out the genuine ones.
+            if (envelope.Format == PayloadFormat.Encrypted)
+            {
+                await ValidateSequenceAsync(context, frame).ConfigureAwait(false);
+            }
         }
         cancellationToken.ThrowIfCancellationRequested();
         new PayloadRequest(envelope.Format, envelope.Codec, value, frame).Attach(context);
@@ -65,8 +79,8 @@ public sealed class PayloadFilter : IJsonRpcFilter
     {
         // The difference is taken in double: the timestamp comes from the caller, and `now - TimestampMs` overflows a long
         // for a timestamp near either end of its range.
-        double driftMs = Math.Abs((double)_processor.Options.TimeProvider.GetUtcNow().ToUnixTimeMilliseconds() - frame.TimestampMs);
-        if (driftMs > _processor.Options.FrameTimestampTolerance.TotalMilliseconds)
+        double driftMs = Math.Abs((double)_clock.GetUtcNow().ToUnixTimeMilliseconds() - frame.TimestampMs);
+        if (driftMs > _tolerance.TotalMilliseconds)
         {
             throw new ReplayRejectedException(
                 $"The request timestamp is {Math.Floor(driftMs / 1000)} seconds away from server time, outside the accepted window. Check the client clock.");
