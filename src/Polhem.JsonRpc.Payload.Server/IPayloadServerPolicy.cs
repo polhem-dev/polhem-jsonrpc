@@ -13,8 +13,9 @@ namespace Polhem.JsonRpc.Payload.Server;
 /// <para>
 /// <see cref="GetKeyAsync"/> is asked only for an encrypted call. When frames are required,
 /// <see cref="RequiresUniqueSequence"/> is asked about a plain or encoded call too, before any key, and
-/// <see cref="GetReplayScope"/> only when it answers <see langword="true"/>; for an encrypted call both are asked after
-/// the key. Answer them from the context alone, not from state <see cref="GetKeyAsync"/> leaves behind
+/// <see cref="GetReplayScope"/> only when it answers <see langword="true"/>. For an encrypted call the order is the
+/// other way round and after the key: <see cref="GetReplayScope"/> is asked for every call with a frame, and
+/// <see cref="RequiresUniqueSequence"/> only when it answers a scope. Answer them from the context alone, not from state <see cref="GetKeyAsync"/> leaves behind
 /// (<c>PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused</c>).
 /// </para>
 /// </remarks>

@@ -73,8 +73,8 @@ Neither package is needed for plain JSON-RPC. The core packages do not reference
 > the calls of a batch (`PayloadOptions.MaxDecompressedBytesPerMessage`, 50 MiB by default), because an encoded body is
 > decompressed before any key is asked for, and a batch could otherwise multiply the per-body limit. The calls draw on
 > the budget in order; a body that fails to decompress uses up the rest of it
-> (`PayloadServerTests.Batch_BodyFailingPastBudget_ExhaustsTheBudget`). Neither limit raises the other, and a body sent
-> uncompressed is not bounded by either. This is a server setting, not part of the wire format: the bytes are unchanged.
+> (`PayloadServerTests.Batch_DecompressionThrowsOtherException_ExhaustsTheBudget`). Neither limit raises the other. A
+> body sent uncompressed is not refused by either, but its length is taken from the budget. This is a server setting, not part of the wire format: the bytes are unchanged.
 
 Each of these is pinned by vectors that the Polhem implementation produced before the extraction
 (`tests/Polhem.JsonRpc.UnitTests/Payload/PayloadWireVectorTests.cs`); a vector that has to change means the wire changed.
