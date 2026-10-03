@@ -57,10 +57,10 @@ public sealed class JsonRpcHttpHandler
             return;
         }
 
-        byte[]? body;
+        ReadOnlyMemory<byte>? body;
         try
         {
-            body = await ReadBodyAsync(request.Body, _options.MaxRequestBodySize, aborted).ConfigureAwait(false);
+            body = await ReadBodyAsync(request.Body, request.ContentLength, _options.MaxRequestBodySize, aborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (aborted.IsCancellationRequested)
         {
@@ -68,7 +68,7 @@ public sealed class JsonRpcHttpHandler
             return;
         }
 
-        if (body is null)
+        if (body is not { } message)
         {
             await WriteErrorAsync(httpContext, StatusCodes.Status413PayloadTooLarge, "Request too large").ConfigureAwait(false);
             return;
@@ -83,7 +83,7 @@ public sealed class JsonRpcHttpHandler
         JsonRpcDispatchResult result;
         try
         {
-            result = await _dispatcher.DispatchMessageAsync(body, transport, aborted).ConfigureAwait(false);
+            result = await _dispatcher.DispatchMessageAsync(message, transport, aborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (aborted.IsCancellationRequested)
         {
@@ -108,9 +108,11 @@ public sealed class JsonRpcHttpHandler
         MediaTypeHeaderValue.TryParse(contentType, out var mediaType)
         && mediaType.MediaType.Equals(MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase);
 
-    private static async Task<byte[]?> ReadBodyAsync(Stream body, long limit, CancellationToken cancellationToken)
+    // The body is read once into a buffer sized by Content-Length when there is one, and handed on without the copy
+    // ToArray would make. Content-Length is only a size hint: the count is still checked against the limit as it reads.
+    private static async Task<ReadOnlyMemory<byte>?> ReadBodyAsync(Stream body, long? length, long limit, CancellationToken cancellationToken)
     {
-        using var buffer = new MemoryStream();
+        using var buffer = length is > 0 and <= int.MaxValue ? new MemoryStream((int)length.Value) : new MemoryStream();
         var chunk = new byte[16 * 1024];
         int read;
         while ((read = await body.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
@@ -118,7 +120,7 @@ public sealed class JsonRpcHttpHandler
             if (buffer.Length + read > limit) { return null; }
             await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
-        return buffer.ToArray();
+        return new ReadOnlyMemory<byte>(buffer.GetBuffer(), 0, (int)buffer.Length);
     }
 
     private static Dictionary<string, string> ReadHeaders(IHeaderDictionary headers)
