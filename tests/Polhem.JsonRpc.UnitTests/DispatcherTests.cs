@@ -392,6 +392,14 @@ public class DispatcherTests
     }
 
     [Fact]
+    [DisplayName("A transport that leaves the kind at its default is HTTP, never in-process")]
+    public void TransportKind_Default_IsNotInProcess()
+    {
+        Assert.Equal(JsonRpcTransportKind.Http, default);
+        Assert.NotEqual(JsonRpcTransportKind.InProcess, new JsonRpcTransportInfo(default).Kind);
+    }
+
+    [Fact]
     [DisplayName("InProcessTransport marks its calls as in-process")]
     public async Task InProcessTransport_SendAsync_MarksInProcess()
     {

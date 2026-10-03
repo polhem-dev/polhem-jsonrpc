@@ -94,6 +94,12 @@ requests as in-process; the HTTP handler marks every request as HTTP. The identi
 `params` or from any other part of the request, because a host may grant in-process calls more than remote ones
 (`HttpHandlerTests.Post_HeaderClaimsInProcess_StillMarkedHttp`).
 
+> Amended for 1.1.0 (2026-10-03): `JsonRpcTransportKind.InProcess` was the enum's default value, so a custom transport
+> that forgot to set the kind, or passed `default`, was treated as in process. `Http` is now 0 and `InProcess` 1
+> (`DispatcherTests.TransportKind_Default_IsNotInProcess`). The renumbering is a binary break: a host compiled against
+> 1.0 compares with the old numbers and, against 1.1, takes every HTTP call for an in-process one. The Polhem framework
+> releases a build against 1.1 at the same time and deprecates the one before it.
+
 ### 5. Compression and encryption are not part of the packages
 
 Filters on the server and interceptors on the client can read and rewrite the raw JSON of `params` and `result` before
