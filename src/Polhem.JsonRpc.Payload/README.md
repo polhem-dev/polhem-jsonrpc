@@ -2,7 +2,8 @@
 
 An optional payload envelope for Polhem.JsonRpc: the `params` of a request and the `result` of a response travel as
 plain JSON, as an encoded body (a codec, then gzip), or as an encrypted one (AES-256-CBC with HMAC-SHA256), with an
-optional frame that guards against replay. It is the wire format of the Polhem framework and of its TypeScript client.
+optional frame that guards against replay. It is the wire format of the Polhem framework; its TypeScript client reads
+the envelope, the encoding and the encryption, but not yet the frame.
 It supports trimming and Native AOT, so it runs on iOS, Android and WebAssembly.
 
 ```csharp

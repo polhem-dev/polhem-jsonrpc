@@ -21,22 +21,25 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `JsonRpcDispatcher` resolves the methods of an object type once, the first time the type is used, and asks the method
   policy about each of them then, once, rather than one method name at a time; the answers are kept for the
   dispatcher's life. A method the policy throws for is not callable, and the type's other methods still are.
-- `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
+- **Wire-visible:** `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
   `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
-- `UsePayload` answers `InvalidPayloadException` (a malformed envelope) with `-32602 Invalid params` instead of
+- **Wire-visible:** `UsePayload` answers `InvalidPayloadException` (a malformed envelope) with `-32602 Invalid params` instead of
   `-32603 Internal error`. An `ExceptionMapper` set before `UsePayload` still answers first; every other payload failure
   stays `-32603`, so the answer does not say which check failed.
-- `JsonRpcConnector` reads its `JsonRpcClientOptions` once, when it is created, interceptors included. Before, only
+- **Behavior change:** `JsonRpcConnector` reads its `JsonRpcClientOptions` once, when it is created, interceptors included. Before, only
   `SerializerOptions` was read then, and the rest on every call, so adding an interceptor while calls ran could throw.
-- `JsonRpcConnector` refuses a response that carries the id of another request, and an `IdGenerator` that returns no
+- **Behavior change:** `JsonRpcConnector` refuses a response that carries the id of another request, and an `IdGenerator` that returns no
   id. A batch refuses a call whose id is null or already in the batch.
 - The PayloadQuickStart sample derives each client's key from the demo key and its `X-Client-Id`, so a call replayed
   under another client id no longer starts over in a fresh replay scope. It also requires encrypted calls.
 - **Breaking (binary):** `JsonRpcTransportKind.Http` is now 0 and `InProcess` 1; `Custom` stays 2. `InProcess` was the
   default value, so a custom transport that left the kind unset was treated as in process, which a host may trust more
   than a remote caller. Recompile against this version: code compiled against 1.0 compares with the old numbers and
-  takes every HTTP call for an in-process one.
-- A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
+  takes every HTTP call for an in-process one. This version breaks binary compatibility in a minor release, an exception
+  to Semantic Versioning: the Polhem framework releases a build against it at the same time and deprecates the one
+  before. An application that upgrades these packages but still runs code compiled against 1.0 lets unauthenticated
+  HTTP calls through as in-process ones.
+- **Wire-visible:** A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
   bind `null`, so the method usually failed and the caller got `-32603`.
 - A record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.
 - `GzipPayloadCompressor` reads a body that does not start with the gzip header as it is, uncompressed. This is the

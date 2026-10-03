@@ -3,8 +3,8 @@ using Polhem.JsonRpc.Server;
 namespace Polhem.JsonRpc.Payload.Server;
 
 /// <summary>
-/// What <see cref="PayloadFilter"/> asks the application about a call: the key, the replay rules and the type to decode
-/// into.
+/// What <see cref="PayloadFilter"/> asks the application about a call: the key, the lowest format it accepts, the
+/// replay rules and the type to decode into.
 /// </summary>
 /// <remarks>
 /// Every member receives the request context, whose <see cref="JsonRpcRequestContext.Services"/>

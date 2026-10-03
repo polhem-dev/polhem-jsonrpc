@@ -11,6 +11,7 @@ Read the [architecture decision records](maintainers/adr/README.md) for why the 
 ```bash
 dotnet build Polhem.JsonRpc.slnx --configuration Release
 dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
+./check-md-links.sh
 ```
 
 ## Conventions
@@ -23,7 +24,9 @@ dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
   needs an issue first.
 - The C# snippets of the READMEs are compiled in `tests/Polhem.JsonRpc.ReadmeSnippets`, one region per snippet.
   Change a snippet there and in the README together: the build compiles the region, and `ReadmeSnippetTests` fails when
-  a README no longer shows its region's code, or a translated README shows other code than the English one.
+  a README no longer shows its region's code, or a translated README shows other code than the English one. CI runs
+  both on a pull request that changes only a README, when that README has a C# snippet
+  (`.github/scripts/detect-docs-only.sh`).
 - A test method is named `<Method>_<Scenario>_<Expected>` and says what it checks in the `DisplayName` of its `[Fact]`
   or `[Theory]`, which is what xUnit reports. (`System.ComponentModel.DisplayNameAttribute` is not read by xUnit.)
   `TestConventionTests` fails the build's test run when a test breaks either rule.
