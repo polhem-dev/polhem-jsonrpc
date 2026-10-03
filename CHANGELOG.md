@@ -17,6 +17,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   `-32602` before a key is asked for or its body is read. The default accepts every format, as before.
 - `JsonRpcRequestContext.MessageItems`: values shared by every call of one message, the call alone or all the calls of
   a batch, for a filter that accounts for the whole message.
+- `PayloadOptions.MaxDecompressedBytesPerMessage` (default 50 MiB): how much a server decompresses for one message in
+  total, the call alone or all the calls of a batch. `PayloadDecompressionBudget`,
+  `IPayloadCompressor.Decompress(byte[], long)` (with a default implementation) and an overload of
+  `PayloadProcessor.OpenRequest` carry it.
 
 ### Changed
 
@@ -48,6 +52,13 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   first step towards leaving small bodies uncompressed: every reader has to accept them before a writer sends one.
   The only limit on decompression stays `MaxDecompressedBytes` (50 MiB) per body; an encoded body is decompressed
   without a key, so a deployment that cares requires encrypted calls with `IPayloadServerPolicy.GetMinimumFormat`.
+- **Wire-visible:** a method whose `IPayloadServerPolicy.RequiresUniqueSequence` is true refuses plain and encoded
+  calls with `-32602`. Only an encrypted frame is covered by the HMAC; anybody can write the frame of an encoded call,
+  so it could neither prove its sequence number new nor be allowed to move the scope's window. In 1.0.0 such a call
+  was checked, and a forged one could lock out the genuine encrypted calls after it.
+- A batch shares one decompression budget (`MaxDecompressedBytesPerMessage`). An encoded body is decompressed without
+  a key; with gzip compressed at its best level, one 4 MiB request of 62 bodies could otherwise make the server
+  allocate about 11 GiB and spend about 10 seconds of CPU.
 
 ### Fixed
 
@@ -75,8 +86,6 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `PayloadFilter` reads `FrameTimestampTolerance` and `TimeProvider` once, when it is created, together with the
   lifetime of the replay store they decide. A tolerance raised after `UsePayload` let a captured call be replayed
   after its scope was forgotten.
-- Only an encrypted frame's sequence number is recorded. Anybody can write the frame of an encoded body, so a forged
-  encoded call could move a scope's window and lock out the genuine encrypted calls after it.
 
 ## [1.0.0] - 2026-10-03
 

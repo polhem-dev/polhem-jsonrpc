@@ -8,7 +8,7 @@ using Polhem.JsonRpc.Server;
 
 namespace Polhem.JsonRpc.UnitTests.Payload;
 
-public class PayloadServerTests
+public partial class PayloadServerTests
 {
     private const string Subtract = "Spec.Subtract";
 
@@ -296,8 +296,8 @@ public class PayloadServerTests
     public async Task Call_EncodedFrame_DoesNotMoveReplayWindow()
     {
         var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true });
-        await rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1_000_000));
+        await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
+            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1_000_000)));
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract,
             client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
@@ -317,7 +317,14 @@ public class PayloadServerTests
         var parameters = rejection switch
         {
             "foreign type" => client.Wrap(new UpperRequest("a"), PayloadFormat.Encoded, sequence: 1),
-            "unknown codec" => DispatcherFixture.Element("""{"format": 1, "value": "AAAA", "codec": "unknown"}"""),
+            // A valid frame first, so the call gets past the frame to the codec.
+            "unknown codec" => new PayloadEnvelope
+            {
+                Format = PayloadFormat.Encoded,
+                Body = new PayloadFrame(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 1).Prepend(SubtractBody()),
+                TypeName = Registry().GetTypeName(typeof(SubtractRequest)),
+                Codec = "unknown",
+            }.ToElement(),
             "frame of another version" => FramedEnvelope(PayloadFrameVersion2(), PayloadFormat.Encrypted),
             "stale timestamp" => FramedEnvelope(new PayloadFrame(DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeMilliseconds(), 1).Prepend(SubtractBody()), PayloadFormat.Encrypted),
             _ => client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1),

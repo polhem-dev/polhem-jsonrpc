@@ -46,6 +46,11 @@ public interface IPayloadServerPolicy
     /// <summary>Says whether the method rejects a sequence number the scope already used.</summary>
     /// <param name="context">The request context.</param>
     /// <returns><see langword="true"/> to check the sequence number. The default checks none.</returns>
+    /// <remarks>
+    /// Only an encrypted frame is covered by the HMAC; anybody can write the frame of a plain or encoded call. So a
+    /// method that answers <see langword="true"/> refuses plain and encoded calls with an
+    /// <see cref="InvalidPayloadException"/>, and checks the sequence number of encrypted ones.
+    /// </remarks>
     bool RequiresUniqueSequence(JsonRpcRequestContext context) => false;
 
     /// <summary>

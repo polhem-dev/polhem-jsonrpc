@@ -101,6 +101,9 @@ What the filter cannot decide is asked of the application through interfaces:
 
 - **the key** of the call, and the scope a sequence number is unique in (Polhem: the access token and its session key);
 - **whether the method rejects a repeated sequence number** (Polhem: `ApiReplayProtection.UniqueSequence`);
+  amended for 1.1.0: such a method refuses plain and encoded calls, because only an encrypted frame is covered by the
+  HMAC and so only it can prove its sequence number new
+  (`PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused`);
 - **the type to decode into.** The server decides it, from what the method takes; the `type` member of a request is only
   checked against it. A type is never loaded from a name the client sent.
 

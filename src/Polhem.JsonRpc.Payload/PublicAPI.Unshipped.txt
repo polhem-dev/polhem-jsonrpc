@@ -1,3 +1,11 @@
 #nullable enable
 Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.get -> System.TimeProvider!
 Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.set -> void
+Polhem.JsonRpc.Payload.IPayloadCompressor.Decompress(byte[]! bytes, long maxDecompressedBytes) -> byte[]!
+Polhem.JsonRpc.Payload.GzipPayloadCompressor.Decompress(byte[]! bytes, long maxDecompressedBytes) -> byte[]!
+Polhem.JsonRpc.Payload.PayloadDecompressionBudget
+Polhem.JsonRpc.Payload.PayloadDecompressionBudget.PayloadDecompressionBudget(long bytes) -> void
+Polhem.JsonRpc.Payload.PayloadDecompressionBudget.Remaining.get -> long
+Polhem.JsonRpc.Payload.PayloadOptions.MaxDecompressedBytesPerMessage.get -> long
+Polhem.JsonRpc.Payload.PayloadOptions.MaxDecompressedBytesPerMessage.set -> void
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenRequest(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, Polhem.JsonRpc.Payload.PayloadDecompressionBudget! budget, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?

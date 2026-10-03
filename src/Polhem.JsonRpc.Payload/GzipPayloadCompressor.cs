@@ -54,9 +54,17 @@ public sealed class GzipPayloadCompressor : IPayloadCompressor
 
     /// <inheritdoc/>
     /// <exception cref="InvalidDataException">The data is not gzip, or decompresses beyond the size limit.</exception>
-    public byte[] Decompress(byte[] bytes)
+    public byte[] Decompress(byte[] bytes) => Decompress(bytes, MaxDecompressedBytes);
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidDataException">
+    /// The data is not gzip, or decompresses beyond the smaller of <paramref name="maxDecompressedBytes"/> and
+    /// <see cref="MaxDecompressedBytes"/>.
+    /// </exception>
+    public byte[] Decompress(byte[] bytes, long maxDecompressedBytes)
     {
         ArgumentNullException.ThrowIfNull(bytes);
+        long limit = Math.Min(maxDecompressedBytes, MaxDecompressedBytes);
         if (!bytes.AsSpan().StartsWith(GzipHeader)) { return bytes; }
 
         using var input = new MemoryStream(bytes);
@@ -68,10 +76,9 @@ public sealed class GzipPayloadCompressor : IPayloadCompressor
         while ((count = gzip.Read(buffer, 0, buffer.Length)) > 0)
         {
             total += count;
-            if (total > MaxDecompressedBytes)
+            if (total > limit)
             {
-                throw new InvalidDataException(
-                    $"The decompressed payload exceeds the limit of {MaxDecompressedBytes} bytes.");
+                throw new InvalidDataException($"The decompressed payload exceeds the limit of {limit} bytes.");
             }
             output.Write(buffer, 0, count);
         }
