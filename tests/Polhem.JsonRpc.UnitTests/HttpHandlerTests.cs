@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -48,8 +47,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     private Task<HttpResponseMessage> PostAsync(string body, string contentType = "application/json") =>
         _client!.PostAsync("/api", new StringContent(body, Encoding.UTF8, contentType));
 
-    [Fact]
-    [DisplayName("HTTP: a call is answered with 200 and the JSON-RPC response")]
+    [Fact(DisplayName = "HTTP: a call is answered with 200 and the JSON-RPC response")]
     public async Task Post_Call_Returns200WithResponse()
     {
         using var response = await PostAsync(Subtract);
@@ -60,8 +58,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(2, body.RootElement.GetProperty("result").GetProperty("difference").GetInt32());
     }
 
-    [Fact]
-    [DisplayName("HTTP: a notification is answered with 204 and no body")]
+    [Fact(DisplayName = "HTTP: a notification is answered with 204 and no body")]
     public async Task Post_Notification_Returns204()
     {
         using var response = await PostAsync("""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "http"}}""");
@@ -70,8 +67,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Empty(await response.Content.ReadAsByteArrayAsync());
     }
 
-    [Fact]
-    [DisplayName("HTTP: a body that is not application/json is answered with 415")]
+    [Fact(DisplayName = "HTTP: a body that is not application/json is answered with 415")]
     public async Task Post_WrongContentType_Returns415()
     {
         using var response = await PostAsync(Subtract, "text/plain");
@@ -79,8 +75,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
     }
 
-    [Fact]
-    [DisplayName("HTTP: a body larger than MaxRequestBodySize is answered with 413")]
+    [Fact(DisplayName = "HTTP: a body larger than MaxRequestBodySize is answered with 413")]
     public async Task Post_TooLarge_Returns413()
     {
         var large = $$"""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "{{new string('x', 2048)}}"}, "id": 1}""";
@@ -90,8 +85,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
     }
 
-    [Fact]
-    [DisplayName("HTTP: a body without Content-Length is cut off at MaxRequestBodySize and answered with 413")]
+    [Fact(DisplayName = "HTTP: a body without Content-Length is cut off at MaxRequestBodySize and answered with 413")]
     public async Task Post_TooLargeWithoutContentLength_Returns413()
     {
         var large = $$"""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "{{new string('x', 2048)}}"}, "id": 1}""";
@@ -104,8 +98,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
     }
 
-    [Fact]
-    [DisplayName("HTTP: StatusCodeSelector chooses the status of a single response")]
+    [Fact(DisplayName = "HTTP: StatusCodeSelector chooses the status of a single response")]
     public async Task Post_StatusCodeSelector_ChoosesStatus()
     {
         using var response = await PostAsync("""{"jsonrpc": "2.0", "method": "Nothing.Here", "id": 1}""");
@@ -113,8 +106,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
-    [DisplayName("HTTP: a call is marked as HTTP even when a header claims otherwise")]
+    [Fact(DisplayName = "HTTP: a call is marked as HTTP even when a header claims otherwise")]
     public async Task Post_HeaderClaimsInProcess_StillMarkedHttp()
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api")
@@ -131,8 +123,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.NotEmpty(_seenKinds);
     }
 
-    [Fact]
-    [DisplayName("HTTP: AddJsonRpcServer adds to the options a framework registered first, after its filters")]
+    [Fact(DisplayName = "HTTP: AddJsonRpcServer adds to the options a framework registered first, after its filters")]
     public async Task AddJsonRpcServer_RegisteredOptions_AreSharedAndExtended()
     {
         var order = new List<string>();
@@ -153,8 +144,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal(["framework", "application"], order);
     }
 
-    [Fact]
-    [DisplayName("HTTP: AddJsonRpcServer applies configureHttp to HTTP options a framework registered first")]
+    [Fact(DisplayName = "HTTP: AddJsonRpcServer applies configureHttp to HTTP options a framework registered first")]
     public void AddJsonRpcServer_RegisteredHttpOptions_AreSharedAndExtended()
     {
         var services = new ServiceCollection();

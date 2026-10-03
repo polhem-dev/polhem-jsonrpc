@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.ComponentModel;
 using Polhem.JsonRpc.Payload.Server;
 
 namespace Polhem.JsonRpc.UnitTests.Payload;
@@ -14,16 +13,14 @@ public class ReplayWindowTests
     private const long MaxForwardJump = 1_000_000;
     private const string Scope = "session";
 
-    [Fact]
-    [DisplayName("Replay window: the first sequence number is accepted whatever its size and becomes the baseline")]
-    public async Task FirstSequence_IsAccepted()
+    [Fact(DisplayName = "Replay window: the first sequence number is accepted whatever its size and becomes the baseline")]
+    public async Task TryAcceptAsync_FirstSequence_IsAccepted()
     {
         Assert.True(await new MemoryPayloadReplayStore().TryAcceptAsync(Scope, 5_000));
     }
 
-    [Fact]
-    [DisplayName("Replay window: increasing sequence numbers are all accepted")]
-    public async Task IncreasingSequences_AllAccepted()
+    [Fact(DisplayName = "Replay window: increasing sequence numbers are all accepted")]
+    public async Task TryAcceptAsync_IncreasingSequences_AllAccepted()
     {
         var store = new MemoryPayloadReplayStore();
         for (long i = 1; i <= 500; i++)
@@ -32,9 +29,8 @@ public class ReplayWindowTests
         }
     }
 
-    [Fact]
-    [DisplayName("Replay window: a forward jump beyond the window width clears it, so earlier numbers can no longer be used")]
-    public async Task JumpBeyondWindow_ClearsEarlierSlots()
+    [Fact(DisplayName = "Replay window: a forward jump beyond the window width clears it, so earlier numbers can no longer be used")]
+    public async Task TryAcceptAsync_JumpBeyondWindow_ClearsEarlierSlots()
     {
         var store = new MemoryPayloadReplayStore();
         await store.TryAcceptAsync(Scope, 1);
@@ -44,9 +40,8 @@ public class ReplayWindowTests
         Assert.False(await store.TryAcceptAsync(Scope, 2));
     }
 
-    [Fact]
-    [DisplayName("Replay window: a forward jump exactly at the limit is accepted")]
-    public async Task JumpExactlyAtLimit_IsAccepted()
+    [Fact(DisplayName = "Replay window: a forward jump exactly at the limit is accepted")]
+    public async Task TryAcceptAsync_JumpExactlyAtLimit_IsAccepted()
     {
         var store = new MemoryPayloadReplayStore();
         await store.TryAcceptAsync(Scope, 1);
@@ -54,9 +49,8 @@ public class ReplayWindowTests
         Assert.True(await store.TryAcceptAsync(Scope, 1 + MaxForwardJump));
     }
 
-    [Fact]
-    [DisplayName("Replay window: a jump beyond the limit is refused and leaves the window usable")]
-    public async Task JumpBeyondLimit_IsRefusedWithoutLockingTheScope()
+    [Fact(DisplayName = "Replay window: a jump beyond the limit is refused and leaves the window usable")]
+    public async Task TryAcceptAsync_JumpBeyondLimit_RefusedWithoutLockingScope()
     {
         // Without a limit, one arithmetic mistake on a client that sends a number near `long.MaxValue` would put every
         // later request of that session outside the window, all failing with a valid key, which is hard to diagnose.
@@ -67,9 +61,8 @@ public class ReplayWindowTests
         Assert.True(await store.TryAcceptAsync(Scope, 2));
     }
 
-    [Fact]
-    [DisplayName("Replay window: the same sequence number sent concurrently is accepted exactly once")]
-    public void SameSequenceConcurrently_AcceptedExactlyOnce()
+    [Fact(DisplayName = "Replay window: the same sequence number sent concurrently is accepted exactly once")]
+    public void TryAcceptAsync_SameSequenceConcurrently_AcceptedExactlyOnce()
     {
         // Concurrent requests of the same session share the window, so the read-modify-write must be atomic.
         var store = new MemoryPayloadReplayStore();
@@ -80,9 +73,8 @@ public class ReplayWindowTests
         Assert.Single(results, accepted => accepted);
     }
 
-    [Fact]
-    [DisplayName("Replay window: distinct numbers within the window width sent concurrently are all accepted")]
-    public void DistinctSequencesConcurrently_AllAccepted()
+    [Fact(DisplayName = "Replay window: distinct numbers within the window width sent concurrently are all accepted")]
+    public void TryAcceptAsync_DistinctSequencesConcurrently_AllAccepted()
     {
         var store = new MemoryPayloadReplayStore();
         var results = new ConcurrentBag<bool>();
@@ -92,9 +84,8 @@ public class ReplayWindowTests
         Assert.Equal(WindowSize, results.Count(accepted => accepted));
     }
 
-    [Fact]
-    [DisplayName("Replay window: a cancelled call throws and records nothing")]
-    public async Task CancelledCall_RecordsNothing()
+    [Fact(DisplayName = "Replay window: a cancelled call throws and records nothing")]
+    public async Task TryAcceptAsync_Cancelled_RecordsNothing()
     {
         var store = new MemoryPayloadReplayStore();
         using var cancelled = new CancellationTokenSource();
@@ -105,9 +96,8 @@ public class ReplayWindowTests
         Assert.True(await store.TryAcceptAsync(Scope, 3));
     }
 
-    [Fact]
-    [DisplayName("Replay window: a scope in continuous use is never forgotten, so replay protection is not silently reset")]
-    public async Task ScopeInContinuousUse_IsKept()
+    [Fact(DisplayName = "Replay window: a scope in continuous use is never forgotten, so replay protection is not silently reset")]
+    public async Task TryAcceptAsync_ScopeInContinuousUse_IsKept()
     {
         var clock = new ManualClock();
         var store = new MemoryPayloadReplayStore(TimeSpan.FromMinutes(10), clock);

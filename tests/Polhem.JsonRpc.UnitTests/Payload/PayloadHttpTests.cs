@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -46,8 +45,7 @@ public sealed class PayloadHttpTests : IAsyncLifetime
         if (_app is not null) { await _app.DisposeAsync(); }
     }
 
-    [Fact]
-    [DisplayName("Payload over HTTP: an encrypted, framed call is answered encrypted and opens on the client")]
+    [Fact(DisplayName = "Payload over HTTP: an encrypted, framed call is answered encrypted and opens on the client")]
     public async Task Post_EncryptedCall_RoundTrips()
     {
         var rpc = new JsonRpcConnector(new HttpTransport(_app!.GetTestClient(), new Uri("/api", UriKind.Relative)));

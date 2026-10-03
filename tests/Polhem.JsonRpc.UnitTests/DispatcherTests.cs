@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
 using Polhem.JsonRpc.Server;
@@ -14,15 +13,13 @@ public class DispatcherTests
         return response!;
     }
 
-    [Fact]
-    [DisplayName("The dispatcher requires an object factory")]
+    [Fact(DisplayName = "The dispatcher requires an object factory")]
     public void Constructor_NoObjectFactory_Throws()
     {
         Assert.Throws<ArgumentException>(() => new JsonRpcDispatcher(new JsonRpcServerOptions()));
     }
 
-    [Fact]
-    [DisplayName("ProgId.Action creates the object for the ProgId and calls the action on it")]
+    [Fact(DisplayName = "ProgId.Action creates the object for the ProgId and calls the action on it")]
     public async Task DispatchAsync_ProgIdAction_CallsAction()
     {
         var response = await CallAsync(DispatcherFixture.Create(), "Spec.Subtract", """{"minuend": 5, "subtrahend": 3}""");
@@ -30,8 +27,7 @@ public class DispatcherTests
         Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
     }
 
-    [Theory]
-    [DisplayName("A name the factory or the object does not know is answered with -32601")]
+    [Theory(DisplayName = "A name the factory or the object does not know is answered with -32601")]
     [InlineData("Unknown.Subtract")]
     [InlineData("Spec.Missing")]
     public async Task DispatchAsync_UnknownProgIdOrAction_ReturnsMethodNotFound(string method)
@@ -41,8 +37,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
-    [Theory]
-    [DisplayName("Names are matched case-sensitively, as in the Polhem framework")]
+    [Theory(DisplayName = "Names are matched case-sensitively, as in the Polhem framework")]
     [InlineData("Spec.subtract")]
     [InlineData("spec.Subtract")]
     public async Task DispatchAsync_DifferentCase_ReturnsMethodNotFound(string method)
@@ -52,8 +47,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
-    [Theory]
-    [DisplayName("Malformed or too long names, and methods that are static, overloaded, accessors, generic or declared by object, are not resolved")]
+    [Theory(DisplayName = "Malformed or too long names, and methods that are static, overloaded, accessors, generic or declared by object, are not resolved")]
     [InlineData("Spec")]
     [InlineData(".Subtract")]
     [InlineData("Spec.")]
@@ -75,8 +69,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
-    [Theory]
-    [DisplayName("A record's Equals is not an action, even under a policy that admits every method")]
+    [Theory(DisplayName = "A record's Equals is not an action, even under a policy that admits every method")]
     [InlineData("Record.Equals")]
     [InlineData("DerivedRecord.Equals")]
     public async Task DispatchAsync_RecordEquals_ReturnsMethodNotFound(string method)
@@ -88,8 +81,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
-    [Theory]
-    [DisplayName("A public method inherited from a base type is an action, as with Polhem's Type.GetMethod")]
+    [Theory(DisplayName = "A public method inherited from a base type is an action, as with Polhem's Type.GetMethod")]
     [InlineData("Record.Subtract")]
     [InlineData("DerivedRecord.Subtract")]
     public async Task DispatchAsync_InheritedMethod_CallsAction(string method)
@@ -101,8 +93,7 @@ public class DispatcherTests
         Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
     }
 
-    [Fact]
-    [DisplayName("A request without params is answered with -32602, because the method has a parameter to bind")]
+    [Fact(DisplayName = "A request without params is answered with -32602, because the method has a parameter to bind")]
     public async Task DispatchMessageAsync_NoParams_ReturnsInvalidParams()
     {
         using var answer = await DispatcherFixture.RunAsync(DispatcherFixture.Create(),
@@ -111,8 +102,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, answer!.RootElement.GetProperty("error").GetProperty("code").GetInt32());
     }
 
-    [Fact]
-    [DisplayName("An action name of exactly 64 characters is resolved")]
+    [Fact(DisplayName = "An action name of exactly 64 characters is resolved")]
     public async Task DispatchAsync_ActionNameAtLengthLimit_CallsAction()
     {
         var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
@@ -123,8 +113,7 @@ public class DispatcherTests
         Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
     }
 
-    [Theory]
-    [DisplayName("A ProgId of exactly 64 characters is resolved, and one of 65 is not a method name")]
+    [Theory(DisplayName = "A ProgId of exactly 64 characters is resolved, and one of 65 is not a method name")]
     [InlineData(TestObjectFactory.LongProgId, false)]
     [InlineData(TestObjectFactory.LongProgId + "X", true)]
     public async Task DispatchAsync_ProgIdAtLengthLimit_IsResolvedUpTo64(string progId, bool refused)
@@ -141,8 +130,7 @@ public class DispatcherTests
         }
     }
 
-    [Fact]
-    [DisplayName("Names the caller makes up are looked up but never cached, so they cannot grow the dispatcher's memory")]
+    [Fact(DisplayName = "Names the caller makes up are looked up but never cached, so they cannot grow the dispatcher's memory")]
     public async Task DispatchAsync_ManyUnknownActions_CacheHoldsOneEntryPerType()
     {
         var dispatcher = DispatcherFixture.Create();
@@ -159,8 +147,7 @@ public class DispatcherTests
         Assert.Single(cache.Cast<object>());
     }
 
-    [Fact]
-    [DisplayName("A public method outside the {Action}Request/{Action}Response convention is not callable")]
+    [Fact(DisplayName = "A public method outside the {Action}Request/{Action}Response convention is not callable")]
     public async Task DispatchAsync_UnconventionalMethod_ReturnsMethodNotFound()
     {
         var response = await CallAsync(DispatcherFixture.Create(), "Spec.Echo", """{"text": "x"}""");
@@ -168,8 +155,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
-    [Fact]
-    [DisplayName("A replaced method policy decides which methods are callable")]
+    [Fact(DisplayName = "A replaced method policy decides which methods are callable")]
     public async Task DispatchAsync_CustomPolicy_AdmitsUnconventionalMethod()
     {
         var dispatcher = DispatcherFixture.Create(o => o.MethodPolicy = new AllowAllPolicy());
@@ -179,8 +165,7 @@ public class DispatcherTests
         Assert.Equal("x", response.Result!.Value.GetString());
     }
 
-    [Theory]
-    [DisplayName("Naming convention: the parameter is {Action}Request, the result {Action}Response, also inside a task")]
+    [Theory(DisplayName = "Naming convention: the parameter is {Action}Request, the result {Action}Response, also inside a task")]
     [InlineData(nameof(SpecTarget.Subtract), true)]
     [InlineData(nameof(SpecTarget.Upper), true)]
     [InlineData(nameof(SpecTarget.Length), true)]
@@ -194,8 +179,7 @@ public class DispatcherTests
         Assert.Equal(expected, new JsonRpcNamingConventionPolicy().IsCallable(method));
     }
 
-    [Theory]
-    [DisplayName("Task and ValueTask results are awaited and serialized")]
+    [Theory(DisplayName = "Task and ValueTask results are awaited and serialized")]
     [InlineData("Spec.Upper", """{"text":"ABC"}""")]
     [InlineData("Spec.Length", """{"length":3}""")]
     public async Task DispatchAsync_AsyncMethods_ReturnResult(string method, string expected)
@@ -205,8 +189,7 @@ public class DispatcherTests
         Assert.Equal(expected, response.Result!.Value.GetRawText());
     }
 
-    [Fact]
-    [DisplayName("Parameters that do not fit the request type are answered with -32602")]
+    [Fact(DisplayName = "Parameters that do not fit the request type are answered with -32602")]
     public async Task DispatchAsync_ParamsOfWrongShape_ReturnsInvalidParams()
     {
         var response = await CallAsync(DispatcherFixture.Create(), "Spec.Subtract", """{"minuend": "not a number"}""");
@@ -214,8 +197,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, response.Error!.Code);
     }
 
-    [Fact]
-    [DisplayName("An unexpected exception is answered with -32603 and a fixed message that does not leak its text")]
+    [Fact(DisplayName = "An unexpected exception is answered with -32603 and a fixed message that does not leak its text")]
     public async Task DispatchAsync_UnexpectedException_DoesNotLeakMessage()
     {
         var response = await CallAsync(DispatcherFixture.Create(), "Spec.Fail", """{"text": "pwd=1"}""");
@@ -225,8 +207,7 @@ public class DispatcherTests
         Assert.Null(response.Error.Data);
     }
 
-    [Fact]
-    [DisplayName("IncludeExceptionDetails puts the exception message in the error data")]
+    [Fact(DisplayName = "IncludeExceptionDetails puts the exception message in the error data")]
     public async Task DispatchAsync_IncludeExceptionDetails_SendsMessageAsData()
     {
         var dispatcher = DispatcherFixture.Create(o => o.IncludeExceptionDetails = true);
@@ -236,8 +217,7 @@ public class DispatcherTests
         Assert.Equal("Secret connection string: x", response.Error!.Data!.Value.GetString());
     }
 
-    [Fact]
-    [DisplayName("JsonRpcErrorException thrown by a method reaches the caller as it is")]
+    [Fact(DisplayName = "JsonRpcErrorException thrown by a method reaches the caller as it is")]
     public async Task DispatchAsync_JsonRpcErrorException_IsSentAsIs()
     {
         var response = await CallAsync(DispatcherFixture.Create(), "Spec.Reject", """{"text": "nope"}""");
@@ -246,8 +226,7 @@ public class DispatcherTests
         Assert.Equal("Rejected: nope", response.Error.Message);
     }
 
-    [Fact]
-    [DisplayName("The exception mapper turns an exception into a chosen error")]
+    [Fact(DisplayName = "The exception mapper turns an exception into a chosen error")]
     public async Task DispatchAsync_ExceptionMapper_MapsException()
     {
         var dispatcher = DispatcherFixture.Create(o => o.ExceptionMapper = (ex, _) =>
@@ -258,8 +237,7 @@ public class DispatcherTests
         Assert.Equal(-32010, response.Error!.Code);
     }
 
-    [Fact]
-    [DisplayName("Filters run in order around the call")]
+    [Fact(DisplayName = "Filters run in order around the call")]
     public async Task DispatchAsync_Filters_RunInOrder()
     {
         var log = new List<string>();
@@ -274,8 +252,7 @@ public class DispatcherTests
         Assert.Equal(["a:before", "b:before", "b:after", "a:after"], log);
     }
 
-    [Fact]
-    [DisplayName("Filters see the resolved object and method, and do not run for a method that is not found")]
+    [Fact(DisplayName = "Filters see the resolved object and method, and do not run for a method that is not found")]
     public async Task DispatchAsync_Filters_RunAfterResolution()
     {
         var seen = new List<string>();
@@ -287,8 +264,7 @@ public class DispatcherTests
         Assert.Equal(["Spec.Subtract:SpecTarget"], seen);
     }
 
-    [Fact]
-    [DisplayName("A filter that throws JsonRpcErrorException rejects the call before the method runs")]
+    [Fact(DisplayName = "A filter that throws JsonRpcErrorException rejects the call before the method runs")]
     public async Task DispatchAsync_FilterThrows_RejectsCall()
     {
         var marker = Guid.NewGuid().ToString();
@@ -300,8 +276,7 @@ public class DispatcherTests
         Assert.DoesNotContain(marker, SpecTarget.Updates);
     }
 
-    [Fact]
-    [DisplayName("Filters can rewrite raw params and results: a compress-and-encrypt round trip")]
+    [Fact(DisplayName = "Filters can rewrite raw params and results: a compress-and-encrypt round trip")]
     public async Task DispatchAsync_PayloadFilter_RewritesParamsAndResult()
     {
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new SealedPayloadFilter()));
@@ -312,8 +287,7 @@ public class DispatcherTests
         Assert.Equal(6, SealedPayload.Open(response.Result!.Value).GetProperty("difference").GetInt32());
     }
 
-    [Fact]
-    [DisplayName("A filter can answer from the returned object, so a result the default options cannot write never reaches them")]
+    [Fact(DisplayName = "A filter can answer from the returned object, so a result the default options cannot write never reaches them")]
     public async Task DispatchAsync_FilterWritesResultFromReturnValue_SkipsDefaultSerialization()
     {
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new DescribeFilter()));
@@ -323,8 +297,7 @@ public class DispatcherTests
         Assert.Equal("String:x", response.Result!.Value.GetString());
     }
 
-    [Fact]
-    [DisplayName("Without such a filter, a result the default options cannot write is an internal error")]
+    [Fact(DisplayName = "Without such a filter, a result the default options cannot write is an internal error")]
     public async Task DispatchAsync_UnserializableResultWithoutFilter_ReturnsInternalError()
     {
         var response = await CallAsync(DispatcherFixture.Create(), "Spec.Describe", """{"text": "x"}""");
@@ -332,8 +305,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InternalError, response.Error!.Code);
     }
 
-    [Fact]
-    [DisplayName("The filter sees the transport kind and items the transport set")]
+    [Fact(DisplayName = "The filter sees the transport kind and items the transport set")]
     public async Task DispatchAsync_Filter_SeesTransportInfo()
     {
         var seen = new List<string>();
@@ -345,8 +317,7 @@ public class DispatcherTests
         Assert.Equal(["InProcess:t-1"], seen);
     }
 
-    [Theory]
-    [DisplayName("The object is released after the call, whether it succeeded or failed")]
+    [Theory(DisplayName = "The object is released after the call, whether it succeeded or failed")]
     [InlineData("Disposable.Update")]
     [InlineData("Disposable.Fail")]
     public async Task DispatchAsync_Object_IsReleased(string method)
@@ -359,8 +330,7 @@ public class DispatcherTests
         Assert.Contains(marker, DisposableTarget.Disposed);
     }
 
-    [Fact]
-    [DisplayName("A batch larger than MaxBatchSize is answered with a single -32600")]
+    [Fact(DisplayName = "A batch larger than MaxBatchSize is answered with a single -32600")]
     public async Task DispatchMessageAsync_BatchTooLarge_ReturnsSingleInvalidRequest()
     {
         var dispatcher = DispatcherFixture.Create(o => o.MaxBatchSize = 2);
@@ -372,8 +342,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InvalidRequest, answer.RootElement.GetProperty("error").GetProperty("code").GetInt32());
     }
 
-    [Theory]
-    [DisplayName("DispatchBatchAsync answers an empty batch or one larger than MaxBatchSize with a single -32600")]
+    [Theory(DisplayName = "DispatchBatchAsync answers an empty batch or one larger than MaxBatchSize with a single -32600")]
     [InlineData(0)]
     [InlineData(3)]
     public async Task DispatchBatchAsync_EmptyOrTooLarge_ReturnsSingleInvalidRequest(int count)
@@ -390,8 +359,7 @@ public class DispatcherTests
         Assert.Equal(JsonRpcId.Null, response.Id);
     }
 
-    [Fact]
-    [DisplayName("A message nested deeper than the JSON reader allows is answered with -32700")]
+    [Fact(DisplayName = "A message nested deeper than the JSON reader allows is answered with -32700")]
     public async Task DispatchMessageAsync_NestedTooDeep_ReturnsParseError()
     {
         var nested = new string('[', 70) + new string(']', 70);
@@ -403,8 +371,7 @@ public class DispatcherTests
         Assert.Equal(JsonValueKind.Null, answer.RootElement.GetProperty("id").ValueKind);
     }
 
-    [Fact]
-    [DisplayName("A call the caller cancelled propagates the cancellation instead of answering -32603")]
+    [Fact(DisplayName = "A call the caller cancelled propagates the cancellation instead of answering -32603")]
     public async Task DispatchAsync_CallerCancelled_Throws()
     {
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new CancellationObservingFilter()));
@@ -416,8 +383,7 @@ public class DispatcherTests
             () => dispatcher.DispatchAsync(request, DispatcherFixture.Http(), cancelled.Token));
     }
 
-    [Fact]
-    [DisplayName("A cancellation the caller did not ask for is an internal error like any other exception")]
+    [Fact(DisplayName = "A cancellation the caller did not ask for is an internal error like any other exception")]
     public async Task DispatchAsync_CancellationNotRequested_ReturnsInternalError()
     {
         var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new CancellationObservingFilter()));
@@ -427,16 +393,14 @@ public class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.InternalError, response.Error!.Code);
     }
 
-    [Fact]
-    [DisplayName("A transport that leaves the kind at its default is HTTP, never in-process")]
+    [Fact(DisplayName = "A transport that leaves the kind at its default is HTTP, never in-process")]
     public void TransportKind_Default_IsNotInProcess()
     {
         Assert.Equal(JsonRpcTransportKind.Http, default);
         Assert.NotEqual(JsonRpcTransportKind.InProcess, new JsonRpcTransportInfo(default).Kind);
     }
 
-    [Fact]
-    [DisplayName("InProcessTransport marks its calls as in-process")]
+    [Fact(DisplayName = "InProcessTransport marks its calls as in-process")]
     public async Task InProcessTransport_SendAsync_MarksInProcess()
     {
         var seen = new List<JsonRpcTransportKind>();
@@ -448,8 +412,7 @@ public class DispatcherTests
         Assert.Equal([JsonRpcTransportKind.InProcess], seen);
     }
 
-    [Fact]
-    [DisplayName("A release that throws answers a call that succeeded with -32603, keeps the error of one that failed, and leaves the rest of the batch answered")]
+    [Fact(DisplayName = "A release that throws answers a call that succeeded with -32603, keeps the error of one that failed, and leaves the rest of the batch answered")]
     public async Task DispatchMessageAsync_ReleaseThrows_AnswersEachCall()
     {
         var dispatcher = DispatcherFixture.Create(o => o.ObjectFactory = new ThrowingReleaseFactory());
@@ -466,8 +429,7 @@ public class DispatcherTests
         Assert.Equal(-32050, codes[2]);
     }
 
-    [Fact]
-    [DisplayName("An exception mapper that throws falls back to the default -32603 and leaves the rest of the batch answered")]
+    [Fact(DisplayName = "An exception mapper that throws falls back to the default -32603 and leaves the rest of the batch answered")]
     public async Task DispatchMessageAsync_ExceptionMapperThrows_FallsBackToInternalError()
     {
         var dispatcher = DispatcherFixture.Create(o => o.ExceptionMapper = (_, _) => throw new InvalidOperationException("Mapper bug"));
@@ -484,8 +446,7 @@ public class DispatcherTests
         Assert.Equal(2, responses[2].GetProperty("result").GetProperty("difference").GetInt32());
     }
 
-    [Theory]
-    [DisplayName("A batch whose caller cancels stops before its next call")]
+    [Theory(DisplayName = "A batch whose caller cancels stops before its next call")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task DispatchBatch_CancelledMidway_StopsBeforeNextCall(bool asMessage)

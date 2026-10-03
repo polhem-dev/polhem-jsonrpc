@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -12,8 +11,7 @@ public class ClientTests
     private static JsonRpcConnector InProcess(JsonRpcClientOptions? options = null, Action<JsonRpcServerOptions>? configureServer = null) =>
         new(new InProcessTransport(DispatcherFixture.Create(configureServer)), options);
 
-    [Fact]
-    [DisplayName("Client: InvokeAsync returns the result")]
+    [Fact(DisplayName = "Client: InvokeAsync returns the result")]
     public async Task InvokeAsync_Call_ReturnsResult()
     {
         var result = await InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", new SubtractRequest(10, 3));
@@ -21,8 +19,7 @@ public class ClientTests
         Assert.Equal(7, result!.Difference);
     }
 
-    [Fact]
-    [DisplayName("Client: an error response is thrown as JsonRpcErrorException")]
+    [Fact(DisplayName = "Client: an error response is thrown as JsonRpcErrorException")]
     public async Task InvokeAsync_ErrorResponse_ThrowsJsonRpcErrorException()
     {
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => InProcess().InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
@@ -30,8 +27,7 @@ public class ClientTests
         Assert.Equal(-32050, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("Client: ErrorMapper chooses the exception to throw")]
+    [Fact(DisplayName = "Client: ErrorMapper chooses the exception to throw")]
     public async Task InvokeAsync_ErrorMapper_ThrowsMappedException()
     {
         var options = new JsonRpcClientOptions { ErrorMapper = error => error.Code == -32050 ? new UnauthorizedAccessException(error.Message) : null };
@@ -39,8 +35,7 @@ public class ClientTests
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InProcess(options).InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
     }
 
-    [Fact]
-    [DisplayName("Client: the non-generic InvokeAsync waits for a method that returns nothing")]
+    [Fact(DisplayName = "Client: the non-generic InvokeAsync waits for a method that returns nothing")]
     public async Task InvokeAsync_VoidMethod_Completes()
     {
         var marker = Guid.NewGuid().ToString();
@@ -50,8 +45,7 @@ public class ClientTests
         Assert.Contains(marker, SpecTarget.Updates);
     }
 
-    [Fact]
-    [DisplayName("Client: NotifyAsync runs the method and receives nothing")]
+    [Fact(DisplayName = "Client: NotifyAsync runs the method and receives nothing")]
     public async Task NotifyAsync_Notification_RunsMethod()
     {
         var marker = Guid.NewGuid().ToString();
@@ -61,8 +55,7 @@ public class ClientTests
         Assert.Contains(marker, SpecTarget.Updates);
     }
 
-    [Fact]
-    [DisplayName("Client: a batch completes each call's task, failures included")]
+    [Fact(DisplayName = "Client: a batch completes each call's task, failures included")]
     public async Task Batch_MixedCalls_CompletesEachTask()
     {
         var batch = InProcess().CreateBatch();
@@ -76,8 +69,7 @@ public class ClientTests
         await Assert.ThrowsAsync<JsonRpcErrorException>(() => failed);
     }
 
-    [Fact]
-    [DisplayName("Client: a batch cannot be sent twice")]
+    [Fact(DisplayName = "Client: a batch cannot be sent twice")]
     public async Task Batch_SentTwice_Throws()
     {
         var batch = InProcess().CreateBatch();
@@ -86,8 +78,7 @@ public class ClientTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => batch.SendAsync());
     }
 
-    [Fact]
-    [DisplayName("Client: interceptors can rewrite raw params and results: a compress-and-encrypt round trip")]
+    [Fact(DisplayName = "Client: interceptors can rewrite raw params and results: a compress-and-encrypt round trip")]
     public async Task InvokeAsync_Interceptor_RewritesParamsAndResult()
     {
         var options = new JsonRpcClientOptions();
@@ -99,8 +90,7 @@ public class ClientTests
         Assert.Equal(7, result!.Difference);
     }
 
-    [Fact]
-    [DisplayName("Client: IdGenerator chooses the request ids")]
+    [Fact(DisplayName = "Client: IdGenerator chooses the request ids")]
     public async Task InvokeAsync_IdGenerator_UsesGeneratedId()
     {
         var transport = new RecordingTransport();
@@ -111,8 +101,7 @@ public class ClientTests
         Assert.Equal(JsonRpcId.FromString("custom-id"), transport.LastRequest!.Id);
     }
 
-    [Fact]
-    [DisplayName("Client: Timeout cancels a call that takes too long")]
+    [Fact(DisplayName = "Client: Timeout cancels a call that takes too long")]
     public async Task InvokeAsync_Timeout_Cancels()
     {
         var connector = new JsonRpcConnector(new HangingTransport(), new JsonRpcClientOptions { Timeout = TimeSpan.FromMilliseconds(50) });
@@ -120,15 +109,13 @@ public class ClientTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => connector.InvokeAsync<int>("Any.Method", null));
     }
 
-    [Fact]
-    [DisplayName("Client: parameters that are not an object or array are rejected")]
+    [Fact(DisplayName = "Client: parameters that are not an object or array are rejected")]
     public async Task InvokeAsync_ScalarParameters_Throws()
     {
         await Assert.ThrowsAsync<ArgumentException>(() => InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", 42));
     }
 
-    [Fact]
-    [DisplayName("Client: a response carrying the id of another request is refused")]
+    [Fact(DisplayName = "Client: a response carrying the id of another request is refused")]
     public async Task InvokeAsync_ResponseWithAnotherId_Throws()
     {
         using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "result": 1, "id": 999}""")) { BaseAddress = new Uri("http://test/api") };
@@ -136,8 +123,7 @@ public class ClientTests
         await Assert.ThrowsAsync<JsonException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("Any.Method", null));
     }
 
-    [Fact]
-    [DisplayName("Client: an IdGenerator that returns no id is refused, because the call would become a notification")]
+    [Fact(DisplayName = "Client: an IdGenerator that returns no id is refused, because the call would become a notification")]
     public async Task InvokeAsync_IdGeneratorReturnsNone_Throws()
     {
         var transport = new RecordingTransport();
@@ -147,8 +133,7 @@ public class ClientTests
         Assert.Null(transport.LastRequest);
     }
 
-    [Theory]
-    [DisplayName("Client: a batch refuses a call whose id is null or already in the batch, so no task is left waiting")]
+    [Theory(DisplayName = "Client: a batch refuses a call whose id is null or already in the batch, so no task is left waiting")]
     [InlineData(true)]
     [InlineData(false)]
     public void Batch_IdNotUnique_AddThrows(bool nullId)
@@ -162,8 +147,7 @@ public class ClientTests
         Assert.Throws<InvalidOperationException>(() => { _ = batch.Add<SubtractResponse>("Spec.Subtract", new SubtractRequest(2, 1)); });
     }
 
-    [Fact]
-    [DisplayName("Client: when the server refuses the whole batch with one error, each call fails with that error")]
+    [Fact(DisplayName = "Client: when the server refuses the whole batch with one error, each call fails with that error")]
     public async Task Batch_RefusedAsAWhole_EachCallFailsWithServerError()
     {
         var batch = InProcess(configureServer: server => server.MaxBatchSize = 1).CreateBatch();
@@ -176,8 +160,7 @@ public class ClientTests
         Assert.Equal(JsonRpcErrorCodes.InvalidRequest, (await Assert.ThrowsAsync<JsonRpcErrorException>(() => second)).Code);
     }
 
-    [Fact]
-    [DisplayName("Client: the options are read when the connector is created; an interceptor added later does not run")]
+    [Fact(DisplayName = "Client: the options are read when the connector is created; an interceptor added later does not run")]
     public async Task Connector_OptionsChangedAfterCreation_AreNotSeen()
     {
         var options = new JsonRpcClientOptions();
@@ -192,8 +175,7 @@ public class ClientTests
         await Assert.ThrowsAsync<JsonRpcErrorException>(() => connector.InvokeAsync<RejectResponse>("Spec.Reject", new RejectRequest("x")));
     }
 
-    [Fact]
-    [DisplayName("Client: the non-generic InvokeAsync and InvokeAsync<JsonElement> need no JsonElement in a source-generated context")]
+    [Fact(DisplayName = "Client: the non-generic InvokeAsync and InvokeAsync<JsonElement> need no JsonElement in a source-generated context")]
     public async Task InvokeAsync_JsonElementWithSourceGeneratedContext_NeedsNoMetadata()
     {
         var options = new JsonRpcClientOptions
@@ -210,8 +192,7 @@ public class ClientTests
         Assert.Equal(2, nullable!.Value.GetProperty("difference").GetInt32());
     }
 
-    [Fact]
-    [DisplayName("HTTP transport: an error object in a 4xx body is read as a JSON-RPC error")]
+    [Fact(DisplayName = "HTTP transport: an error object in a 4xx body is read as a JSON-RPC error")]
     public async Task HttpTransport_ErrorBodyWith401_IsRead()
     {
         const string Body = """{"jsonrpc": "2.0", "error": {"code": -32001, "message": "Unauthorized"}, "id": 1}""";
@@ -222,8 +203,7 @@ public class ClientTests
         Assert.Equal(-32001, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("HTTP transport: a non-JSON-RPC body with an error status raises HttpRequestException")]
+    [Fact(DisplayName = "HTTP transport: a non-JSON-RPC body with an error status raises HttpRequestException")]
     public async Task HttpTransport_HtmlWith500_ThrowsHttpRequestException()
     {
         using var http = new HttpClient(new StubHandler(HttpStatusCode.InternalServerError, "<html>oops</html>")) { BaseAddress = new Uri("http://test/api") };
@@ -231,8 +211,7 @@ public class ClientTests
         await Assert.ThrowsAsync<HttpRequestException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("Any.Method", null));
     }
 
-    [Fact]
-    [DisplayName("HTTP transport: a response from an older server without id and result reads as an empty success")]
+    [Fact(DisplayName = "HTTP transport: a response from an older server without id and result reads as an empty success")]
     public async Task HttpTransport_LenientResponse_ReadsAsSuccess()
     {
         using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "method": "A.B"}""")) { BaseAddress = new Uri("http://test/api") };

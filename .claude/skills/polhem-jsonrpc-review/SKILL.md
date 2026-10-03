@@ -249,7 +249,8 @@ is safe.
 
 - Tests that assert nothing (S2699), assert only `NotNull`, or round-trip through the code under test where a fixed
   expected value is needed (wire vectors, serializer output).
-- Every test has a `[DisplayName]`; names follow `<Method>_<Scenario>_<Expected>`.
+- Every test has a `DisplayName` on its `[Fact]` / `[Theory]` and is named `<Method>_<Scenario>_<Expected>`;
+  `TestConventionTests` enforces both, so check that it still covers every test rather than re-listing names.
 - Coverage of security logic: every rejection in dimension 3 has a test that sends the hostile input and checks the exact
   error.
 - The sample tests (`QuickStartSampleTests`, `PayloadQuickStartSampleTests`) exercise what the sample READMEs tell a
