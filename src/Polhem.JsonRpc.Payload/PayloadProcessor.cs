@@ -8,7 +8,7 @@ namespace Polhem.JsonRpc.Payload;
 /// </summary>
 /// <remarks>
 /// A client wraps its parameters with <see cref="Wrap"/> before calling <c>JsonRpcConnector.InvokeAsync</c> and unwraps
-/// the result with <see cref="Unwrap"/>. Everything that differs per call (the format, the codec, the key and the
+/// the result with <see cref="Unwrap{T}"/>, or with <see cref="Unwrap"/> when it does not know the result type. Everything that differs per call (the format, the codec, the key and the
 /// sequence number) is passed in; the processor keeps no per-call state and can be shared.
 /// </remarks>
 public sealed class PayloadProcessor
@@ -35,7 +35,32 @@ public sealed class PayloadProcessor
     public JsonElement Wrap(object? value, PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0)
         => Seal(value, format, codec, key, sequence).ToElement();
 
-    /// <summary>Reads an envelope and opens it into the type its <c>type</c> member names.</summary>
+    /// <summary>
+    /// Reads an envelope and opens it into <typeparamref name="T"/>, using the <c>type</c> member only to check that the
+    /// writer meant the same type.
+    /// </summary>
+    /// <typeparam name="T">The result type the caller expects.</typeparam>
+    /// <param name="payload">The <c>result</c> element.</param>
+    /// <param name="key">The key; required when the envelope is encrypted.</param>
+    /// <returns>The value; a plain envelope's value is deserialized with <see cref="PayloadOptions.SerializerOptions"/>.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The type name is missing or names another type, or the key is missing.
+    /// </exception>
+    /// <remarks>
+    /// The caller chose the type, so nothing needs to be registered with <see cref="PayloadOptions.TypeResolver"/>.
+    /// </remarks>
+    public T? Unwrap<T>(JsonElement? payload, byte[]? key = null)
+    {
+        var value = OpenAs(PayloadEnvelope.Read(payload), typeof(T), key, out _);
+        if (value is JsonElement element)
+            value = element.Deserialize(_options.SerializerOptions.GetTypeInfo(typeof(T)));
+        return value is null ? default : (T)value;
+    }
+
+    /// <summary>
+    /// Reads an envelope and opens it into the type its <c>type</c> member names, which must be registered with
+    /// <see cref="PayloadOptions.TypeResolver"/>.
+    /// </summary>
     /// <param name="payload">The <c>result</c> element.</param>
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <returns>
@@ -136,6 +161,9 @@ public sealed class PayloadProcessor
     /// The type name is missing, not allowed or names another type, or the key is missing.
     /// </exception>
     public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
+        => OpenAs(envelope, type, key, out frame);
+
+    private object? OpenAs(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         ArgumentNullException.ThrowIfNull(type);
@@ -146,7 +174,7 @@ public sealed class PayloadProcessor
         if (string.IsNullOrEmpty(envelope.TypeName))
             throw new InvalidOperationException("The payload names no type to decode into.");
         if (!_options.TypeResolver.IsNameOf(envelope.TypeName, type))
-            throw new InvalidOperationException("The payload type does not match the parameter of the requested method.");
+            throw new InvalidOperationException("The payload type does not match the type the reader expects.");
         return Decode(envelope, key, type, out frame);
     }
 

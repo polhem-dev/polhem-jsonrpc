@@ -18,11 +18,7 @@ dotnet run --project samples/PayloadQuickStart.Server
 `Program.cs` adds the payload filter to the server with the options both ends share:
 
 ```csharp
-var payload = new PayloadOptions
-{
-    RequireFrame = true,
-    TypeResolver = new PayloadTypeRegistry().Register<AddRequest>().Register<AddResponse>(),
-};
+var payload = new PayloadOptions { RequireFrame = true };
 builder.Services.AddJsonRpcServer(options => options.UsePayload(payload, policy));
 ```
 
@@ -37,7 +33,9 @@ public bool RequiresUniqueSequence(JsonRpcRequestContext context) => true;
 
 - The method itself (`Calculator.cs`) is the same as without the envelope: the filter opens the request before the
   call and seals the result after it, in the format and codec the request used.
-- The server decides the type a request decodes into; the `type` the client writes is only checked against it.
+- The server decides the type a request decodes into, the parameter type of the method, and the `type` the client
+  writes is only checked against it. So no contract type is registered: the methods the server exposes are the
+  allow-list.
 - One key for every client keeps the sample short. A real application gives each session its own key, agreed at
   sign-in, and uses the session as the replay scope. How keys are agreed is outside the payload packages.
 - `MemoryPayloadReplayStore` remembers sequence numbers in the process. Several server instances need a shared

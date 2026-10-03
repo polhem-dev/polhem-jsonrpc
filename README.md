@@ -144,7 +144,7 @@ builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, 
 
 // Client: wrap the parameters and unwrap the result of each call.
 var parameters = payload.Wrap(request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-var result = (AddResponse)payload.Unwrap(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+var result = payload.Unwrap<AddResponse>(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
 ```
 
 Both ends share the same `PayloadOptions` settings; how the key is agreed is up to the application. The

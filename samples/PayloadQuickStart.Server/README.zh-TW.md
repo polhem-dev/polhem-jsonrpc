@@ -17,11 +17,7 @@ dotnet run --project samples/PayloadQuickStart.Server
 `Program.cs` 以兩端共用的選項把 payload filter 加進伺服器：
 
 ```csharp
-var payload = new PayloadOptions
-{
-    RequireFrame = true,
-    TypeResolver = new PayloadTypeRegistry().Register<AddRequest>().Register<AddResponse>(),
-};
+var payload = new PayloadOptions { RequireFrame = true };
 builder.Services.AddJsonRpcServer(options => options.UsePayload(payload, policy));
 ```
 
@@ -34,7 +30,8 @@ public bool RequiresUniqueSequence(JsonRpcRequestContext context) => true;
 ```
 
 - 方法本身（`Calculator.cs`）和不用外殼時一樣：filter 在呼叫前開啟請求、呼叫後以請求的格式與 codec 封裝結果。
-- 請求解碼成什麼型別由伺服器決定；用戶端寫的 `type` 只拿來比對。
+- 請求解碼成什麼型別由伺服器決定（方法的參數型別），用戶端寫的 `type` 只拿來比對。因此不需要登錄任何合約型別：
+  伺服器公開的方法就是白名單。
 - 所有用戶端共用一把金鑰是為了讓範例簡短。實際的應用程式會在登入時為每個 session 協商一把金鑰，並以 session 作為防重放範圍。
   金鑰如何協商不在 payload 套件的範圍內。
 - `MemoryPayloadReplayStore` 把序號記在行程記憶體裡。多個伺服器執行個體需要共用的 `IPayloadReplayStore`。
