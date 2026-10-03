@@ -8,7 +8,8 @@ namespace Polhem.JsonRpc.Payload;
 /// <remarks>
 /// The limit guards against a small body that expands without bound. It applies to each body. A server also bounds what
 /// one message decompresses in total, the call alone or all the calls of a batch, with
-/// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/>; a body stops at whichever of the two it reaches first.
+/// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/>; a compressed body stops at whichever of the two it
+/// reaches first. A body sent uncompressed is returned as it is, whatever either limit says.
 /// An encoded body is decompressed without a key, so a deployment that cares requires encrypted calls
 /// (<c>IPayloadServerPolicy.GetMinimumFormat</c>).
 /// <para>

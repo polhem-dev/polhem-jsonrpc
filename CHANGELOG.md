@@ -31,7 +31,7 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   time; the type's other methods still are. Before, each such call failed with `-32603`, or what the host's `ExceptionMapper` made of the exception.
 - **Wire-visible:** `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
   `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
-- **Wire-visible:** `UsePayload` answers `InvalidPayloadException` (a malformed envelope, or a call below the method's minimum format) with `-32602 Invalid params` instead of
+- **Wire-visible:** `UsePayload` answers `InvalidPayloadException` (a malformed envelope, a call below the method's minimum format, or an unencrypted call refused where unique sequence numbers are checked) with `-32602 Invalid params` instead of
   `-32603 Internal error`. An `ExceptionMapper` set before `UsePayload` still answers first; every other payload failure
   stays `-32603`, so the answer does not say which check failed.
 - **Behavior change:** `JsonRpcConnector` reads its `JsonRpcClientOptions` once, when it is created, interceptors included. Before, only

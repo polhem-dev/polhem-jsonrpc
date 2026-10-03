@@ -24,9 +24,9 @@ public sealed class PayloadFilter : IJsonRpcFilter
 
     /// <summary>Initializes a new instance.</summary>
     /// <remarks>
-    /// <see cref="PayloadOptions.FrameTimestampTolerance"/>, <see cref="PayloadOptions.TimeProvider"/> and
-    /// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/> are read here, once; the other settings are read on
-    /// each call. The tolerance and the clock go
+    /// <see cref="PayloadOptions.FrameTimestampTolerance"/>, <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/>
+    /// and the <see cref="PayloadOptions.TimeProvider"/> that checks request timestamps are read here, once; the other
+    /// settings, and the clock that stamps the frames of responses, are read on each call. The tolerance and the clock go
     /// together with the lifetime of the in-memory replay store they decide: a tolerance raised later would let a frame
     /// outlive the scope that remembers its sequence number.
     /// </remarks>

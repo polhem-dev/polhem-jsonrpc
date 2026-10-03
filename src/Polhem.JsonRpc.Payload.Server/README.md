@@ -22,6 +22,8 @@ rejects a repeated one also refuses plain and encoded calls, because only an enc
 `UsePayload` answers `-32602 Invalid params` for a malformed envelope, a call below the method's minimum format, and a
 plain or encoded call to such a method; every other payload failure is `-32603`, unless
 the application's own `ExceptionMapper`, set before `UsePayload`, answers it first.
+Decompression is bounded per body by the compressor and per message, the call alone or a whole batch, by
+`PayloadOptions.MaxDecompressedBytesPerMessage`, because an encoded body is decompressed before any key is asked for.
 `MemoryPayloadReplayStore` remembers sequence numbers in the process; a deployment with several instances needs a
 shared `IPayloadReplayStore`.
 

@@ -105,6 +105,8 @@ public sealed class JsonRpcRequestContext
     /// </summary>
     /// <remarks>
     /// <see cref="JsonRpcDispatcher"/> runs the calls of a batch one after another, so they never use it at the same time.
+    /// A message is assumed to come from one caller, as an HTTP request does: a custom transport that joins the calls of
+    /// different callers into one batch makes them share what is kept here, a decompression budget included.
     /// </remarks>
     public IDictionary<string, object?> MessageItems
     {

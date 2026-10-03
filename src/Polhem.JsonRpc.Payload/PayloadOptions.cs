@@ -11,8 +11,8 @@ namespace Polhem.JsonRpc.Payload;
 /// the envelope; the reader resolves it from <see cref="ResolveCodec"/>.
 /// <para>
 /// Configure the options before the first call. <c>PayloadFilter</c> reads <see cref="FrameTimestampTolerance"/>,
-/// <see cref="TimeProvider"/> and <see cref="MaxDecompressedBytesPerMessage"/> once, when it is created, and the other
-/// settings on each call, so a change made after it is created reaches part of it only.
+/// <see cref="MaxDecompressedBytesPerMessage"/> and the <see cref="TimeProvider"/> it checks request timestamps with
+/// once, when it is created, and the other settings on each call, so a change made after it is created reaches part of it only.
 /// </para>
 /// </remarks>
 public sealed class PayloadOptions
@@ -128,6 +128,9 @@ public sealed class PayloadOptions
     /// notifications included. A body sent uncompressed draws on it by its length, and a body that fails to decompress
     /// uses up what is left, because its failure may have cost that much already. Calls in the plain format decompress
     /// nothing and draw nothing.
+    /// </para>
+    /// <para>
+    /// <c>PayloadFilter</c> reads this setting once, when it is created.
     /// </para>
     /// </remarks>
     public long MaxDecompressedBytesPerMessage

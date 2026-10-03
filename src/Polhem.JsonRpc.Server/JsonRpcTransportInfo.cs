@@ -56,6 +56,10 @@ public sealed class JsonRpcTransportInfo
     /// <summary>
     /// Gets the headers that came with the call. An in-process call has none.
     /// </summary>
+    /// <remarks>
+    /// Names are compared ignoring case. The HTTP handler joins the values of a header sent more than once with commas,
+    /// so code that expects a single value, such as a token, should refuse one that contains a comma.
+    /// </remarks>
     public IReadOnlyDictionary<string, string> Headers { get; }
 
     /// <summary>
