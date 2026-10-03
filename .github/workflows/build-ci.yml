@@ -1,8 +1,14 @@
 name: Build CI
 
+# A push that changes only `.md` files starts no run; docs-check.yml checks the documents. The pull_request trigger has
+# no `paths-ignore`, because `build` is a required check and a required check that never starts leaves a
+# documentation-only pull request waiting forever. Each job recognizes such a pull request itself instead, with
+# .github/scripts/detect-docs-only.sh, and ends successfully without building.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
   pull_request:
     branches: [main]
 
@@ -18,16 +24,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 2
+
+      - name: Detect documentation-only pull request
+        id: changes
+        run: bash .github/scripts/detect-docs-only.sh
 
       - name: Setup .NET
+        if: steps.changes.outputs.build == 'true'
         uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7  # v5.2.0
         with:
           dotnet-version: 10.0.x
 
       - name: Build
+        if: steps.changes.outputs.build == 'true'
         run: dotnet build Polhem.JsonRpc.slnx --configuration Release
 
       - name: Test
+        if: steps.changes.outputs.build == 'true'
         run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
 
   # Native AOT: publishes the smoke test, which uses only the packages that promise AOT support (Polhem.JsonRpc,
@@ -40,16 +55,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 2
+
+      - name: Detect documentation-only pull request
+        id: changes
+        run: bash .github/scripts/detect-docs-only.sh
 
       - name: Setup .NET
+        if: steps.changes.outputs.build == 'true'
         uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7  # v5.2.0
         with:
           dotnet-version: 10.0.x
 
       - name: Publish with Native AOT
+        if: steps.changes.outputs.build == 'true'
         run: dotnet publish tests/Polhem.JsonRpc.AotSmoke/Polhem.JsonRpc.AotSmoke.csproj --configuration Release --output aot-smoke
 
       - name: Run
+        if: steps.changes.outputs.build == 'true'
         run: ./aot-smoke/Polhem.JsonRpc.AotSmoke
 
   # SonarCloud analysis. It runs apart from the build job above, because the scanner wraps the build and turns warnings
@@ -60,22 +84,27 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          # SonarCloud reads the history to find new code and to assign issues to authors.
+          fetch-depth: 0
+
+      - name: Detect documentation-only pull request
+        id: changes
+        run: bash .github/scripts/detect-docs-only.sh
+
       # Secrets are not passed to pull requests from forks, and the repository may not have the token yet. The analysis
-      # is then skipped instead of failing the run.
+      # is then skipped instead of failing the run. A documentation-only pull request skips this step too, so every
+      # later step, which is gated on `enabled`, is skipped with it.
       - name: Check for the SonarCloud token
         id: token
+        if: steps.changes.outputs.build == 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           if [ -n "$SONAR_TOKEN" ]; then echo "enabled=true" >> "$GITHUB_OUTPUT"
           else echo "SONAR_TOKEN is not available, so the SonarCloud analysis is skipped."; fi
-
-      - name: Checkout code
-        if: steps.token.outputs.enabled == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-        with:
-          # SonarCloud reads the history to find new code and to assign issues to authors.
-          fetch-depth: 0
 
       - name: Setup .NET
         if: steps.token.outputs.enabled == 'true'

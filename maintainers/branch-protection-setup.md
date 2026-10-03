@@ -21,6 +21,12 @@ The `aot` and `sonarcloud` jobs are not required checks. Making one required mea
 `contexts`; renaming a required job means changing the protection too, otherwise every pull request waits for a check
 that no longer exists.
 
+A required check must start on every pull request, so the `pull_request` trigger of `build-ci.yml` has no
+`paths-ignore`; only its `push` trigger ignores `.md` files. A pull request that changes only `.md` files is recognized
+inside each job instead: every job of `build-ci.yml` starts, skips its build steps and reports success. The detection
+is a step of each job, not a job of its own: GitHub reports a job skipped by `if:` as passing, so a failed detection
+job would let the pull request merge. The reasons are in the header of `.github/scripts/detect-docs-only.sh`.
+
 ## Repository settings
 
 | Setting | Value |
