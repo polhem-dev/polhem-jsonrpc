@@ -19,7 +19,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 ### Changed
 
 - `JsonRpcDispatcher` resolves the methods of an object type once, the first time the type is used, and asks the method
-  policy about each of them then, rather than one method name at a time.
+  policy about each of them then, once, rather than one method name at a time; the answers are kept for the
+  dispatcher's life. A method the policy throws for is not callable, and the type's other methods still are.
 - `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
   `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
 - `UsePayload` answers `InvalidPayloadException` (a malformed envelope) with `-32602 Invalid params` instead of

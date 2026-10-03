@@ -28,7 +28,7 @@ public sealed class JsonRpcDispatcher
 
     private readonly IJsonRpcObjectFactory _objectFactory;
     private readonly IJsonRpcMethodPolicy _policy;
-    private readonly ConcurrentDictionary<Type, FrozenDictionary<string, MethodInfo>> _actions = new();
+    private readonly ConcurrentDictionary<Type, Lazy<FrozenDictionary<string, MethodInfo>>> _actions = new();
     private readonly IJsonRpcParameterBinder _binder;
     private readonly IJsonRpcFilter[] _filters;
     private readonly JsonSerializerOptions _serializerOptions;
@@ -211,7 +211,11 @@ public sealed class JsonRpcDispatcher
 
     // Exact, case-sensitive name match, like the Polhem framework's `Type.GetMethod(action)`. The table is built once
     // per object type, from the application's code only, so a name the caller makes up is looked up but never stored.
-    private MethodInfo? FindAction(Type type, string action) => _actions.GetOrAdd(type, ResolveActions).GetValueOrDefault(action);
+    // The table is built once per type under a Lazy, so the method policy is asked about each method once, not by every
+    // request that happens to arrive first.
+    private MethodInfo? FindAction(Type type, string action) =>
+        _actions.GetOrAdd(type, static (key, self) => new Lazy<FrozenDictionary<string, MethodInfo>>(() => self.ResolveActions(key)), this)
+            .Value.GetValueOrDefault(action);
 
     // The suppression sits on this method rather than on `FindAction`, which only hands it to the cache as a
     // delegate: the reflection runs here.
@@ -227,8 +231,22 @@ public sealed class JsonRpcDispatcher
             actions[candidate.Name] = actions.ContainsKey(candidate.Name) ? null : candidate;
         }
         return actions
-            .Where(pair => pair.Value is not null && _policy.IsCallable(pair.Value))
+            .Where(pair => pair.Value is not null && IsCallable(pair.Value))
             .ToFrozenDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal);
+    }
+
+    private bool IsCallable(MethodInfo method)
+    {
+        try
+        {
+            return _policy.IsCallable(method);
+        }
+        catch (Exception)
+        {
+            // NOTE: the policy is the host's code. A method it cannot decide about is not callable, which keeps the
+            // other methods of the type reachable instead of failing every call to the type.
+            return false;
+        }
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2075",
