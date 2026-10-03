@@ -1,6 +1,6 @@
 name: Build CI
 
-# A push that changes only `.md` files starts no run; docs-check.yml checks the documents. The pull_request trigger has
+# A push that changes only `.md` files starts no run; docs-check.yml checks their links. The pull_request trigger has
 # no `paths-ignore`, because `build` is a required check and a required check that never starts leaves a
 # documentation-only pull request waiting forever. Each job recognizes such a pull request itself instead, with
 # .github/scripts/detect-docs-only.sh, and ends successfully without building, unless a changed .md file has a C#

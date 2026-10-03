@@ -26,7 +26,10 @@ if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ] && git rev-parse -q --verify 'H
     # one builds. Both sides are looked at, so adding, changing or removing a snippet all count.
     while IFS= read -r file; do
       for rev in 'HEAD^1' HEAD; do
-        if git show "$rev:$file" 2>/dev/null | grep -q '^```csharp'; then
+        # No pipe into grep -q: under pipefail, grep stopping at the first match fails the writer with SIGPIPE, and a
+        # large file then looks as if it had no snippet. Indented fences count, as ReadmeSnippetTests reads them too.
+        content=$(git show "$rev:$file" 2>/dev/null || true)
+        if grep -Eq '^[[:space:]]*```csharp' <<< "$content"; then
           build=true
           echo "$file has a C# snippet, which ReadmeSnippetTests checks."
           break 2
@@ -37,5 +40,5 @@ if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ] && git rev-parse -q --verify 'H
 fi
 echo "build=$build" >> "$GITHUB_OUTPUT"
 if [ "$build" = false ]; then
-  echo "Only .md files without C# snippets changed: skipping this job's build steps (docs-check.yml checks the documents)"
+  echo "Only .md files without C# snippets changed: skipping this job's build steps (docs-check.yml checks the links)"
 fi

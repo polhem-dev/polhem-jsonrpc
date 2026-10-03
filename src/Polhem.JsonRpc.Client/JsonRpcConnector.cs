@@ -104,8 +104,9 @@ public sealed class JsonRpcConnector
         {
             // A JsonElement is already JSON, as PayloadProcessor.Wrap returns it; serializing it would need the application's
             // serializer context to list JsonElement, which nothing tells an application under Native AOT to do.
+            // Cloned, so the request does not depend on the caller's document staying alive until a batch is sent.
             var value = parameters is JsonElement json
-                ? json
+                ? json.Clone()
                 : JsonSerializer.SerializeToElement(parameters, _serializerOptions.GetTypeInfo(parameters.GetType()));
             if (value.ValueKind is not (JsonValueKind.Object or JsonValueKind.Array))
             {

@@ -11,7 +11,7 @@ public class TestConventionTests
     public static TheoryData<string> TestMethods =>
     [
         .. typeof(TestConventionTests).Assembly.GetTypes()
-            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
             .Where(method => method.GetCustomAttribute<FactAttribute>() is not null)
             .Select(method => $"{method.DeclaringType!.Name}.{method.Name}"),
     ];

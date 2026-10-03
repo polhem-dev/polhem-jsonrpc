@@ -305,7 +305,7 @@ public partial class PayloadServerTests
         Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result, s_key)).Difference);
     }
 
-    [Theory(DisplayName = "Payload server: without a mapper of the host's, every payload rejection other than a malformed envelope answers the same -32603")]
+    [Theory(DisplayName = "Payload server: without a mapper of the host's, every payload rejection other than an InvalidPayloadException answers the same -32603")]
     [InlineData("foreign type")]
     [InlineData("no key")]
     [InlineData("unknown codec")]
