@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <Description>Transport-independent JSON-RPC 2.0 dispatcher: method resolution, parameter binding, filters and an in-process transport.</Description>
+    <!-- The server is not trim-compatible: JsonRpcDispatcher requires unreferenced code. The analyzer still runs, so
+         every reflection call outside that requirement is a build error until it is annotated or justified. -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>
