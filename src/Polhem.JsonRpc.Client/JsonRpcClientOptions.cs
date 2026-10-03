@@ -18,7 +18,9 @@ public sealed class JsonRpcClientOptions
     /// <remarks>
     /// IMPORTANT: under Native AOT, and on iOS where reflection-based serialization is off, set options whose
     /// <see cref="JsonSerializerOptions.TypeInfoResolver"/> is a source-generated <c>JsonSerializerContext</c> that
-    /// covers every parameter and result type. Otherwise the call fails with <see cref="InvalidOperationException"/>.
+    /// covers every parameter and result type. Otherwise the call fails: with <see cref="NotSupportedException"/> when the
+    /// context does not cover a type, and with <see cref="InvalidOperationException"/> when the options have no resolver.
+    /// A result read as <see cref="JsonElement"/> needs no entry.
     /// </remarks>
     public JsonSerializerOptions SerializerOptions { get; set; } = new(JsonSerializerDefaults.Web);
 

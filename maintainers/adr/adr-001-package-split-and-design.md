@@ -116,7 +116,8 @@ With them, the Polhem framework's responses are written exactly as before
 > specification in its release 1.2.0 and no longer uses them, so keeping them would have committed 1.x to an older
 > format nobody writes. A response is now always written as the specification defines it, and members of a response
 > that the specification does not define are ignored when read. `JsonRpcHttpOptions.StatusCodeSelector`, which is not
-> about an older format, stays.
+> about an older format, stays. The test cited above, `SerializerTests.SerializeResponse_OmitNullId_LeavesNullIdOut`,
+> was removed with the options.
 
 ### 7. AOT is promised for the shared package and the client
 

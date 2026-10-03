@@ -6,7 +6,7 @@ using Polhem.JsonRpc.Server;
 namespace Polhem.JsonRpc.AspNetCore;
 
 /// <summary>
-/// Answers JSON-RPC calls that arrive over HTTP POST. <c>MapJsonRpc</c> routes to it, and an MVC controller can
+/// Answers JSON-RPC calls that arrive over HTTP POST. <see cref="JsonRpcEndpointRouteBuilderExtensions.MapJsonRpc"/> routes to it, and an MVC controller can
 /// call it as well.
 /// </summary>
 public sealed class JsonRpcHttpHandler

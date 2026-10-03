@@ -33,7 +33,7 @@ public interface IPayloadTypeResolver
     /// name never chooses that type.
     /// </summary>
     /// <param name="typeName">The name read from the envelope.</param>
-    /// <param name="type">The type the server decodes into.</param>
+    /// <param name="type">The type the reader decodes into: a server's method parameter, or the type a client expects.</param>
     /// <returns><see langword="true"/> when the name is allowed and names the type.</returns>
     bool IsNameOf(string typeName, Type type);
 }

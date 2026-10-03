@@ -15,10 +15,11 @@ var policy = new DemoKeyPolicy(DemoKeyPolicy.ReadKey(builder.Configuration["Payl
 builder.Services.AddSingleton<IJsonRpcObjectFactory, AppObjectFactory>();
 builder.Services.AddJsonRpcServer(options =>
 {
-    options.UsePayload(payload, policy);
+    // Set before UsePayload, which keeps it answering first and maps a malformed envelope to -32602 after it.
     options.ExceptionMapper = (exception, _) => exception is ReplayRejectedException
         ? new JsonRpcError(-32005, "Replay rejected")
         : null;
+    options.UsePayload(payload, policy);
 });
 
 var app = builder.Build();

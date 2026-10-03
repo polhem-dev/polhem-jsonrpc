@@ -17,6 +17,11 @@ public sealed class JsonRpcServerOptions
     /// Gets or sets the factory that creates the object for the ProgId of a method name. The dispatcher requires
     /// one.
     /// </summary>
+    /// <remarks>
+    /// The dispatcher keeps the factory for its whole life and calls it from every request at once, so it must be
+    /// thread-safe and must not depend on a scoped service. It reaches the services of each call through
+    /// <see cref="JsonRpcRequestContext.Services"/>.
+    /// </remarks>
     public IJsonRpcObjectFactory? ObjectFactory { get; set; }
 
     /// <summary>
@@ -37,8 +42,8 @@ public sealed class JsonRpcServerOptions
 
     /// <summary>
     /// Gets or sets a function that turns an exception into an error, or returns <c>null</c> to leave it to the
-    /// default handling. It sees every exception except <see cref="JsonRpcErrorException"/>, so it is also the
-    /// place to log them.
+    /// default handling. It sees every exception except <see cref="JsonRpcErrorException"/> and the
+    /// <see cref="OperationCanceledException"/> of a call its caller cancelled, so it is also the place to log them.
     /// </summary>
     /// <remarks>
     /// By default an exception is answered with <see cref="JsonRpcErrorCodes.InternalError"/> and a fixed message; its own message
@@ -56,5 +61,8 @@ public sealed class JsonRpcServerOptions
     /// Gets or sets the largest number of requests a batch may hold. A larger batch is answered with a single
     /// <see cref="JsonRpcErrorCodes.InvalidRequest"/> error. The default is 100.
     /// </summary>
+    /// <remarks>
+    /// Zero or a negative value refuses every batch; a single request is not affected.
+    /// </remarks>
     public int MaxBatchSize { get; set; } = 100;
 }

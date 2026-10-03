@@ -12,6 +12,7 @@ dotnet run --project samples/PayloadQuickStart.Client
 ## 關鍵的幾行
 
 ```csharp
+var key = HMACSHA512.HashData(Convert.FromBase64String(base64Key), Encoding.UTF8.GetBytes(clientId));
 var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
 var parameters = payload.Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
@@ -19,6 +20,7 @@ var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
 var added = payload.Unwrap<AddResponse>(result, key)!;
 ```
 
+- 金鑰由示範金鑰與用戶端放在 `X-Client-Id` 的 client id 推導而來，推導方式與伺服器完全相同，因此呼叫無法換一個 client id 重送。
 - `Wrap` 把請求序列化、壓縮、加上 frame 並加密；`Unwrap` 對結果反向處理。connector 收送的是一般的 `JsonElement`，
   所以核心用戶端套件不需要任何改變。
 - 格式、金鑰與序號逐次呼叫決定。每次呼叫取下一個序號；再送一次相同的參數，會收到錯誤（本範例為 `-32005`）。

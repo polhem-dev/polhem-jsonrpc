@@ -1,12 +1,16 @@
 namespace Polhem.JsonRpc.Client;
 
 /// <summary>
-/// Sees every request before it is sent and every response before its result is read.
+/// Sees every request before it is sent and the response to it before its result is read.
 /// </summary>
 /// <remarks>
 /// An interceptor can rewrite <see cref="JsonRpcRequest.Params"/> before sending (for example to encrypt it) and
 /// <see cref="JsonRpcResponse.Result"/> after receiving (for example to decrypt it). HTTP headers belong to the
 /// transport: add them with a <see cref="DelegatingHandler"/> on the <see cref="HttpClient"/>.
+/// <para>
+/// A response that answers no request it sent, such as the single error a server answers a refused batch with, is not
+/// passed to <see cref="OnResponseAsync"/>.
+/// </para>
 /// </remarks>
 public interface IJsonRpcClientInterceptor
 {
