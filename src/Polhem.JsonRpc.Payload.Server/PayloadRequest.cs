@@ -10,11 +10,10 @@ public sealed class PayloadRequest
 {
     private const string ItemKey = "Polhem.JsonRpc.Payload.Server.PayloadRequest";
 
-    internal PayloadRequest(PayloadFormat format, string codec, byte[]? key, object? value, PayloadFrame? frame)
+    internal PayloadRequest(PayloadFormat format, string codec, object? value, PayloadFrame? frame)
     {
         Format = format;
         Codec = codec;
-        Key = key;
         Value = value;
         Frame = frame;
     }
@@ -24,9 +23,6 @@ public sealed class PayloadRequest
 
     /// <summary>Gets the codec the request named; the result names the same one.</summary>
     public string Codec { get; }
-
-    /// <summary>Gets the key of an encrypted call, or <see langword="null"/>.</summary>
-    public byte[]? Key { get; }
 
     /// <summary>
     /// Gets the value: the decoded body of an encoded or encrypted request, or the JSON value of a plain one, which the

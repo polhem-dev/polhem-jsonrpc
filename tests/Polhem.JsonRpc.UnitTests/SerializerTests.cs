@@ -40,50 +40,14 @@ public class SerializerTests
     }
 
     [Fact]
-    [DisplayName("Serializer: additional members are written after jsonrpc, but never in place of a standard member")]
-    public void SerializeResponse_AdditionalMembers_SkipsStandardNames()
-    {
-        var response = JsonRpcResponse.Success(1, JsonSerializer.SerializeToElement(5));
-        response.AdditionalMembers = new Dictionary<string, JsonElement>
-        {
-            ["method"] = JsonSerializer.SerializeToElement("a.b"),
-            ["result"] = JsonSerializer.SerializeToElement(99),
-        };
-
-        var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(response));
-
-        Assert.Equal("""{"jsonrpc":"2.0","method":"a.b","result":5,"id":1}""", json);
-    }
-
-    [Fact]
-    [DisplayName("Serializer: OmitNullId leaves a null id out, as the Polhem wire format does")]
-    public void SerializeResponse_OmitNullId_LeavesNullIdOut()
-    {
-        var response = JsonRpcResponse.Failure(JsonRpcId.Null, new JsonRpcError(-32601, "Method not found."));
-        response.AdditionalMembers = new Dictionary<string, JsonElement> { ["method"] = JsonSerializer.SerializeToElement("A.B") };
-
-        var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(response, new JsonRpcWriteOptions { OmitNullId = true }));
-
-        Assert.Equal("""{"jsonrpc":"2.0","method":"A.B","error":{"code":-32601,"message":"Method not found."}}""", json);
-    }
-
-    [Fact]
-    [DisplayName("Serializer: OmitNullId still writes an id that is a string or a number")]
-    public void SerializeResponse_OmitNullIdWithId_WritesId()
-    {
-        var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(
-            JsonRpcResponse.Success("x", null), new JsonRpcWriteOptions { OmitNullId = true }));
-
-        Assert.Equal("""{"jsonrpc":"2.0","result":null,"id":"x"}""", json);
-    }
-
-    [Fact]
-    [DisplayName("Serializer: unknown response members are kept as additional members when read")]
-    public void ReadResponse_UnknownMember_IsKept()
+    [DisplayName("Serializer: unknown response members are ignored when read")]
+    public void ReadResponse_UnknownMember_IsIgnored()
     {
         var response = JsonRpcSerializer.ReadResponses(Encoding.UTF8.GetBytes("""{"jsonrpc":"2.0","result":1,"id":1,"method":"a.b"}"""))[0];
 
-        Assert.Equal("a.b", response.AdditionalMembers!["method"].GetString());
+        Assert.True(response.IsSuccess);
+        Assert.Equal(1, response.Result!.Value.GetInt32());
+        Assert.Equal(JsonRpcId.FromNumber(1), response.Id);
     }
 
     [Fact]

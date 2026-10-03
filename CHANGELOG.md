@@ -7,6 +7,14 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Removed
+
+- The options for an older wire format: `JsonRpcServerOptions.InternalErrorCode`, `JsonRpcRequestContext.ResponseMembers`,
+  `JsonRpcResponse.AdditionalMembers`, and `JsonRpcWriteOptions` with `OmitNullId` (and the `options` parameters that
+  took it, and `JsonRpcHttpOptions.WriteOptions`). Responses are always written as the specification defines them, and
+  unknown response members are ignored when read ([ADR-001](maintainers/adr/adr-001-package-split-and-design.md),
+  decision 6).
+
 ### Added
 
 - `Polhem.JsonRpc.Payload` (optional): the payload envelope around `params` and `result` (`format`, `value`, `type`,

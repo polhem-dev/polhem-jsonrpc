@@ -112,6 +112,12 @@ internal error code (`JsonRpcServerOptions.InternalErrorCode`), additional respo
 With them, the Polhem framework's responses are written exactly as before
 (`SerializerTests.SerializeResponse_OmitNullId_LeavesNullIdOut`).
 
+> Amended for 1.0.0 (2026-10-03): the three options are removed. The Polhem framework aligned its wire with the
+> specification in its release 1.2.0 and no longer uses them, so keeping them would have committed 1.x to an older
+> format nobody writes. A response is now always written as the specification defines it, and members of a response
+> that the specification does not define are ignored when read. `JsonRpcHttpOptions.StatusCodeSelector`, which is not
+> about an older format, stays.
+
 ### 7. AOT is promised for the shared package and the client
 
 `Polhem.JsonRpc` and `Polhem.JsonRpc.Client` are meant to run on iOS, Android and WebAssembly. The envelope is read

@@ -9,7 +9,6 @@ namespace Polhem.JsonRpc.Server;
 public sealed class JsonRpcRequestContext
 {
     private Dictionary<string, object?>? _items;
-    private Dictionary<string, JsonElement>? _responseMembers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonRpcRequestContext"/> class.
@@ -98,15 +97,4 @@ public sealed class JsonRpcRequestContext
     /// <see cref="JsonRpcTransportInfo.Items"/>.
     /// </summary>
     public IDictionary<string, object?> Items => _items ??= new Dictionary<string, object?>(Transport.Items, StringComparer.Ordinal);
-
-    /// <summary>
-    /// Gets members to add to the response next to <c>jsonrpc</c>, <c>result</c>, <c>error</c> and <c>id</c>.
-    /// </summary>
-    /// <remarks>
-    /// They exist so that a host can keep an older wire format; see <see cref="JsonRpcResponse.AdditionalMembers"/>.
-    /// They are written on success and on error.
-    /// </remarks>
-    public IDictionary<string, JsonElement> ResponseMembers => _responseMembers ??= new Dictionary<string, JsonElement>(StringComparer.Ordinal);
-
-    internal bool HasResponseMembers => _responseMembers is { Count: > 0 };
 }

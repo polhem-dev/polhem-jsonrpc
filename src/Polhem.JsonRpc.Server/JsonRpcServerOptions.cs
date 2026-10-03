@@ -41,16 +41,10 @@ public sealed class JsonRpcServerOptions
     /// place to log them.
     /// </summary>
     /// <remarks>
-    /// By default an exception is answered with <see cref="InternalErrorCode"/> and a fixed message; its own message
+    /// By default an exception is answered with <see cref="JsonRpcErrorCodes.InternalError"/> and a fixed message; its own message
     /// is not sent unless <see cref="IncludeExceptionDetails"/> is set.
     /// </remarks>
     public Func<Exception, JsonRpcRequestContext, JsonRpcError?>? ExceptionMapper { get; set; }
-
-    /// <summary>
-    /// Gets or sets the code of the error that answers an unexpected exception. The default is
-    /// <see cref="JsonRpcErrorCodes.InternalError"/>; a host can choose another to keep an older wire format.
-    /// </summary>
-    public int InternalErrorCode { get; set; } = JsonRpcErrorCodes.InternalError;
 
     /// <summary>
     /// Gets or sets a value indicating whether the message of an unexpected exception is sent in the error's

@@ -32,7 +32,6 @@ public sealed class JsonRpcDispatcher
     private readonly IJsonRpcFilter[] _filters;
     private readonly JsonSerializerOptions _serializerOptions;
     private readonly Func<Exception, JsonRpcRequestContext, JsonRpcError?>? _exceptionMapper;
-    private readonly int _internalErrorCode;
     private readonly bool _includeExceptionDetails;
     private readonly int _maxBatchSize;
 
@@ -57,7 +56,6 @@ public sealed class JsonRpcDispatcher
         _binder = options.ParameterBinder ?? new DefaultParameterBinder(_serializerOptions);
         _filters = [.. options.Filters];
         _exceptionMapper = options.ExceptionMapper;
-        _internalErrorCode = options.InternalErrorCode;
         _includeExceptionDetails = options.IncludeExceptionDetails;
         _maxBatchSize = options.MaxBatchSize;
     }
@@ -172,10 +170,6 @@ public sealed class JsonRpcDispatcher
         }
 
         if (request.IsNotification) { return null; }
-        if (context.HasResponseMembers)
-        {
-            response.AdditionalMembers = new Dictionary<string, JsonElement>(context.ResponseMembers, StringComparer.Ordinal);
-        }
         return response;
     }
 
@@ -259,6 +253,6 @@ public sealed class JsonRpcDispatcher
         JsonElement? data = _includeExceptionDetails
             ? JsonSerializer.SerializeToElement(exception.Message, JsonRpcServerJsonContext.Default.String)
             : null;
-        return new JsonRpcError(_internalErrorCode, InternalErrorMessage, data);
+        return new JsonRpcError(JsonRpcErrorCodes.InternalError, InternalErrorMessage, data);
     }
 }

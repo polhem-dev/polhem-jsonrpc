@@ -79,7 +79,7 @@ public class PayloadWireVectorTests
         const string json = """{"format":2,"value":"EAAAAP+MfBW24ORVEBRAil6/IOFgAAAAsjNkN/1BqmCCUJfqODQU/QfeBevI++phd9Qx7vGAurn2Mv05Asg3S32frwAvaVKYXr6mJHmE+IrqNK+ns3UfUyZRGyaOuoFgc9KOe8J+GwGsIz4l4M3IgwQkWhNskSvlMFwQ1PCSA3cnPK9PtKWBj+gqgj6iX0MflH1l1hJwXVc=","type":"Polhem.Api.Core.Messages.System.PingRequest, Polhem.Api.Core","codec":"json"}""";
         var envelope = PayloadEnvelope.Read(Parse(json));
 
-        var ping = Assert.IsType<VectorPing>(CreateProcessor(requireFrame: true).Open(envelope, typeof(VectorPing), s_key, out var frame));
+        var ping = Assert.IsType<VectorPing>(CreateProcessor(requireFrame: true).OpenRequest(envelope, typeof(VectorPing), s_key, out var frame));
 
         Assert.Equal("vector", ping.ClientName);
         Assert.Equal(1_700_000_000_123, frame!.TimestampMs);

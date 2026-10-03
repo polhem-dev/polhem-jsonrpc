@@ -144,8 +144,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     public void AddJsonRpcServer_RegisteredHttpOptions_AreSharedAndExtended()
     {
         var services = new ServiceCollection();
-        var frameworkHttp = new JsonRpcHttpOptions();
-        frameworkHttp.WriteOptions.OmitNullId = true;
+        var frameworkHttp = new JsonRpcHttpOptions { StatusCodeSelector = _ => 299 };
         services.AddSingleton(frameworkHttp);
 
         services.AddJsonRpcServer(configureHttp: http => http.MaxRequestBodySize = 123);
@@ -153,7 +152,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
 
         var shared = provider.GetRequiredService<JsonRpcHttpOptions>();
         Assert.Same(frameworkHttp, shared);
-        Assert.True(shared.WriteOptions.OmitNullId);
+        Assert.NotNull(shared.StatusCodeSelector);
         Assert.Equal(123, shared.MaxRequestBodySize);
     }
 
