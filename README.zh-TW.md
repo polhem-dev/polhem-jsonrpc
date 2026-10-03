@@ -22,12 +22,15 @@
 | `Polhem.JsonRpc.Server` | dispatcher：方法解析、參數繫結、filter，以及 in-process 傳輸 | `Polhem.JsonRpc` |
 | `Polhem.JsonRpc.AspNetCore` | ASP.NET Core 端點（`MapJsonRpc`）與 HTTP 請求處理 | `Polhem.JsonRpc.Server`、ASP.NET Core |
 | `Polhem.JsonRpc.Client` | `JsonRpcConnector`：HTTP 傳輸、batch、notification 與請求攔截器 | `Polhem.JsonRpc` |
+| `Polhem.JsonRpc.Payload` | 選用：包住 `params` 與 `result` 的 payload 外殼，含 codec、gzip、AES-CBC-HMAC 加密與防重放 frame | `Polhem.JsonRpc` |
+| `Polhem.JsonRpc.Payload.Server` | 選用：開啟外殼並檢查 frame 的伺服器 filter | `Polhem.JsonRpc.Payload`、`Polhem.JsonRpc.Server` |
 
 伺服器端應用程式引用 `Polhem.JsonRpc.AspNetCore`（不是 ASP.NET Core 的 host 則引用 `Polhem.JsonRpc.Server`），
-用戶端應用程式只引用 `Polhem.JsonRpc.Client`。
+用戶端應用程式只引用 `Polhem.JsonRpc.Client`。要加密 payload 的應用程式，兩端都加上 `Polhem.JsonRpc.Payload`，
+伺服器再加上 `Polhem.JsonRpc.Payload.Server`。
 
 這些套件不依賴 [Polhem 框架](https://github.com/polhem-dev/polhem)。Polhem 用它們實作自己的 API，
-並透過 filter 與攔截器加上自己的 payload 加密、壓縮與授權。
+以 payload 套件處理加密與壓縮，並以自己的 filter 處理授權。
 
 ## 快速上手
 

@@ -22,12 +22,15 @@ client, published as separate NuGet packages so an application takes only the pa
 | `Polhem.JsonRpc.Server` | The dispatcher: method resolution, parameter binding, filters and an in-process transport | `Polhem.JsonRpc` |
 | `Polhem.JsonRpc.AspNetCore` | The ASP.NET Core endpoint (`MapJsonRpc`) and the HTTP request handler | `Polhem.JsonRpc.Server`, ASP.NET Core |
 | `Polhem.JsonRpc.Client` | `JsonRpcConnector` with an HTTP transport, batches, notifications and request interceptors | `Polhem.JsonRpc` |
+| `Polhem.JsonRpc.Payload` | Optional: the payload envelope around `params` and `result`, with codecs, gzip, AES-CBC-HMAC encryption and a replay-protection frame | `Polhem.JsonRpc` |
+| `Polhem.JsonRpc.Payload.Server` | Optional: the server filter that opens the envelope and checks the frame | `Polhem.JsonRpc.Payload`, `Polhem.JsonRpc.Server` |
 
 A server application references `Polhem.JsonRpc.AspNetCore` (or `Polhem.JsonRpc.Server` for a host that is not
-ASP.NET Core). A client application references `Polhem.JsonRpc.Client` only.
+ASP.NET Core). A client application references `Polhem.JsonRpc.Client` only. An application that encrypts its payloads
+adds `Polhem.JsonRpc.Payload` on both ends and `Polhem.JsonRpc.Payload.Server` on the server.
 
 The packages do not depend on the [Polhem framework](https://github.com/polhem-dev/polhem). Polhem uses them for its
-API, and adds its own payload encryption, compression and authorization on top through the filters and interceptors.
+API, with the payload packages for its encryption and compression and its own filters for authorization.
 
 ## Quick start
 

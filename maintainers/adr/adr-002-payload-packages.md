@@ -113,8 +113,9 @@ disagree turns its build red.
 
 `PayloadOptions` holds the codecs and the default codec, the compressor, the encryptor, whether a frame is required,
 the timestamp tolerance, and whether the unencrypted encryptor may be used (off by default; meant for development). On
-the server it is registered in the service collection together with the filter; on the client the caller holds an
-instance.
+the server it is passed to `JsonRpcServerOptions.UsePayload`, which adds the filter and the parameter binder:
+`Polhem.JsonRpc.Server` depends on nothing but .NET, so the package does not register itself in a service collection.
+On the client the caller holds an instance.
 
 - **The default codec is a setting.** The package defaults to JSON. Polhem sets MessagePack, its compatibility constant
   for every client that predates codec negotiation.

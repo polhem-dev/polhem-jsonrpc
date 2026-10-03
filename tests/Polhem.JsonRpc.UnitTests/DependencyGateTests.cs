@@ -18,6 +18,7 @@ public class DependencyGateTests
         { typeof(Server.JsonRpcDispatcher).Assembly.GetName().Name!, s_dotNet },
         { typeof(Client.JsonRpcConnector).Assembly.GetName().Name!, s_dotNet },
         { typeof(Polhem.JsonRpc.Payload.PayloadProcessor).Assembly.GetName().Name!, s_dotNet },
+        { typeof(Polhem.JsonRpc.Payload.Server.PayloadFilter).Assembly.GetName().Name!, s_dotNet },
         { typeof(AspNetCore.JsonRpcHttpHandler).Assembly.GetName().Name!, s_aspNetCore },
     };
 
