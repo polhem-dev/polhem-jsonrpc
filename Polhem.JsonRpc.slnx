@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Polhem.JsonRpc.AotSmoke/Polhem.JsonRpc.AotSmoke.csproj" />
+    <Project Path="tests/Polhem.JsonRpc.ReadmeSnippets/Polhem.JsonRpc.ReadmeSnippets.csproj" />
     <Project Path="tests/Polhem.JsonRpc.UnitTests/Polhem.JsonRpc.UnitTests.csproj" />
   </Folder>
   <Folder Name="/samples/">

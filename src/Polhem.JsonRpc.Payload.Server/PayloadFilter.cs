@@ -63,11 +63,13 @@ public sealed class PayloadFilter : IJsonRpcFilter
 
     private void ValidateTimestamp(PayloadFrame frame)
     {
-        long driftMs = Math.Abs(_processor.Options.TimeProvider.GetUtcNow().ToUnixTimeMilliseconds() - frame.TimestampMs);
+        // The difference is taken in double: the timestamp comes from the caller, and `now - TimestampMs` overflows a long
+        // for a timestamp near either end of its range.
+        double driftMs = Math.Abs((double)_processor.Options.TimeProvider.GetUtcNow().ToUnixTimeMilliseconds() - frame.TimestampMs);
         if (driftMs > _processor.Options.FrameTimestampTolerance.TotalMilliseconds)
         {
             throw new ReplayRejectedException(
-                $"The request timestamp is {driftMs / 1000} seconds away from server time, outside the accepted window. Check the client clock.");
+                $"The request timestamp is {Math.Floor(driftMs / 1000)} seconds away from server time, outside the accepted window. Check the client clock.");
         }
     }
 

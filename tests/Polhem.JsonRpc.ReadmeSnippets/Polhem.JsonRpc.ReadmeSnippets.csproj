@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    The C# snippets of the READMEs, each inside a region named after its README and position, wrapped in just enough
+    code to compile. Building this project checks that the snippets still compile against the packages, and
+    ReadmeSnippetTests in Polhem.JsonRpc.UnitTests checks that each README still shows what its region holds. The files
+    mirror the READMEs, so a file may declare several types, as its README does.
+  -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <!-- Snippets declare variables a reader would go on to use, and the server snippets use reflection. -->
+    <NoWarn>$(NoWarn);CS0168;CS0219;CS8321;CA1050;IL2026;IL3050;IDE0059;IDE0060</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.AspNetCore\Polhem.JsonRpc.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Client\Polhem.JsonRpc.Client.csproj" />
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload.Server\Polhem.JsonRpc.Payload.Server.csproj" />
+    <ProjectReference Include="..\..\samples\QuickStart.Contracts\QuickStart.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.Security.Cryptography" />
+    <Using Include="System.Text" />
+    <Using Include="System.Text.Json" />
+    <Using Include="Polhem.JsonRpc" />
+    <Using Include="Polhem.JsonRpc.AspNetCore" />
+    <Using Include="Polhem.JsonRpc.Client" />
+    <Using Include="Polhem.JsonRpc.Payload" />
+    <Using Include="Polhem.JsonRpc.Payload.Server" />
+    <Using Include="Polhem.JsonRpc.Server" />
+    <Using Include="QuickStart.Contracts" />
+  </ItemGroup>
+
+</Project>

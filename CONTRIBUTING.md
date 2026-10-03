@@ -21,6 +21,9 @@ dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
   is declared in `PublicAPI.Unshipped.txt`; say in the pull request whether it is binary compatible.
 - The packages depend on nothing but .NET (and ASP.NET Core for `Polhem.JsonRpc.AspNetCore`). A new package reference
   needs an issue first.
+- The C# snippets of the READMEs are compiled in `tests/Polhem.JsonRpc.ReadmeSnippets`, one region per snippet.
+  Change a snippet there and in the README together: the build compiles the region, and `ReadmeSnippetTests` fails when
+  a README no longer shows its region's code, or a translated README shows other code than the English one.
 - A test method is named `<Method>_<Scenario>_<Expected>` and says what it checks in the `DisplayName` of its `[Fact]`
   or `[Theory]`, which is what xUnit reports. (`System.ComponentModel.DisplayNameAttribute` is not read by xUnit.)
   `TestConventionTests` fails the build's test run when a test breaks either rule.

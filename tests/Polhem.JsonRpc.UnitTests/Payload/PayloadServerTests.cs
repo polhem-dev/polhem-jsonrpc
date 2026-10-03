@@ -118,6 +118,25 @@ public class PayloadServerTests
         }
     }
 
+    [Fact(DisplayName = "Payload server: a frame timestamp whose distance from the server clock overflows a long is refused as a replay")]
+    public async Task Call_OverflowingTimestamp_IsRejectedAsReplay()
+    {
+        var serverNow = DateTimeOffset.FromUnixTimeMilliseconds(1_700_000_000_000);
+        var (rpc, _) = Create(new TestPolicy(), new FixedClock(serverNow));
+        // `now - timestamp` is exactly long.MinValue, the one difference whose absolute value a long cannot hold.
+        var timestamp = unchecked(serverNow.ToUnixTimeMilliseconds() - long.MinValue);
+        var body = new GzipPayloadCompressor().Compress(Encoding.UTF8.GetBytes("""{"minuend":5,"subtrahend":3}"""));
+        var envelope = new PayloadEnvelope
+        {
+            Format = PayloadFormat.Encrypted,
+            Body = new AesCbcHmacPayloadEncryptor().Encrypt(new PayloadFrame(timestamp, 1).Prepend(body), s_key),
+            TypeName = Registry().GetTypeName(typeof(SubtractRequest)),
+        };
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, envelope.ToElement()));
+        Assert.Equal(ReplayRejected, ex.Code);
+    }
+
     [Theory(DisplayName = "Payload server: a call the method policy refuses is answered -32601 without fetching a key or decrypting")]
     [InlineData("Spec.Subtract", 1)]
     [InlineData("Spec.Echo", 0)]
