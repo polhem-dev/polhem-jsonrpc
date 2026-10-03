@@ -20,19 +20,21 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy
   （每個方法只問一次），而不再逐個方法名稱處理；答案在 dispatcher 存續期間保留。policy 擲出例外的方法不可呼叫，
   該型別的其他方法不受影響。
-- `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
+- **wire 可見：** `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
-- `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
+- **wire 可見：** `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
   在 `UsePayload` 之前設定的 `ExceptionMapper` 仍然優先；其他 payload 失敗維持 `-32603`，回應不會透露是哪一項檢查失敗。
-- `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
+- **行為變更：** `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
   其餘每次呼叫都重讀，因此在呼叫進行中新增 interceptor 可能擲出例外。
-- `JsonRpcConnector` 拒絕帶著另一個請求 id 的回應，也拒絕不產生 id 的 `IdGenerator`；批次拒絕 id 為 null 或與批次內重複的呼叫。
+- **行為變更：** `JsonRpcConnector` 拒絕帶著另一個請求 id 的回應，也拒絕不產生 id 的 `IdGenerator`；批次拒絕 id 為 null 或與批次內重複的呼叫。
 - PayloadQuickStart 範例改由示範金鑰與 `X-Client-Id` 推導每個用戶端的金鑰，換一個 client id 重送的呼叫不再落入全新的防重放範圍。
   範例也改為只接受加密的呼叫。
 - **破壞性變更（binary）：** `JsonRpcTransportKind.Http` 改為 0、`InProcess` 改為 1，`Custom` 維持 2。`InProcess` 原本是預設值，
   自訂傳輸若沒有設定 kind，就會被當成 in-process，而主機可能給 in-process 比遠端呼叫更多信任。請以此版本重新編譯：
   以 1.0 編譯的程式碼仍用舊數值比較，會把每個 HTTP 呼叫當成 in-process。
-- 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
+  此版本在 minor 版中破壞 binary 相容性，是語意化版本的例外：Polhem 框架會同時發佈以此版編譯的版本並停用前一版。
+  升級這些套件、卻仍執行以 1.0 編譯之程式碼的應用程式，會把未經驗證的 HTTP 呼叫當成 in-process 放行。
+- **wire 可見：** 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
 - record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
 - `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
   所有讀取端都接受之後，寫出端才會送出未壓縮的內容。解壓的唯一上限仍是每個內容 `MaxDecompressedBytes`（50 MiB）；
