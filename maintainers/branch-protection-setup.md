@@ -35,3 +35,4 @@ job would let the pull request merge. The reasons are in the header of `.github/
 | `allow_merge_commit` / `allow_rebase_merge` | `false` |
 | `delete_branch_on_merge` | `true` |
 | `allow_auto_merge` | `true` |
+
