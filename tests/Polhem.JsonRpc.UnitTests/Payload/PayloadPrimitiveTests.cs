@@ -101,6 +101,21 @@ public class PayloadPrimitiveTests
         Assert.Throws<CryptographicException>(() => encryptor.Decrypt(malformed, key));
     }
 
+    [Fact(DisplayName = "AES-CBC-HMAC: an IV length of 17 to 32 with a valid HMAC is refused for its IV length, not decrypted at a shifted offset")]
+    public void AesCbcHmacDecrypt_AuthenticatedOddIvLength_ThrowsForIvLength()
+    {
+        var key = RandomNumberGenerator.GetBytes(AesCbcHmacPayloadEncryptor.KeySize);
+        // Layout with a 17-byte IV and a 16-byte cipher, signed with the key as only its holder could.
+        var data = new byte[4 + 17 + 4 + 16 + 32];
+        BinaryPrimitives.WriteInt32LittleEndian(data, 17);
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(4 + 17), 16);
+        HMACSHA256.HashData(key[32..], data.AsSpan(0, 4 + 17 + 4 + 16), data.AsSpan(4 + 17 + 4 + 16));
+
+        var ex = Assert.Throws<CryptographicException>(() => new AesCbcHmacPayloadEncryptor().Decrypt(data, key));
+
+        Assert.Contains("IV length", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact(DisplayName = "Frame: data shorter than a frame or of another version is refused")]
     public void FrameExtract_Invalid_ThrowsReplayRejected()
     {
