@@ -179,7 +179,7 @@ public sealed class PayloadProcessor
     /// </exception>
     /// <remarks>
     /// A body that fails to decompress, for any reason, uses up what is left of the budget, because the failure may
-    /// already have cost that much; the calls after it in the message are then refused.
+    /// already have cost that much; the encoded and encrypted calls after it in the message are then refused.
     /// </remarks>
     public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, PayloadDecompressionBudget budget, out PayloadFrame? frame)
     {

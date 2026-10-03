@@ -78,8 +78,10 @@ public partial class PayloadServerTests
         Assert.Equal(2, ((JsonElement)client.Unwrap(result)!).GetProperty("difference").GetInt32());
     }
 
-    [Fact(DisplayName = "Payload server: frames required after UsePayload still make a method that requires unique sequence numbers refuse a plain call")]
-    public async Task Call_RequireFrameSetAfterUsePayload_RefusesPlain()
+    [Theory(DisplayName = "Payload server: frames required after UsePayload still make a method that requires unique sequence numbers refuse plain and encoded calls")]
+    [InlineData(PayloadFormat.Plain)]
+    [InlineData(PayloadFormat.Encoded)]
+    public async Task Call_RequireFrameSetAfterUsePayload_RefusesUnencrypted(PayloadFormat format)
     {
         var payloadOptions = new PayloadOptions { TypeResolver = Registry() };
         var policy = new TestPolicy { ReplayScope = "session-1", UniqueSequence = true };
@@ -89,9 +91,10 @@ public partial class PayloadServerTests
         var client = new PayloadProcessor(payloadOptions);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() =>
-            rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Plain)));
+            rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), format, sequence: 1)));
 
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
+        Assert.Equal(0, policy.KeyRequests);
     }
 
     [Fact(DisplayName = "Payload server: a body that fails past the decompression budget uses up the rest of it, so the next call of the batch is refused")]
