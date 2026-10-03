@@ -441,31 +441,6 @@ public partial class PayloadServerTests
         return (new JsonRpcConnector(new InProcessTransport(dispatcher)), new PayloadProcessor(payloadOptions));
     }
 
-    private sealed class TestPolicy : IPayloadServerPolicy
-    {
-        public byte[]? Key { get; init; } = s_key;
-
-        public string? ReplayScope { get; init; }
-
-        public bool UniqueSequence { get; init; }
-
-        public PayloadFormat MinimumFormat { get; init; }
-
-        public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => MinimumFormat;
-
-        public int KeyRequests { get; private set; }
-
-        public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context)
-        {
-            KeyRequests++;
-            return ValueTask.FromResult(Key);
-        }
-
-        public string? GetReplayScope(JsonRpcRequestContext context) => ReplayScope;
-
-        public bool RequiresUniqueSequence(JsonRpcRequestContext context) => UniqueSequence;
-    }
-
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;

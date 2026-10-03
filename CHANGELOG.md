@@ -19,7 +19,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   a batch, for a filter that accounts for the whole message.
 - `PayloadOptions.MaxDecompressedBytesPerMessage` (default 50 MiB): how much a server decompresses for one message in
   total, the call alone or all the calls of a batch. `PayloadDecompressionBudget`,
-  `IPayloadCompressor.Decompress(byte[], long)` (with a default implementation) and an overload of
+  `IPayloadCompressor.Decompress(byte[], long)` (with a default implementation, and implemented by
+  `GzipPayloadCompressor`) and an overload of
   `PayloadProcessor.OpenRequest` carry it. `PayloadFilter` reads the setting once, when it is created.
 
 ### Changed
@@ -72,6 +73,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ### Fixed
 
+- `HttpTransport` gives each request a `Content-Type` value of its own. All requests of the process shared one, so a
+  handler that changed it in place, adding a parameter for instance, changed every later request, of every
+  `HttpClient`, until the header grew too long to send.
 - A method name the caller made up no longer stays in the dispatcher's method cache, so names that resolve to nothing
   cannot grow its memory. The lookup runs before any filter, so before authentication.
 - A batch larger than `MaxBatchSize` is refused before a request object is built for each of its entries.
@@ -93,8 +97,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - A request or response that starts with a UTF-8 byte order mark is read instead of answered with `-32700 Parse error`.
 - A frame timestamp whose distance from the server clock overflows a 64-bit integer is refused like any other
   timestamp outside the tolerance, instead of failing with an arithmetic overflow.
-- `PayloadFilter` reads `FrameTimestampTolerance` and `TimeProvider` once, when it is created, together with the
-  lifetime of the replay store they decide. A tolerance raised after `UsePayload` let a captured call be replayed
+- `PayloadFilter` reads `FrameTimestampTolerance` and the `TimeProvider` that checks request timestamps once, when it
+  is created, together with the lifetime of the replay store they decide. A tolerance raised after `UsePayload` let a captured call be replayed
   after its scope was forgotten.
 
 ## [1.0.0] - 2026-10-03

@@ -36,6 +36,19 @@ jobs:
             exit 1
           }
 
+      # A release moves every PublicAPI.Unshipped.txt entry into PublicAPI.Shipped.txt and drops the old lines that a
+      # *REMOVED* entry names. The analyzer accepts either file, so only this step notices a release that did half of it.
+      - name: Check that the public API is shipped
+        run: |
+          $unshipped = Get-ChildItem -Path src -Recurse -Filter PublicAPI.Unshipped.txt |
+            Where-Object { Get-Content $_.FullName | Where-Object { $_.Trim() -and $_.Trim() -ne '#nullable enable' } }
+          $removed = Get-ChildItem -Path src -Recurse -Filter PublicAPI.Shipped.txt |
+            Where-Object { Select-String -Path $_.FullName -Pattern '^\*REMOVED\*' -Quiet }
+          foreach ($file in @($unshipped) + @($removed)) {
+            Write-Host "::error file=$($file.FullName)::Move the public API entries into PublicAPI.Shipped.txt before tagging a release."
+          }
+          if ($unshipped -or $removed) { exit 1 }
+
       - name: Build
         run: dotnet build Polhem.JsonRpc.slnx --configuration Release
 

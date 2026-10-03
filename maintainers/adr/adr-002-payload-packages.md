@@ -66,8 +66,9 @@ Neither package is needed for plain JSON-RPC. The core packages do not reference
 > uncompressed. A body written by the built-in JSON codec, or by MessagePack, never starts with those bytes; a custom
 > codec may, so a writer that leaves a body uncompressed must still compress one that starts with them. Compressing a
 > small body costs more than it saves, so writers will leave small bodies uncompressed, but only in a later version,
-> once every reader (this package, the Polhem framework, polhem-connector-js) accepts them; until then every writer
-> still compresses (`PayloadProcessorTests.OpenRequest_UncompressedEncodedBody_Opens`).
+> once every reader (this package, the Polhem framework, polhem-connector-js) accepts them
+> (`PayloadProcessorTests.OpenRequest_UncompressedEncodedBody_Opens`); until then every writer still compresses, as
+> `PayloadWireVectorTests.Wrap_Encoded_WritesPolhemEnvelopeAndBody` pins.
 
 > Amended for 1.1.0 (2026-10-04): a server also bounds what one message decompresses in total, the call alone or all
 > the calls of a batch (`PayloadOptions.MaxDecompressedBytesPerMessage`, 50 MiB by default), because an encoded body is

@@ -46,8 +46,10 @@ public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadF
 - 方法本身（`Calculator.cs`）和不用外殼時一樣：filter 在呼叫前開啟請求、呼叫後以請求的格式與 codec 封裝結果。
 - 請求解碼成什麼型別由伺服器決定（方法的參數型別），用戶端寫的 `type` 只拿來比對。因此不需要登錄任何合約型別：
   伺服器公開的方法就是白名單。
-- 防重放範圍必須是金鑰所驗證的東西，否則攔截到的呼叫換一個範圍重送就會再次被接受。`X-Client-Id` header
-  本身沒有經過驗證，所以金鑰由它推導（`HMACSHA512(demoKey, clientId)`）：換一個 client id 重送的呼叫，HMAC 驗證會失敗。
+- 防重放範圍必須涵蓋這把金鑰的所有持有者，否則攔截到的呼叫換到使用同一把金鑰的另一個範圍重送，就會再次被接受。
+  `X-Client-Id` header 本身沒有經過驗證，所以金鑰由它推導（`HMACSHA512(demoKey, clientId)`）：每個 client id 各有一把金鑰，
+  換一個 client id 重送的呼叫，HMAC 驗證會失敗。這只在範例要求加密呼叫時成立；plain 與 encoded 呼叫沒有 HMAC，
+  呼叫端可以改掉或拿掉這個 header。
 - 從同一把示範金鑰推導是為了讓範例簡短。實際的應用程式會在登入時為每個 session 協商一把金鑰，並以 session 作為防重放範圍。
   金鑰如何協商不在 payload 套件的範圍內。
 - `MemoryPayloadReplayStore` 把序號記在行程記憶體裡。多個伺服器執行個體需要共用的 `IPayloadReplayStore`。
