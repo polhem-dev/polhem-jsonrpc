@@ -31,6 +31,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `JsonRpcConnector` 拒絕帶著另一個請求 id 的回應，也拒絕不產生 id 的 `IdGenerator`；批次拒絕 id 為 null 或與批次內重複的呼叫。
 - PayloadQuickStart 範例改由示範金鑰與 `X-Client-Id` 推導每個用戶端的金鑰，換一個 client id 重送的呼叫不再落入全新的防重放範圍。
   範例也改為只接受加密的呼叫。
+- **破壞性變更（binary）：** `JsonRpcTransportKind.Http` 改為 0、`InProcess` 改為 1，`Custom` 維持 2。`InProcess` 原本是預設值，
+  自訂傳輸若沒有設定 kind，就會被當成 in-process，而主機可能給 in-process 比遠端呼叫更多信任。請以此版本重新編譯：
+  以 1.0 編譯的程式碼仍用舊數值比較，會把每個 HTTP 呼叫當成 in-process。
 
 ### 修正
 

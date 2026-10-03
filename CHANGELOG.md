@@ -35,6 +35,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   id. A batch refuses a call whose id is null or already in the batch.
 - The PayloadQuickStart sample derives each client's key from the demo key and its `X-Client-Id`, so a call replayed
   under another client id no longer starts over in a fresh replay scope. It also requires encrypted calls.
+- **Breaking (binary):** `JsonRpcTransportKind.Http` is now 0 and `InProcess` 1; `Custom` stays 2. `InProcess` was the
+  default value, so a custom transport that left the kind unset was treated as in process, which a host may trust more
+  than a remote caller. Recompile against this version: code compiled against 1.0 compares with the old numbers and
+  takes every HTTP call for an in-process one.
 
 ### Fixed
 
