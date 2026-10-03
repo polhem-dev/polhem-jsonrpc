@@ -12,7 +12,8 @@
 JSON-RPC 2.0 for .NET, built on System.Text.Json: a transport-independent server, an ASP.NET Core endpoint and a
 client, published as separate NuGet packages so an application takes only the part it needs.
 
-> **Status: under development.** No package has been released yet, and the API may still change.
+The packages are published on [nuget.org](https://www.nuget.org/packages?q=Polhem.JsonRpc); the changes of each release
+are in the [CHANGELOG](CHANGELOG.md).
 
 ## Packages
 
@@ -88,6 +89,8 @@ it by these rules.
 | [QuickStart.Server](samples/QuickStart.Server/README.md) | A server on ASP.NET Core minimal APIs |
 | [QuickStart.Client](samples/QuickStart.Client/README.md) | Calls, errors, notifications and batches from a console application |
 | [QuickStart.Contracts](samples/QuickStart.Contracts) | The request and response classes both sides share |
+| [PayloadQuickStart.Server](samples/PayloadQuickStart.Server/README.md) | Encrypted parameters and results with replay protection, on the server |
+| [PayloadQuickStart.Client](samples/PayloadQuickStart.Client/README.md) | The same from a console application, including a replayed call refused |
 
 ## Extension points
 
@@ -112,7 +115,7 @@ builder.Services.AddJsonRpcServer(options => options.Filters.Add(new ApiKeyFilte
 ```
 
 On the client, HTTP headers belong to the `HttpClient`: add them with a `DelegatingHandler`. To rewrite parameters
-and results, for example to encrypt them, add an `IJsonRpcClientInterceptor` to `JsonRpcClientOptions.Interceptors`.
+and results on every call, add an `IJsonRpcClientInterceptor` to `JsonRpcClientOptions.Interceptors`.
 
 ```csharp
 public sealed class ApiKeyHandler(string key) : DelegatingHandler
@@ -127,13 +130,32 @@ public sealed class ApiKeyHandler(string key) : DelegatingHandler
 using var http = new HttpClient(new ApiKeyHandler(apiKey) { InnerHandler = new HttpClientHandler() }) { BaseAddress = endpoint };
 ```
 
-Payload encryption and compression are not part of the packages. Use HTTPS and HTTP compression, or rewrite
-parameters and results in a filter and an interceptor as above.
+## Encrypted payloads
+
+HTTPS protects the connection. When parameters and results must also be protected end to end, or a call must not be
+replayable, add the optional payload packages: `Polhem.JsonRpc.Payload.Server` on the server and
+`Polhem.JsonRpc.Payload` on the client. They carry `params` and `result` in an envelope that is plain JSON, encoded
+(a codec, then gzip) or encrypted (AES-256-CBC with HMAC-SHA256), with an optional frame that rejects a repeated
+sequence number.
+
+```csharp
+// Server: the application supplies the key and the replay rules.
+builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
+
+// Client: wrap the parameters and unwrap the result of each call.
+var parameters = payload.Wrap(request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
+var result = (AddResponse)payload.Unwrap(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+```
+
+Both ends share the same `PayloadOptions` settings; how the key is agreed is up to the application. The
+[PayloadQuickStart](samples/PayloadQuickStart.Server/README.md) samples run it end to end, and
+[ADR-002](maintainers/adr/adr-002-payload-packages.md) describes the format, which other clients can implement.
 
 ## Design
 
 The reasons behind the package split and the main design choices are recorded in
-[ADR-001](maintainers/adr/adr-001-package-split-and-design.md).
+[ADR-001](maintainers/adr/adr-001-package-split-and-design.md), and those of the payload packages in
+[ADR-002](maintainers/adr/adr-002-payload-packages.md).
 
 ## Contributing
 

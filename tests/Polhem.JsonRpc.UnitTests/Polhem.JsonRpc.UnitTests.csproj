@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload\Polhem.JsonRpc.Payload.csproj" />
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload.Server\Polhem.JsonRpc.Payload.Server.csproj" />
     <ProjectReference Include="..\..\samples\QuickStart.Server\QuickStart.Server.csproj" />
+    <ProjectReference Include="..\..\samples\PayloadQuickStart.Server\PayloadQuickStart.Server.csproj" />
   </ItemGroup>
 
 </Project>

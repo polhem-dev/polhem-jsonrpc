@@ -23,6 +23,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `Polhem.JsonRpc.Payload.Server`（選用）：`PayloadFilter` 開啟請求的外殼、檢查 frame 的時間戳與序號，並以相同格式與
   codec 回應；`IPayloadServerPolicy` 提供金鑰、重放範圍與解碼型別；`MemoryPayloadReplayStore`；以及
   `JsonRpcServerOptions.UsePayload`。
+- PayloadQuickStart 範例：完整示範一次加密呼叫，以及重送的呼叫被拒絕。
 
 ## [0.1.0] - 2026-10-02
 

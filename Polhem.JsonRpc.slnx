@@ -14,6 +14,8 @@
   <Folder Name="/samples/">
     <Project Path="samples/QuickStart.Contracts/QuickStart.Contracts.csproj" />
     <Project Path="samples/QuickStart.Server/QuickStart.Server.csproj" />
+    <Project Path="samples/PayloadQuickStart.Client/PayloadQuickStart.Client.csproj" />
+    <Project Path="samples/PayloadQuickStart.Server/PayloadQuickStart.Server.csproj" />
     <Project Path="samples/QuickStart.Client/QuickStart.Client.csproj" />
   </Folder>
 </Solution>

@@ -12,7 +12,7 @@
 以 System.Text.Json 實作的 .NET JSON-RPC 2.0 套件：與傳輸無關的伺服器、ASP.NET Core 端點與用戶端，
 拆成多個 NuGet 套件發佈，應用程式只引用需要的部分。
 
-> **狀態：開發中。** 尚未發佈任何套件，API 仍可能變動。
+套件已發佈在 [nuget.org](https://www.nuget.org/packages?q=Polhem.JsonRpc)；每一版的變更見 [CHANGELOG](CHANGELOG.zh-TW.md)。
 
 ## 套件
 
@@ -87,6 +87,8 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest 
 | [QuickStart.Server](samples/QuickStart.Server/README.zh-TW.md) | 以 ASP.NET Core minimal API 架設伺服器 |
 | [QuickStart.Client](samples/QuickStart.Client/README.zh-TW.md) | 從主控台程式發出一般呼叫、處理錯誤、notification 與 batch |
 | [QuickStart.Contracts](samples/QuickStart.Contracts) | 兩端共用的 request 與 response 類別 |
+| [PayloadQuickStart.Server](samples/PayloadQuickStart.Server/README.zh-TW.md) | 伺服器端：加密的參數與結果，以及防重放 |
+| [PayloadQuickStart.Client](samples/PayloadQuickStart.Client/README.zh-TW.md) | 主控台程式端的同一件事，含重送的呼叫被拒絕 |
 
 ## 擴充點
 
@@ -110,7 +112,7 @@ public sealed class ApiKeyFilter(string expectedKey) : IJsonRpcFilter
 builder.Services.AddJsonRpcServer(options => options.Filters.Add(new ApiKeyFilter(apiKey)));
 ```
 
-用戶端的 HTTP header 屬於 `HttpClient` 的事，用 `DelegatingHandler` 加上。要改寫參數與結果（例如加密），
+用戶端的 HTTP header 屬於 `HttpClient` 的事，用 `DelegatingHandler` 加上。要在每次呼叫改寫參數與結果，
 就在 `JsonRpcClientOptions.Interceptors` 加一個 `IJsonRpcClientInterceptor`。
 
 ```csharp
@@ -126,11 +128,28 @@ public sealed class ApiKeyHandler(string key) : DelegatingHandler
 using var http = new HttpClient(new ApiKeyHandler(apiKey) { InnerHandler = new HttpClientHandler() }) { BaseAddress = endpoint };
 ```
 
-套件本身不做 payload 的加密與壓縮。請用 HTTPS 與 HTTP 壓縮，或像上面那樣在 filter 與攔截器裡改寫參數與結果。
+## 加密 payload
+
+HTTPS 保護的是連線。若參數與結果還需要端對端保護，或呼叫不得被重放，就加上選用的 payload 套件：伺服器用
+`Polhem.JsonRpc.Payload.Server`，用戶端用 `Polhem.JsonRpc.Payload`。它們把 `params` 與 `result` 放進外殼，外殼可以是一般 JSON、
+編碼（codec 加 gzip）或加密（AES-256-CBC 加 HMAC-SHA256），並可加上拒絕重複序號的 frame。
+
+```csharp
+// 伺服器：金鑰與防重放規則由應用程式提供。
+builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
+
+// 用戶端：每次呼叫包裝參數、還原結果。
+var parameters = payload.Wrap(request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
+var result = (AddResponse)payload.Unwrap(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+```
+
+兩端使用相同的 `PayloadOptions` 設定；金鑰如何協商由應用程式決定。[PayloadQuickStart](samples/PayloadQuickStart.Server/README.zh-TW.md)
+範例完整跑過一遍，[ADR-002](maintainers/adr/adr-002-payload-packages.md)（英文）說明格式，其他用戶端可依此實作。
 
 ## 設計
 
-套件切分與主要設計取捨的理由，記錄在 [ADR-001](maintainers/adr/adr-001-package-split-and-design.md)（英文）。
+套件切分與主要設計取捨的理由，記錄在 [ADR-001](maintainers/adr/adr-001-package-split-and-design.md)（英文）；payload 套件的理由在
+[ADR-002](maintainers/adr/adr-002-payload-packages.md)（英文）。
 
 ## 參與貢獻
 

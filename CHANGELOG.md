@@ -25,6 +25,7 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `Polhem.JsonRpc.Payload.Server` (optional): `PayloadFilter`, which opens the envelope of a request, checks the frame's
   timestamp and sequence number, and answers in the same format and codec; `IPayloadServerPolicy` for the key, the
   replay scope and the type to decode into; `MemoryPayloadReplayStore`; and `JsonRpcServerOptions.UsePayload`.
+- The PayloadQuickStart samples: an encrypted call and a replayed call refused, end to end.
 
 ## [0.1.0] - 2026-10-02
 
