@@ -63,6 +63,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   `DefaultParameterBinder`. `Polhem.JsonRpc.Server`, `Polhem.JsonRpc.AspNetCore` and `Polhem.JsonRpc.Payload.Server`
   now run the trim analyzer, though they still do not claim to support trimming.
 - A request or response that starts with a UTF-8 byte order mark is read instead of answered with `-32700 Parse error`.
+- A frame timestamp whose distance from the server clock overflows a 64-bit integer is refused like any other
+  timestamp outside the tolerance, instead of failing with an arithmetic overflow.
 
 ## [1.0.0] - 2026-10-03
 

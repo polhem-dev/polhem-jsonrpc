@@ -55,6 +55,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   `Polhem.JsonRpc.Server`、`Polhem.JsonRpc.AspNetCore` 與 `Polhem.JsonRpc.Payload.Server` 現在會執行 trim analyzer，
   但仍不宣稱支援 trimming。
 - 以 UTF-8 BOM 開頭的請求或回應會被正常讀取，不再回 `-32700 Parse error`。
+- frame 時間戳與伺服器時鐘的差距超出 64 位元整數範圍時，會和其他超出容許範圍的時間戳一樣被拒絕，不再因算術溢位而失敗。
 
 ## [1.0.0] - 2026-10-03
 
