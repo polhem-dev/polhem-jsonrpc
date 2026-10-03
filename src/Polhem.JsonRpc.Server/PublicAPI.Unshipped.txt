@@ -3,3 +3,4 @@
 *REMOVED*Polhem.JsonRpc.Server.JsonRpcTransportKind.InProcess = 0 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
 Polhem.JsonRpc.Server.JsonRpcTransportKind.Http = 0 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
 Polhem.JsonRpc.Server.JsonRpcTransportKind.InProcess = 1 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
+Polhem.JsonRpc.Server.JsonRpcRequestContext.MessageItems.get -> System.Collections.Generic.IDictionary<string!, object?>!

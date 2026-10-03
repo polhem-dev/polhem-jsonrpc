@@ -15,6 +15,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   its entries.
 - `IPayloadServerPolicy.GetMinimumFormat`: the lowest format a method accepts. A call in a lower format is answered
   `-32602` before a key is asked for or its body is read. The default accepts every format, as before.
+- `JsonRpcRequestContext.MessageItems`: values shared by every call of one message, the call alone or all the calls of
+  a batch, for a filter that accounts for the whole message.
 
 ### Changed
 
