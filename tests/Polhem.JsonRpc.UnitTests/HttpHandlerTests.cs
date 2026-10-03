@@ -149,6 +149,33 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.NotEmpty(_seenKinds);
     }
 
+    [Fact(DisplayName = "HTTP: header names are looked up ignoring case, and the values of a repeated header are joined with commas")]
+    public async Task Post_RepeatedHeader_JoinedAndCaseInsensitive()
+    {
+        string? token = null;
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddJsonRpcServer(options =>
+        {
+            options.ObjectFactory = new TestObjectFactory();
+            options.Filters.Add(new HeaderReadingFilter("x-token", value => token = value));
+        });
+        await using var app = builder.Build();
+        app.MapJsonRpc("/api");
+        await app.StartAsync();
+        using var client = app.GetTestClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api")
+        {
+            Content = new StringContent(Subtract, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Add("X-Token", ["first", "second"]);
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("first,second", token);
+    }
+
     [Fact(DisplayName = "HTTP: AddJsonRpcServer adds to the options a framework registered first, after its filters")]
     public async Task AddJsonRpcServer_RegisteredOptions_AreSharedAndExtended()
     {
@@ -184,6 +211,15 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Same(frameworkHttp, shared);
         Assert.NotNull(shared.StatusCodeSelector);
         Assert.Equal(123, shared.MaxRequestBodySize);
+    }
+
+    private sealed class HeaderReadingFilter(string name, Action<string?> read) : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            read(context.Transport.Headers.GetValueOrDefault(name));
+            return next(context);
+        }
     }
 
     private sealed class NamedFilter(string name, List<string> order) : IJsonRpcFilter

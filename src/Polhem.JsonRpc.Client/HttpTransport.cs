@@ -15,8 +15,6 @@ namespace Polhem.JsonRpc.Client;
 /// </remarks>
 public sealed class HttpTransport : IJsonRpcTransport
 {
-    private static readonly MediaTypeHeaderValue s_jsonMediaType = new(MediaTypeNames.Application.Json) { CharSet = "utf-8" };
-
     private readonly HttpClient _httpClient;
     private readonly Uri? _endpoint;
 
@@ -53,7 +51,9 @@ public sealed class HttpTransport : IJsonRpcTransport
     private async Task<IReadOnlyList<JsonRpcResponse>> PostAsync(byte[] body, CancellationToken cancellationToken)
     {
         using var content = new ByteArrayContent(body);
-        content.Headers.ContentType = s_jsonMediaType;
+        // A new value for each request: a handler may change the header value in place, and a shared one would carry the
+        // change into every later request of the process.
+        content.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Application.Json) { CharSet = "utf-8" };
         using var message = new HttpRequestMessage(HttpMethod.Post, _endpoint) { Content = content };
         using var response = await _httpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
 

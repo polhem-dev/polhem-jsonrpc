@@ -222,6 +222,28 @@ public class ClientTests
         await Assert.ThrowsAsync<ArgumentException>(() => InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", DispatcherFixture.Element(json)));
     }
 
+    [Fact(DisplayName = "HTTP transport: a handler that changes the Content-Type of a request in place changes no other request")]
+    public async Task HttpTransport_HandlerChangesContentType_OtherRequestsUnaffected()
+    {
+        var signed = new List<string>();
+        var plain = new List<string>();
+        using var signing = new HttpClient(new SigningHandler(signed) { InnerHandler = new StubHandler(HttpStatusCode.NoContent, "") })
+        {
+            BaseAddress = new Uri("http://test/api"),
+        };
+        using var other = new HttpClient(new RecordingHandler(plain) { InnerHandler = new StubHandler(HttpStatusCode.NoContent, "") })
+        {
+            BaseAddress = new Uri("http://test/api"),
+        };
+
+        await new JsonRpcConnector(new HttpTransport(signing)).NotifyAsync("A.B", null);
+        await new JsonRpcConnector(new HttpTransport(signing)).NotifyAsync("A.B", null);
+        await new JsonRpcConnector(new HttpTransport(other)).NotifyAsync("A.B", null);
+
+        Assert.Equal(["application/json; charset=utf-8; sig=1", "application/json; charset=utf-8; sig=1"], signed);
+        Assert.Equal(["application/json; charset=utf-8"], plain);
+    }
+
     [Fact(DisplayName = "HTTP transport: an error object in a 4xx body is read as a JSON-RPC error")]
     public async Task HttpTransport_ErrorBodyWith401_IsRead()
     {
@@ -314,6 +336,26 @@ public class ClientTests
 
         public Task<IReadOnlyList<JsonRpcResponse>> SendBatchAsync(IReadOnlyList<JsonRpcRequest> requests, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<JsonRpcResponse>>([]);
+    }
+
+    // Adds a parameter to the request's Content-Type in place, as a handler that signs requests might.
+    private sealed class SigningHandler(List<string> seen) : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.Content!.Headers.ContentType!.Parameters.Add(new System.Net.Http.Headers.NameValueHeaderValue("sig", "1"));
+            seen.Add(request.Content.Headers.ContentType.ToString());
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    private sealed class RecordingHandler(List<string> seen) : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            seen.Add(request.Content!.Headers.ContentType!.ToString());
+            return base.SendAsync(request, cancellationToken);
+        }
     }
 
     private sealed class StubHandler(HttpStatusCode status, string body) : HttpMessageHandler

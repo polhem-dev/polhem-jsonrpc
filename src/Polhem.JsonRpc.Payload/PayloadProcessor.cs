@@ -131,6 +131,10 @@ public sealed class PayloadProcessor
     /// The value. A plain envelope returns its value as a <see cref="JsonElement"/>, or <see langword="null"/>.
     /// </returns>
     /// <exception cref="InvalidOperationException">The type name is missing or not allowed, or the key is missing.</exception>
+    /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body fails authentication.</exception>
+    /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
+    /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
     public object? OpenResult(PayloadEnvelope envelope, byte[]? key, out PayloadFrame? frame)
     {
         ArgumentNullException.ThrowIfNull(envelope);
@@ -160,6 +164,10 @@ public sealed class PayloadProcessor
     /// <exception cref="InvalidOperationException">
     /// The type name is missing, not allowed or names another type, or the key is missing.
     /// </exception>
+    /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body fails authentication.</exception>
+    /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
+    /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
     public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
         => OpenAs(envelope, type, key, budget: null, out frame);
 
@@ -177,6 +185,10 @@ public sealed class PayloadProcessor
     /// The type name is missing, not allowed or names another type, the key is missing, or the body decompresses beyond
     /// the budget.
     /// </exception>
+    /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body fails authentication.</exception>
+    /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
+    /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
     /// <remarks>
     /// A body that fails to decompress, for any reason, uses up what is left of the budget, because the failure may
     /// already have cost that much. A later compressed body of the message is then refused by a compressor that

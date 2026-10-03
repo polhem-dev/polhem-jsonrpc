@@ -77,6 +77,21 @@ public class PayloadPrimitiveTests
         Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, RandomNumberGenerator.GetBytes(64)));
     }
 
+    // Without the HMAC, a change to the IV or to a block before the last one still decrypts with valid padding, so only
+    // the HMAC can refuse it; a change to the last block would also be refused by the padding check.
+    [Theory(DisplayName = "AES-CBC-HMAC: a change to the IV or to the first block of ciphertext fails authentication")]
+    [InlineData(4)]
+    [InlineData(24)]
+    public void AesCbcHmac_TamperedBeforeLastBlock_FailsAuthentication(int offset)
+    {
+        var encryptor = new AesCbcHmacPayloadEncryptor();
+        var key = RandomNumberGenerator.GetBytes(64);
+        var encrypted = encryptor.Encrypt(new byte[64], key);
+        encrypted[offset] ^= 0x01;
+
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, key));
+    }
+
     [Theory(DisplayName = "AES-CBC-HMAC: data whose length fields do not fit it is refused as a cryptographic error, never an out-of-range")]
     [InlineData("shorter than the minimum")]
     [InlineData("last byte missing")]

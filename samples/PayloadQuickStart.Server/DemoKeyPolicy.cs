@@ -11,8 +11,11 @@ namespace PayloadQuickStart.Server;
 /// <c>X-Client-Id</c> header, and that client id as the scope a sequence number must be unique in.
 /// </summary>
 /// <remarks>
-/// The replay scope has to be something the key authenticates. Here the client id picks the key, so a call replayed
-/// under another client id fails its HMAC instead of starting over in a fresh scope. A real application gives each
+/// The replay scope has to cover every holder of the key. Here the client id picks the key, so each scope has a key of
+/// its own, and a call replayed under another client id fails its HMAC instead of starting over in a fresh scope. That
+/// holds only because every call is encrypted (<see cref="GetMinimumFormat"/>): a plain or encoded call has no HMAC, so
+/// with a lower minimum format a caller could drop the header, and its call would be accepted without any sequence
+/// check. A real application gives each
 /// session its own key, agreed at sign-in (the Polhem framework wraps it with RSA), and uses the session as the replay
 /// scope. How keys are agreed is outside the payload packages.
 /// </remarks>

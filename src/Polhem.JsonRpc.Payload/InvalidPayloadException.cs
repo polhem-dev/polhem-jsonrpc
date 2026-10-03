@@ -3,7 +3,8 @@ namespace Polhem.JsonRpc.Payload;
 /// <summary>
 /// The exception thrown when the JSON of a payload envelope is not one: it is not an object, a member has the wrong
 /// kind of value, or an encoded value is not Base64. A server also throws it for a call in a format below the one the
-/// method requires.
+/// method requires, and, where sequence numbers are checked, for a plain or encoded call to a method that requires
+/// unique ones.
 /// </summary>
 /// <remarks>
 /// A server set up with <c>UsePayload</c> (Polhem.JsonRpc.Payload.Server) answers it as invalid parameters, unless the

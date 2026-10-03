@@ -53,9 +53,11 @@ public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadF
 - The server decides the type a request decodes into, the parameter type of the method, and the `type` the client
   writes is only checked against it. So no contract type is registered: the methods the server exposes are the
   allow-list.
-- The replay scope must be something the key authenticates, or a captured call replayed under a new scope is accepted
-  again. The `X-Client-Id` header is not authenticated by itself, so the key is derived from it
-  (`HMACSHA512(demoKey, clientId)`): a call replayed under another client id fails its HMAC.
+- The replay scope must cover every holder of the key, or a captured call replayed under another scope that uses the
+  same key is accepted again. The `X-Client-Id` header is not authenticated by itself, so the key is derived from it
+  (`HMACSHA512(demoKey, clientId)`): each client id has a key of its own, and a call replayed under another client id
+  fails its HMAC. This holds only because the sample requires encrypted calls; a plain or encoded call has no HMAC, and
+  its caller could change or drop the header.
 - Deriving keys from one demo key keeps the sample short. A real application gives each session its own key, agreed at
   sign-in, and uses the session as the replay scope. How keys are agreed is outside the payload packages.
 - `MemoryPayloadReplayStore` remembers sequence numbers in the process. Several server instances need a shared

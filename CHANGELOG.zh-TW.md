@@ -16,7 +16,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   預設接受所有格式，與先前相同。
 - `JsonRpcRequestContext.MessageItems`：同一則訊息的所有呼叫共用的值（單一呼叫，或 batch 的全部呼叫），供需要為整則訊息計量的 filter 使用。
 - `PayloadOptions.MaxDecompressedBytesPerMessage`（預設 50 MiB）：伺服器為一則訊息（單一呼叫或整個 batch）解壓的總量上限。
-  由 `PayloadDecompressionBudget`、`IPayloadCompressor.Decompress(byte[], long)`（含預設實作）與 `PayloadProcessor.OpenRequest`
+  由 `PayloadDecompressionBudget`、`IPayloadCompressor.Decompress(byte[], long)`（含預設實作，`GzipPayloadCompressor` 有實作）與 `PayloadProcessor.OpenRequest`
   的一個多載承載。`PayloadFilter` 只在建立時讀取一次這個設定。
 
 ### 變更
@@ -58,6 +58,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ### 修正
 
+- `HttpTransport` 為每個請求建立自己的 `Content-Type` 值。先前整個行程的請求共用同一個，handler 若就地修改它（例如加一個參數），
+  之後每個請求、每個 `HttpClient` 都會跟著改，直到 header 長到無法送出。
 - 呼叫端自行編造的方法名稱不再留在 dispatcher 的方法快取中，解析不到任何方法的名稱無法再讓記憶體成長。
   這個查找在任何 filter 之前執行，也就是在驗證之前。
 - 超過 `MaxBatchSize` 的批次會在逐一建立請求物件之前就被拒絕。
@@ -75,7 +77,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   但仍不宣稱支援 trimming。
 - 以 UTF-8 BOM 開頭的請求或回應會被正常讀取，不再回 `-32700 Parse error`。
 - frame 時間戳與伺服器時鐘的差距超出 64 位元整數範圍時，會和其他超出容許範圍的時間戳一樣被拒絕，不再因算術溢位而失敗。
-- `PayloadFilter` 在建立時一次讀取 `FrameTimestampTolerance` 與 `TimeProvider`，與它們決定的 replay store 保存時間一致。
+- `PayloadFilter` 在建立時一次讀取 `FrameTimestampTolerance` 與檢查請求時間戳的 `TimeProvider`，與它們決定的 replay store 保存時間一致。
   先前在 `UsePayload` 之後調高容許範圍，攔截到的呼叫可在其 scope 被遺忘後重送成功。
 
 ## [1.0.0] - 2026-10-03

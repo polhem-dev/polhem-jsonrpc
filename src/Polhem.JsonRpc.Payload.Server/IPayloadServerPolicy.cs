@@ -14,9 +14,10 @@ namespace Polhem.JsonRpc.Payload.Server;
 /// <see cref="GetKeyAsync"/> is asked only for an encrypted call. When frames are required,
 /// <see cref="RequiresUniqueSequence"/> is asked about a plain or encoded call too, before any key, and
 /// <see cref="GetReplayScope"/> only when it answers <see langword="true"/>. For an encrypted call the order is the
-/// other way round and after the key: <see cref="GetReplayScope"/> is asked for every call with a frame, and
-/// <see cref="RequiresUniqueSequence"/> only when it answers a scope. Answer them from the context alone, not from state <see cref="GetKeyAsync"/> leaves behind
-/// (<c>PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused</c>).
+/// other way round and after the key: <see cref="GetReplayScope"/> is asked for every call whose frame passes the
+/// timestamp check, and <see cref="RequiresUniqueSequence"/> only when it answers a scope. Answer them from the context
+/// alone, not from state <see cref="GetKeyAsync"/> leaves behind
+/// (<c>PayloadServerTests.Call_PolicyQuestions_AskedInDocumentedOrder</c>).
 /// </para>
 /// </remarks>
 public interface IPayloadServerPolicy
@@ -30,10 +31,14 @@ public interface IPayloadServerPolicy
     /// Gets the scope a sequence number must be unique in, usually the caller's session.
     /// </summary>
     /// <remarks>
-    /// IMPORTANT: take the scope from the caller's session as an earlier filter or the object factory authenticated it,
-    /// the session whose key encrypts the caller's calls, and read it from the context, not from <see cref="GetKeyAsync"/>:
-    /// it is asked about plain and encoded calls, for which no key is asked. A scope read from an unauthenticated header
-    /// lets a captured call be replayed under a new scope, where its sequence number has not been seen.
+    /// IMPORTANT: the scope must cover every holder of the call's key. The HMAC proves only that a holder of the key
+    /// wrote the frame, so a captured call replayed under another scope that uses the same key is accepted there, where
+    /// its sequence number has not been seen (<c>PayloadServerTests.Call_ReplayedUnderAnotherScopeSharingTheKey_IsAccepted</c>).
+    /// Give each session its own key and use the session as the scope. A scope shared by several holders of one key
+    /// would make them share one run of sequence numbers, because the scope remembers only a window below the highest
+    /// number it has seen, so where a key is shared, sequence numbers stop only callers without the key. Take it from the caller's session as an earlier filter or the object factory
+    /// authenticated it, and read it from the context, not from <see cref="GetKeyAsync"/>: it is asked about plain and
+    /// encoded calls, for which no key is asked. A scope read from an unauthenticated header lets the caller choose it.
     /// </remarks>
     /// <param name="context">The request context.</param>
     /// <returns>The scope, or <see langword="null"/> when sequence numbers are not checked for this caller.</returns>
