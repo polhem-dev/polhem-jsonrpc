@@ -198,6 +198,30 @@ public class ClientTests
         Assert.Equal(2, (await batched).GetProperty("difference").GetInt32());
     }
 
+    [Fact(DisplayName = "Client: JsonElement parameters are copied, so a batch still sends them after the caller's document is gone")]
+    public async Task Batch_JsonElementParametersFromDisposedDocument_AreSent()
+    {
+        var batch = InProcess().CreateBatch();
+        Task<SubtractResponse?> call;
+        using (var document = JsonDocument.Parse("""{"minuend": 5, "subtrahend": 3}"""))
+        {
+            call = batch.Add<SubtractResponse>("Spec.Subtract", document.RootElement);
+        }
+
+        await batch.SendAsync();
+
+        Assert.Equal(2, (await call)!.Difference);
+    }
+
+    [Theory(DisplayName = "Client: a JsonElement parameter that is not an object or array is refused")]
+    [InlineData("42")]
+    [InlineData("\"text\"")]
+    [InlineData("null")]
+    public async Task InvokeAsync_ScalarJsonElementParameter_Throws(string json)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", DispatcherFixture.Element(json)));
+    }
+
     [Fact(DisplayName = "HTTP transport: an error object in a 4xx body is read as a JSON-RPC error")]
     public async Task HttpTransport_ErrorBodyWith401_IsRead()
     {

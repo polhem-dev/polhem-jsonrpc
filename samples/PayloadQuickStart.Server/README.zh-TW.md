@@ -28,7 +28,7 @@ builder.Services.AddJsonRpcServer(options =>
 ```
 
 exception mapper 以 `-32005`（本範例自選的錯誤碼）回應重放的呼叫；少了它，重放會回 `-32603`，和其他 payload 失敗一樣，
-只有格式錯誤的外殼由 `UsePayload` 回 `-32602`。mapper 設定在 `UsePayload` 之前，因此仍會優先回應。
+只有格式錯誤的外殼與低於最低格式的呼叫由 `UsePayload` 回 `-32602`。mapper 設定在 `UsePayload` 之前，因此仍會優先回應。
 
 filter 向應用程式詢問只有它知道的事（`DemoKeyPolicy.cs`）：這次呼叫的金鑰、序號必須唯一的範圍、方法是否拒絕重複的序號，
 以及方法接受的最低格式。

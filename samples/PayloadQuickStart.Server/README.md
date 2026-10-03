@@ -30,7 +30,8 @@ builder.Services.AddJsonRpcServer(options =>
 ```
 
 The exception mapper answers a replayed call with `-32005`, a code this sample chooses; without it a replay is answered
-`-32603`, like every other payload failure except a malformed envelope, which `UsePayload` answers with `-32602`. The
+`-32603`, like every other payload failure except a malformed envelope or a call below the minimum format, which
+`UsePayload` answers with `-32602`. The
 mapper is set before `UsePayload`, so it keeps answering first.
 
 The filter asks the application what only it knows (`DemoKeyPolicy.cs`): the key of a call, the scope a sequence

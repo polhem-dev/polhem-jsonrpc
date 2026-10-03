@@ -3,7 +3,7 @@
 [English](CHANGELOG.md) | **繁體中文**
 
 Polhem.JsonRpc 各套件的重要變更。格式依循
-[Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版號依循[語意化版本](https://semver.org/lang/zh-TW/)。
+[Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版號依循[語意化版本](https://semver.org/lang/zh-TW/)，例外寫在 1.1.0。
 
 ## [Unreleased]
 
@@ -11,7 +11,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 - `PayloadOptions.TimeProvider`：寫入 frame 時間戳與檢查時間戳所用的時鐘，預設為系統時鐘；`PayloadFilter` 自行建立的記憶體
   replay store 也使用它。
-- `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`：批次超過上限時，在讀取任何項目之前就拒絕。
+- `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`：批次超過上限時，依解析後陣列的長度拒絕，不會從任何項目讀出請求。
 - `IPayloadServerPolicy.GetMinimumFormat`：方法接受的最低格式。低於它的呼叫會在詢問金鑰或讀取內容之前就回 `-32602`。
   預設接受所有格式，與先前相同。
 - `JsonRpcRequestContext.MessageItems`：同一則訊息的所有呼叫共用的值（單一呼叫，或 batch 的全部呼叫），供需要為整則訊息計量的 filter 使用。
@@ -26,7 +26,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   該型別的其他方法不受影響。
 - **wire 可見：** `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
-- **wire 可見：** `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
+- **wire 可見：** `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼，或低於方法最低格式的呼叫）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
   在 `UsePayload` 之前設定的 `ExceptionMapper` 仍然優先；其他 payload 失敗維持 `-32603`，回應不會透露是哪一項檢查失敗。
 - **行為變更：** `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
   其餘每次呼叫都重讀，因此在呼叫進行中新增 interceptor 可能擲出例外。
@@ -39,8 +39,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   此版本在 minor 版中破壞 binary 相容性，是語意化版本的例外：Polhem 框架會同時發佈以此版編譯的版本並停用前一版。
   升級這些套件、卻仍執行以 1.0 編譯之程式碼的應用程式，會把未經驗證的 HTTP 呼叫當成 in-process 放行。
 - **wire 可見：** 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
-- record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
-- `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
+- **行為變更：** record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
+- **wire 格式（讀取端）：** `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
   所有讀取端都接受之後，寫出端才會送出未壓縮的內容。解壓的唯一上限仍是每個內容 `MaxDecompressedBytes`（50 MiB）；
   encoded 內容不需金鑰就會被解壓，在意的部署請以 `IPayloadServerPolicy.GetMinimumFormat` 要求加密呼叫。
 - **wire 可見：** `IPayloadServerPolicy.RequiresUniqueSequence` 為 true 的方法，拒絕 plain 與 encoded 呼叫並回 `-32602`。

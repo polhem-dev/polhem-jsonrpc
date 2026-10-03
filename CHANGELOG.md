@@ -3,7 +3,7 @@
 **English** | [繁體中文](CHANGELOG.zh-TW.md)
 
 Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
-[Semantic Versioning](https://semver.org/).
+[Semantic Versioning](https://semver.org/), with the exception stated under 1.1.0.
 
 ## [Unreleased]
 
@@ -11,8 +11,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 - `PayloadOptions.TimeProvider`: the clock frames are stamped with and their timestamps checked against. It defaults to
   the system clock, and `PayloadFilter` passes it to the in-memory replay store it creates.
-- `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`: refuses a batch larger than the limit before reading any of
-  its entries.
+- `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`: refuses a batch larger than the limit from the length of
+  the parsed array, before a request is read from any of its entries.
 - `IPayloadServerPolicy.GetMinimumFormat`: the lowest format a method accepts. A call in a lower format is answered
   `-32602` before a key is asked for or its body is read. The default accepts every format, as before.
 - `JsonRpcRequestContext.MessageItems`: values shared by every call of one message, the call alone or all the calls of
@@ -29,7 +29,7 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   dispatcher's life. A method the policy throws for is not callable, and the type's other methods still are.
 - **Wire-visible:** `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
   `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
-- **Wire-visible:** `UsePayload` answers `InvalidPayloadException` (a malformed envelope) with `-32602 Invalid params` instead of
+- **Wire-visible:** `UsePayload` answers `InvalidPayloadException` (a malformed envelope, or a call below the method's minimum format) with `-32602 Invalid params` instead of
   `-32603 Internal error`. An `ExceptionMapper` set before `UsePayload` still answers first; every other payload failure
   stays `-32603`, so the answer does not say which check failed.
 - **Behavior change:** `JsonRpcConnector` reads its `JsonRpcClientOptions` once, when it is created, interceptors included. Before, only
@@ -47,8 +47,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   HTTP calls through as in-process ones.
 - **Wire-visible:** A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
   bind `null`, so the method usually failed and the caller got `-32603`.
-- A record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.
-- `GzipPayloadCompressor` reads a body that does not start with the gzip header as it is, uncompressed. This is the
+- **Behavior change:** a record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.
+- **Wire format (readers):** `GzipPayloadCompressor` reads a body that does not start with the gzip header as it is,
+  uncompressed. This is the
   first step towards leaving small bodies uncompressed: every reader has to accept them before a writer sends one.
   The only limit on decompression stays `MaxDecompressedBytes` (50 MiB) per body; an encoded body is decompressed
   without a key, so a deployment that cares requires encrypted calls with `IPayloadServerPolicy.GetMinimumFormat`.
