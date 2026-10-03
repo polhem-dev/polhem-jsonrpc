@@ -37,8 +37,10 @@ public class TestConventionTests
     private static MethodInfo Find(string test)
     {
         var dot = test.IndexOf('.', StringComparison.Ordinal);
+        // A test's name may be shared by a helper overload, so only the method that carries [Fact] is taken.
         return typeof(TestConventionTests).Assembly.GetTypes()
-            .Single(type => type.Name == test[..dot] && type.GetMethod(test[(dot + 1)..], Declared) is not null)
-            .GetMethod(test[(dot + 1)..], Declared)!;
+            .Where(type => type.Name == test[..dot])
+            .SelectMany(type => type.GetMethods(Declared))
+            .Single(method => method.Name == test[(dot + 1)..] && method.GetCustomAttribute<FactAttribute>() is not null);
     }
 }

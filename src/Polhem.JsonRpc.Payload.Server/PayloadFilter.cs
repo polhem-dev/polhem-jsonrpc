@@ -18,16 +18,15 @@ public sealed class PayloadFilter : IJsonRpcFilter
     private readonly TimeProvider _clock;
     private readonly TimeSpan _tolerance;
     private readonly long _maxDecompressedBytesPerMessage;
-    private readonly bool _requireFrame;
 
     // The key of the message's decompression budget in JsonRpcRequestContext.MessageItems.
     private const string BudgetItem = "Polhem.JsonRpc.Payload.DecompressionBudget";
 
     /// <summary>Initializes a new instance.</summary>
     /// <remarks>
-    /// <see cref="PayloadOptions.RequireFrame"/>, <see cref="PayloadOptions.FrameTimestampTolerance"/>,
-    /// <see cref="PayloadOptions.TimeProvider"/> and <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/> are read
-    /// here, once; the other settings are read on each call. The tolerance and the clock go
+    /// <see cref="PayloadOptions.FrameTimestampTolerance"/>, <see cref="PayloadOptions.TimeProvider"/> and
+    /// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/> are read here, once; the other settings are read on
+    /// each call. The tolerance and the clock go
     /// together with the lifetime of the in-memory replay store they decide: a tolerance raised later would let a frame
     /// outlive the scope that remembers its sequence number.
     /// </remarks>
@@ -41,7 +40,6 @@ public sealed class PayloadFilter : IJsonRpcFilter
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _clock = options.TimeProvider;
         _tolerance = options.FrameTimestampTolerance;
-        _requireFrame = options.RequireFrame;
         _maxDecompressedBytesPerMessage = options.MaxDecompressedBytesPerMessage;
         _replayStore = replayStore ?? new MemoryPayloadReplayStore(_tolerance * 2, _clock);
     }
@@ -63,7 +61,8 @@ public sealed class PayloadFilter : IJsonRpcFilter
         // unique ones refuses the other formats rather than letting them repeat unchecked. Without frames or a scope
         // nothing is checked for any format, so nothing is refused either, as in 1.0.
         if (envelope.Format != PayloadFormat.Encrypted
-            && _requireFrame
+            // Read on each call, as the processor reads it to decide whether a frame is extracted at all.
+            && _processor.Options.RequireFrame
             && _policy.RequiresUniqueSequence(context)
             && _policy.GetReplayScope(context) is not null)
         {

@@ -60,7 +60,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   calls with `-32602`. Only an encrypted frame is covered by the HMAC; anybody can write the frame of an encoded call,
   so it can neither prove its sequence number new nor be allowed to move the scope's window. In 1.0.0 an encoded call
   was checked, and a forged one could lock out the genuine encrypted calls after it; a plain call carries no frame and
-  was never checked. Without frames or a scope nothing is checked or refused, as before.
+  was never checked. Without frames or a scope nothing is checked or refused, as before. The policy answers
+  `RequiresUniqueSequence` and `GetReplayScope` for a plain or encoded call without being asked for a key, so it has
+  to answer them from the request context.
 - **Behavior change:** a message shares one decompression budget (`MaxDecompressedBytesPerMessage`), the call alone or
   all the calls of a batch, each call drawing on what the calls before it left, notifications included. An encoded
   body is decompressed without a key; with gzip compressed at its best level, one 4 MiB request of 62 bodies could

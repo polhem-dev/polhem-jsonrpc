@@ -48,7 +48,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   回傳了 replay scope），`RequiresUniqueSequence` 為 true 的方法拒絕 plain 與 encoded 呼叫並回 `-32602`。
   只有加密的 frame 受 HMAC 保護；encoded 呼叫的 frame 誰都能寫，既無法證明序號是新的，也不能讓它推進 scope 的 window。
   在 1.0.0，encoded 呼叫會被檢查，偽造的呼叫可使之後合法的加密呼叫被拒；plain 呼叫沒有 frame，從未被檢查。
-  沒有 frame 或沒有 scope 時，一如以往，不檢查也不拒絕。
+  沒有 frame 或沒有 scope 時，一如以往，不檢查也不拒絕。plain 與 encoded 呼叫不會向 policy 要金鑰，policy 回答
+  `RequiresUniqueSequence` 與 `GetReplayScope` 時必須只依據請求的 context。
 - **行為變更：** 一則訊息共用一份解壓額度（`MaxDecompressedBytesPerMessage`）：單一呼叫，或 batch 的全部呼叫；
   每個呼叫使用前面的呼叫剩下的額度，notification 也算在內。encoded 內容不需金鑰就會解壓；以最高壓縮等級的 gzip，
   一個含 62 個內容的 4 MiB 請求原本可讓伺服器配置約 11 GiB、耗費約 10 秒 CPU。這份額度疊加在每個內容自己的上限

@@ -10,9 +10,9 @@ namespace Polhem.JsonRpc.Payload;
 /// <see cref="RequireFrame"/>: the envelope names none of them. The codec, by contrast, is chosen per call and named in
 /// the envelope; the reader resolves it from <see cref="ResolveCodec"/>.
 /// <para>
-/// Configure the options before the first call. <c>PayloadFilter</c> reads <see cref="RequireFrame"/>,
-/// <see cref="FrameTimestampTolerance"/>, <see cref="TimeProvider"/> and <see cref="MaxDecompressedBytesPerMessage"/>
-/// once, when it is created, and the other settings on each call, so a change while calls run reaches part of it only.
+/// Configure the options before the first call. <c>PayloadFilter</c> reads <see cref="FrameTimestampTolerance"/>,
+/// <see cref="TimeProvider"/> and <see cref="MaxDecompressedBytesPerMessage"/> once, when it is created, and the other
+/// settings on each call, so a change made after it is created reaches part of it only.
 /// </para>
 /// </remarks>
 public sealed class PayloadOptions
@@ -115,7 +115,9 @@ public sealed class PayloadOptions
 
     /// <summary>
     /// Gets or sets how many bytes a server decompresses for one message in total: the call alone, or all the calls of a
-    /// batch. The default is 50 MiB, the same as one body's limit, so a batch cannot multiply it.
+    /// batch. The default is 50 MiB, the same as <see cref="GzipPayloadCompressor.DefaultMaxDecompressedBytes"/>, so with
+    /// the default compressor a batch cannot multiply one body's limit. The two limits are independent: raising the
+    /// compressor's limit does not raise this one.
     /// </summary>
     /// <remarks>
     /// An encoded body is decompressed without a key, so without this a small batch could make the server decompress the

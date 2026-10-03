@@ -10,6 +10,12 @@ namespace Polhem.JsonRpc.Payload.Server;
 /// Every member receives the request context, whose <see cref="JsonRpcRequestContext.Services"/>
 /// and <see cref="JsonRpcRequestContext.Items"/> carry what an earlier filter or the object
 /// factory established about the caller.
+/// <para>
+/// <see cref="GetMinimumFormat"/>, <see cref="RequiresUniqueSequence"/> and <see cref="GetReplayScope"/> are asked
+/// about calls in every format, before <see cref="GetKeyAsync"/>, which is asked only for an encrypted call. Answer
+/// them from the context alone, not from state <see cref="GetKeyAsync"/> leaves behind: a plain or encoded call never
+/// reaches it (<c>PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused</c>).
+/// </para>
 /// </remarks>
 public interface IPayloadServerPolicy
 {
