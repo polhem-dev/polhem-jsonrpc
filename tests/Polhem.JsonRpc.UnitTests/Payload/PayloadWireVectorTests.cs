@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
 using System.ComponentModel;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Polhem.JsonRpc.Payload;
@@ -94,6 +97,77 @@ public class PayloadWireVectorTests
             .Wrap(new VectorPing { ClientName = "vector", TraceId = "t-1" }, PayloadFormat.Plain);
 
         Assert.Equal("""{"format":0,"value":{"clientName":"vector","traceId":"t-1"},"type":""}""", element.GetRawText());
+    }
+
+    [Fact]
+    [DisplayName("Wire vector: an encoded envelope is written with Polhem's members and a gzip body of Polhem's JSON bytes")]
+    public void Wrap_Encoded_WritesPolhemEnvelopeAndBody()
+    {
+        var element = CreateWriter(requireFrame: false, clock: null)
+            .Wrap(new WriterPing { ClientName = "vector", TraceId = "t-1" }, PayloadFormat.Encoded, codec: "json");
+
+        Assert.Equal(["format", "value", "type", "codec"], element.EnumerateObject().Select(member => member.Name));
+        Assert.Equal(1, element.GetProperty("format").GetInt32());
+        Assert.Equal(VectorPing.PolhemTypeName, element.GetProperty("type").GetString());
+        Assert.Equal("json", element.GetProperty("codec").GetString());
+        Assert.Equal(PolhemBody, Encoding.UTF8.GetString(Gunzip(element.GetProperty("value").GetBytesFromBase64())));
+    }
+
+    [Fact]
+    [DisplayName("Wire vector: an encrypted, framed body is laid out as Polhem lays it out, read without this package's code")]
+    public void Wrap_EncryptedFramed_WritesPolhemLayout()
+    {
+        var element = CreateWriter(requireFrame: true, clock: new FixedClock(DateTimeOffset.FromUnixTimeMilliseconds(1_700_000_000_123)))
+            .Wrap(new WriterPing { ClientName = "vector", TraceId = "t-1" }, PayloadFormat.Encrypted, codec: "json", key: s_key, sequence: 7);
+        var data = element.GetProperty("value").GetBytesFromBase64();
+
+        // IV length and IV, cipher length and ciphertext, then the HMAC of everything before it.
+        Assert.Equal(16, BinaryPrimitives.ReadInt32LittleEndian(data));
+        var iv = data[4..20];
+        var cipherLength = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(20));
+        Assert.Equal(data.Length, 24 + cipherLength + 32);
+        Assert.Equal(HMACSHA256.HashData(s_key[32..], data[..(24 + cipherLength)]), data[(24 + cipherLength)..]);
+
+        using var aes = Aes.Create();
+        aes.Key = s_key[..32];
+        var framed = aes.DecryptCbc(data.AsSpan(24, cipherLength), iv, PaddingMode.PKCS7);
+
+        Assert.Equal("010000018BCFE5687B0000000000000007", Convert.ToHexString(framed[..17]));
+        Assert.Equal(PolhemBody, Encoding.UTF8.GetString(Gunzip(framed[17..])));
+    }
+
+    // The body inside Polhem's encoded vector above, decompressed.
+    private const string PolhemBody = """{"clientName":"vector","traceId":"t-1","parameters":[]}""";
+
+    private static byte[] Gunzip(byte[] bytes)
+    {
+        using var input = new MemoryStream(bytes);
+        using var gzip = new GZipStream(input, CompressionMode.Decompress);
+        using var output = new MemoryStream();
+        gzip.CopyTo(output);
+        return output.ToArray();
+    }
+
+    private static PayloadProcessor CreateWriter(bool requireFrame, TimeProvider? clock) => new(new PayloadOptions
+    {
+        RequireFrame = requireFrame,
+        TimeProvider = clock ?? TimeProvider.System,
+        TypeResolver = new PayloadTypeRegistry().Register(typeof(WriterPing), VectorPing.PolhemTypeName),
+    });
+
+    /// <summary>The members of Polhem's <c>PingRequest</c>, in its order, so the written body can be compared byte for byte.</summary>
+    private sealed class WriterPing
+    {
+        public string? ClientName { get; set; }
+
+        public string? TraceId { get; set; }
+
+        public string[] Parameters { get; set; } = [];
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     private static PayloadProcessor CreateProcessor(bool requireFrame)

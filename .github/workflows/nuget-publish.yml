@@ -42,6 +42,14 @@ jobs:
       - name: Test
         run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
 
+      # The commit was gated by the aot job of build-ci.yml, but a tag can be pushed on any commit. Publishing and running
+      # the smoke test here keeps a package whose AOT promise is broken from reaching nuget.org.
+      - name: Publish the AOT smoke test with Native AOT
+        run: dotnet publish tests/Polhem.JsonRpc.AotSmoke/Polhem.JsonRpc.AotSmoke.csproj --configuration Release --output aot-smoke
+
+      - name: Run the AOT smoke test
+        run: ./aot-smoke/Polhem.JsonRpc.AotSmoke
+
       - name: Pack
         run: dotnet pack Polhem.JsonRpc.slnx --configuration Release --no-build --output ./nupkgs
 

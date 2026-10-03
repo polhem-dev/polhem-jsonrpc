@@ -6,8 +6,8 @@
     every consumer, mobile clients included, so one that reaches consumers fails the build.
 
     Only references that flow to consumers count: a package with PrivateAssets="all" (SourceLink, analyzers) does not
-    appear in the nuspec. tests/Polhem.JsonRpc.UnitTests/DependencyGateTests.cs checks the referenced assemblies as
-    well, which also catches a dependency that arrives through a project reference.
+    appear in the nuspec. tests/Polhem.JsonRpc.UnitTests/DependencyGateTests.cs checks the rest: the project references
+    between the packages, the assemblies each one references, and that every package under src is listed there.
   -->
   <Target Name="PolhemJsonRpcDependencyGate" BeforeTargets="CoreCompile">
     <ItemGroup>
