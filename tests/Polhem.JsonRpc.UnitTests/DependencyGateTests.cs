@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
@@ -30,9 +29,8 @@ public class DependencyGateTests
 
     public static TheoryData<string> Packages => [.. s_allowed.Keys];
 
-    [Fact]
-    [DisplayName("Every package under src is listed in the dependency gate, so a new package cannot go unchecked")]
-    public void Packages_ListEveryProjectUnderSrc()
+    [Fact(DisplayName = "Every package under src is listed in the dependency gate, so a new package cannot go unchecked")]
+    public void PackageList_ProjectsUnderSrc_AllListed()
     {
         var projects = Directory.GetFiles(SourceDirectory(), "*.csproj", SearchOption.AllDirectories)
             .Select(Path.GetFileNameWithoutExtension)
@@ -41,10 +39,9 @@ public class DependencyGateTests
         Assert.Equal(s_allowed.Keys.Order(StringComparer.Ordinal), projects);
     }
 
-    [Theory]
+    [Theory(DisplayName = "Each package's project references follow the allowed edges between the packages")]
     [MemberData(nameof(Packages))]
-    [DisplayName("Each package's project references follow the allowed edges between the packages")]
-    public void ProjectReferences_AreAllowed(string package)
+    public void ProjectReferences_EachPackage_FollowAllowedEdges(string package)
     {
         var project = Path.Combine(SourceDirectory(), package, package + ".csproj");
         using var reader = XmlReader.Create(project, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
@@ -57,10 +54,9 @@ public class DependencyGateTests
         Assert.Empty(unexpected);
     }
 
-    [Theory]
+    [Theory(DisplayName = "Each package's assembly references only .NET, ASP.NET Core where allowed, and the allowed packages")]
     [MemberData(nameof(Packages))]
-    [DisplayName("Each package's assembly references only .NET, ASP.NET Core where allowed, and the allowed packages")]
-    public void ReferencedAssemblies_AreAllowed(string package)
+    public void ReferencedAssemblies_EachPackage_AreAllowed(string package)
     {
         var (packages, platform) = s_allowed[package];
 

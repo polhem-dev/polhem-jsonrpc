@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -14,8 +13,7 @@ public class SpecificationExampleTests
 {
     private readonly Server.JsonRpcDispatcher _dispatcher = DispatcherFixture.Create();
 
-    [Theory]
-    [DisplayName("Spec examples: each request gets the answer the specification gives")]
+    [Theory(DisplayName = "Spec examples: each request gets the answer the specification gives")]
     [InlineData(
         """{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"subtrahend": 23, "minuend": 42}, "id": 3}""",
         """{"jsonrpc": "2.0", "result": {"difference": 19}, "id": 3}""")]
@@ -79,8 +77,7 @@ public class SpecificationExampleTests
             $"Expected {expected} but got {answer.RootElement.GetRawText()}");
     }
 
-    [Theory]
-    [DisplayName("Spec examples: a notification, alone or in a batch of notifications, gets no answer")]
+    [Theory(DisplayName = "Spec examples: a notification, alone or in a batch of notifications, gets no answer")]
     [InlineData("""{"jsonrpc": "2.0", "method": "Spec.Update", "params": {"text": "single"}}""")]
     [InlineData("""
         [
@@ -95,8 +92,7 @@ public class SpecificationExampleTests
         Assert.Null(answer);
     }
 
-    [Fact]
-    [DisplayName("A notification runs its method even though it is not answered")]
+    [Fact(DisplayName = "A notification runs its method even though it is not answered")]
     public async Task Dispatch_Notification_RunsMethod()
     {
         var marker = Guid.NewGuid().ToString();
@@ -106,8 +102,7 @@ public class SpecificationExampleTests
         Assert.Contains(marker, SpecTarget.Updates);
     }
 
-    [Fact]
-    [DisplayName("A notification that fails is not answered either")]
+    [Fact(DisplayName = "A notification that fails is not answered either")]
     public async Task Dispatch_FailingNotification_ReturnsNothing()
     {
         using var answer = await DispatcherFixture.RunAsync(_dispatcher, """{"jsonrpc": "2.0", "method": "nothing.here"}""");
@@ -115,8 +110,7 @@ public class SpecificationExampleTests
         Assert.Null(answer);
     }
 
-    [Theory]
-    [DisplayName("An invalid request object is answered with -32600")]
+    [Theory(DisplayName = "An invalid request object is answered with -32600")]
     [InlineData("""{"method": "Spec.Subtract", "id": 1}""")]
     [InlineData("""{"jsonrpc": "1.0", "method": "Spec.Subtract", "id": 1}""")]
     [InlineData("""{"jsonrpc": "2.0", "id": 1}""")]
@@ -130,8 +124,7 @@ public class SpecificationExampleTests
         Assert.Equal(1, answer.RootElement.GetProperty("id").GetInt32());
     }
 
-    [Theory]
-    [DisplayName("An id that is not a string, an integer or null makes the request invalid, answered with a null id")]
+    [Theory(DisplayName = "An id that is not a string, an integer or null makes the request invalid, answered with a null id")]
     [InlineData("""{"jsonrpc": "2.0", "method": "Spec.Subtract", "id": 1.5}""")]
     [InlineData("""{"jsonrpc": "2.0", "method": "Spec.Subtract", "id": {"a": 1}}""")]
     [InlineData("""{"jsonrpc": "2.0", "method": "Spec.Subtract", "id": true}""")]
@@ -143,8 +136,7 @@ public class SpecificationExampleTests
         Assert.Equal(JsonValueKind.Null, answer.RootElement.GetProperty("id").ValueKind);
     }
 
-    [Fact]
-    [DisplayName("Positional parameters are answered with -32602, because a method takes one parameter object")]
+    [Fact(DisplayName = "Positional parameters are answered with -32602, because a method takes one parameter object")]
     public async Task Dispatch_PositionalParams_ReturnsInvalidParams()
     {
         using var answer = await DispatcherFixture.RunAsync(_dispatcher, """{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": [42, 23], "id": 1}""");
@@ -152,8 +144,7 @@ public class SpecificationExampleTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, answer!.RootElement.GetProperty("error").GetProperty("code").GetInt32());
     }
 
-    [Fact]
-    [DisplayName("A request with a null id is answered, with a null id")]
+    [Fact(DisplayName = "A request with a null id is answered, with a null id")]
     public async Task Dispatch_NullId_IsAnswered()
     {
         using var answer = await DispatcherFixture.RunAsync(_dispatcher, """{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": 2, "subtrahend": 1}, "id": null}""");

@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -39,9 +38,8 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
 
     private static PayloadProcessor CreateProcessor() => new(new PayloadOptions { RequireFrame = true });
 
-    [Fact]
-    [DisplayName("PayloadQuickStart sample: an encrypted Calculator.Add is answered encrypted")]
-    public async Task EncryptedAdd_ReturnsSum()
+    [Fact(DisplayName = "PayloadQuickStart sample: an encrypted Calculator.Add is answered encrypted")]
+    public async Task CalculatorAdd_Encrypted_ReturnsSum()
     {
         var payload = CreateProcessor();
         var (rpc, key) = Connect();
@@ -53,9 +51,8 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
         Assert.Equal(3, payload.Unwrap<AddResponse>(result, key)!.Sum);
     }
 
-    [Fact]
-    [DisplayName("PayloadQuickStart sample: sending the same call twice is refused with -32005")]
-    public async Task ReplayedCall_IsRefused()
+    [Fact(DisplayName = "PayloadQuickStart sample: sending the same call twice is refused with -32005")]
+    public async Task CalculatorAdd_Replayed_IsRefused()
     {
         var (rpc, key) = Connect();
         var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
@@ -66,9 +63,8 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
         Assert.Equal(-32005, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("PayloadQuickStart sample: a call replayed under another client id does not decrypt, so it is refused")]
-    public async Task ReplayedUnderAnotherClientId_IsRefused()
+    [Fact(DisplayName = "PayloadQuickStart sample: a call replayed under another client id does not decrypt, so it is refused")]
+    public async Task CalculatorAdd_ReplayedUnderAnotherClientId_IsRefused()
     {
         var (rpc, key) = Connect();
         var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
@@ -80,9 +76,8 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
         Assert.Equal(JsonRpcErrorCodes.InternalError, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("PayloadQuickStart sample: a plain call is refused with -32602, because the sample requires encryption")]
-    public async Task PlainCall_IsRefused()
+    [Fact(DisplayName = "PayloadQuickStart sample: a plain call is refused with -32602, because the sample requires encryption")]
+    public async Task CalculatorAdd_Plain_IsRefused()
     {
         var (rpc, _) = Connect();
         var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Plain);

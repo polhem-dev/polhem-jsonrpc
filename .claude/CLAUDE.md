@@ -3,7 +3,7 @@
 ## Language
 
 - Everything maintained together is written in **English**: source code, XML documentation, comments, test method
-  names and `[DisplayName]` text, commit messages, the maintainer documents under `maintainers/`, and the files under
+  names and their `DisplayName` text, commit messages, the maintainer documents under `maintainers/`, and the files under
   `.claude/`.
 - This overrides any personal or user-level setting that asks for another language for prose. Replies in a
   conversation may still follow the user's language.

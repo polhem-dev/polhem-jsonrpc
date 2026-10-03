@@ -31,6 +31,9 @@ dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
   is declared in `PublicAPI.Unshipped.txt`; say in the pull request whether it is binary compatible.
 - The packages depend on nothing but .NET (and ASP.NET Core for `Polhem.JsonRpc.AspNetCore`). A new package reference
   needs an issue first.
+- A test method is named `<Method>_<Scenario>_<Expected>` and says what it checks in the `DisplayName` of its `[Fact]`
+  or `[Theory]`, which is what xUnit reports. (`System.ComponentModel.DisplayNameAttribute` is not read by xUnit.)
+  `TestConventionTests` fails the build's test run when a test breaks either rule.
 
 ## Documents
 

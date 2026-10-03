@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 
@@ -6,8 +5,7 @@ namespace Polhem.JsonRpc.UnitTests;
 
 public class SerializerTests
 {
-    [Fact]
-    [DisplayName("Serializer: a notification is written without an id member")]
+    [Fact(DisplayName = "Serializer: a notification is written without an id member")]
     public void SerializeRequest_Notification_OmitsId()
     {
         var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeRequest(new JsonRpcRequest("a.b")));
@@ -15,8 +13,7 @@ public class SerializerTests
         Assert.Equal("""{"jsonrpc":"2.0","method":"a.b"}""", json);
     }
 
-    [Fact]
-    [DisplayName("Serializer: a request and a response that start with a UTF-8 byte order mark are read")]
+    [Fact(DisplayName = "Serializer: a request and a response that start with a UTF-8 byte order mark are read")]
     public void Read_ByteOrderMark_IsIgnored()
     {
         byte[] bom = [0xEF, 0xBB, 0xBF];
@@ -28,8 +25,7 @@ public class SerializerTests
         Assert.Equal(7, Assert.Single(responses).Result!.Value.GetInt32());
     }
 
-    [Theory]
-    [DisplayName("Serializer: a batch larger than the limit is read as a single invalid request, and one within it as a batch")]
+    [Theory(DisplayName = "Serializer: a batch larger than the limit is read as a single invalid request, and one within it as a batch")]
     [InlineData(2, false)]
     [InlineData(3, true)]
     public void ReadRequests_MaxBatchSize_RefusesLargerBatch(int maxBatchSize, bool isBatch)
@@ -52,8 +48,7 @@ public class SerializerTests
         }
     }
 
-    [Theory]
-    [DisplayName("Serializer: string, number and null ids round-trip")]
+    [Theory(DisplayName = "Serializer: string, number and null ids round-trip")]
     [InlineData("\"abc\"")]
     [InlineData("42")]
     [InlineData("null")]
@@ -67,8 +62,7 @@ public class SerializerTests
         Assert.EndsWith($"\"id\":{id}}}", json);
     }
 
-    [Fact]
-    [DisplayName("Serializer: a response always has an id member, null when it has none")]
+    [Fact(DisplayName = "Serializer: a response always has an id member, null when it has none")]
     public void SerializeResponse_NoId_WritesNullId()
     {
         var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(JsonRpcResponse.Success(JsonRpcId.None, null)));
@@ -76,8 +70,7 @@ public class SerializerTests
         Assert.Equal("""{"jsonrpc":"2.0","result":null,"id":null}""", json);
     }
 
-    [Fact]
-    [DisplayName("Serializer: unknown response members are ignored when read")]
+    [Fact(DisplayName = "Serializer: unknown response members are ignored when read")]
     public void ReadResponse_UnknownMember_IsIgnored()
     {
         var response = JsonRpcSerializer.ReadResponses(Encoding.UTF8.GetBytes("""{"jsonrpc":"2.0","result":1,"id":1,"method":"a.b"}"""))[0];
@@ -87,8 +80,7 @@ public class SerializerTests
         Assert.Equal(JsonRpcId.FromNumber(1), response.Id);
     }
 
-    [Fact]
-    [DisplayName("Serializer: an error response with data is read completely")]
+    [Fact(DisplayName = "Serializer: an error response with data is read completely")]
     public void ReadResponse_Error_IsRead()
     {
         var response = JsonRpcSerializer.ReadResponses(Encoding.UTF8.GetBytes(
@@ -100,8 +92,7 @@ public class SerializerTests
         Assert.Equal(JsonRpcId.FromString("x"), response.Id);
     }
 
-    [Fact]
-    [DisplayName("Serializer: a response that is not an object is rejected")]
+    [Fact(DisplayName = "Serializer: a response that is not an object is rejected")]
     public void ReadResponses_NotAnObject_Throws()
     {
         Assert.ThrowsAny<JsonException>(() => JsonRpcSerializer.ReadResponses(Encoding.UTF8.GetBytes("[1]")));

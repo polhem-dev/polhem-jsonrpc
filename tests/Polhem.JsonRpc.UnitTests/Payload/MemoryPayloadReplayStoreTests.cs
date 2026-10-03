@@ -1,12 +1,10 @@
-using System.ComponentModel;
 using Polhem.JsonRpc.Payload.Server;
 
 namespace Polhem.JsonRpc.UnitTests.Payload;
 
 public class MemoryPayloadReplayStoreTests
 {
-    [Fact]
-    [DisplayName("Replay store: a number is accepted once per scope")]
+    [Fact(DisplayName = "Replay store: a number is accepted once per scope")]
     public async Task TryAccept_SameNumber_AcceptedOncePerScope()
     {
         var store = new MemoryPayloadReplayStore();
@@ -16,8 +14,7 @@ public class MemoryPayloadReplayStoreTests
         Assert.True(await store.TryAcceptAsync("b", 5));
     }
 
-    [Fact]
-    [DisplayName("Replay store: numbers may arrive out of order within the window, but not behind it")]
+    [Fact(DisplayName = "Replay store: numbers may arrive out of order within the window, but not behind it")]
     public async Task TryAccept_OutOfOrder_WithinWindowOnly()
     {
         var store = new MemoryPayloadReplayStore();
@@ -28,8 +25,7 @@ public class MemoryPayloadReplayStoreTests
         Assert.False(await store.TryAcceptAsync("a", 36));
     }
 
-    [Fact]
-    [DisplayName("Replay store: a negative number or an excessive forward jump is refused")]
+    [Fact(DisplayName = "Replay store: a negative number or an excessive forward jump is refused")]
     public async Task TryAccept_NegativeOrHugeJump_Refused()
     {
         var store = new MemoryPayloadReplayStore();
@@ -39,8 +35,7 @@ public class MemoryPayloadReplayStoreTests
         Assert.False(await store.TryAcceptAsync("a", 1_000_001));
     }
 
-    [Fact]
-    [DisplayName("Replay store: a scope idle longer than its lifetime is forgotten")]
+    [Fact(DisplayName = "Replay store: a scope idle longer than its lifetime is forgotten")]
     public async Task TryAccept_IdleScope_IsSwept()
     {
         var clock = new ManualClock();
@@ -53,8 +48,7 @@ public class MemoryPayloadReplayStoreTests
         Assert.Equal(1, store.Count);
     }
 
-    [Fact]
-    [DisplayName("Replay store: a number accepted while a sweep forgets its idle scope is still refused when sent again")]
+    [Fact(DisplayName = "Replay store: a number accepted while a sweep forgets its idle scope is still refused when sent again")]
     public async Task TryAccept_DuringSweepOfIdleScope_ReplayStillRefused()
     {
         for (var round = 0; round < 2000; round++)

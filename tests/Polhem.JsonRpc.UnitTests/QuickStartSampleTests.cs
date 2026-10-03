@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Polhem.JsonRpc.Client;
 using QuickStart.Contracts;
@@ -18,15 +17,13 @@ public sealed class QuickStartSampleTests(WebApplicationFactory<Calculator> fact
         return new JsonRpcConnector(new HttpTransport(http, new Uri("/api", UriKind.Relative)));
     }
 
-    [Fact]
-    [DisplayName("QuickStart sample: Calculator.Add returns the sum")]
-    public async Task Add_ReturnsSum()
+    [Fact(DisplayName = "QuickStart sample: Calculator.Add returns the sum")]
+    public async Task CalculatorAdd_Call_ReturnsSum()
     {
         Assert.Equal(3, (await Connect().InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 }))!.Sum);
     }
 
-    [Fact]
-    [DisplayName("QuickStart sample: Calculator.Divide by zero answers with error -32001")]
+    [Fact(DisplayName = "QuickStart sample: Calculator.Divide by zero answers with error -32001")]
     public async Task Divide_ByZero_ReturnsError()
     {
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => Connect().InvokeAsync<DivideResponse>("Calculator.Divide", new DivideRequest { Dividend = 1, Divisor = 0 }));
@@ -34,9 +31,8 @@ public sealed class QuickStartSampleTests(WebApplicationFactory<Calculator> fact
         Assert.Equal(-32001, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("QuickStart sample: a notification and a batch work end to end")]
-    public async Task NotificationAndBatch_Work()
+    [Fact(DisplayName = "QuickStart sample: a notification and a batch work end to end")]
+    public async Task Batch_WithNotification_AnswersCalls()
     {
         var rpc = Connect();
         await rpc.NotifyAsync("Calculator.Log", new LogRequest { Message = "test" });

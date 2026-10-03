@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,8 +18,7 @@ public class PayloadServerTests
 
     private static readonly byte[] s_key = RandomNumberGenerator.GetBytes(AesCbcHmacPayloadEncryptor.KeySize);
 
-    [Theory]
-    [DisplayName("Payload server: a call in each format is answered in the same format and opens on the client")]
+    [Theory(DisplayName = "Payload server: a call in each format is answered in the same format and opens on the client")]
     [InlineData(PayloadFormat.Plain)]
     [InlineData(PayloadFormat.Encoded)]
     [InlineData(PayloadFormat.Encrypted)]
@@ -39,8 +37,7 @@ public class PayloadServerTests
         Assert.Equal(2, difference);
     }
 
-    [Fact]
-    [DisplayName("Payload server: the result names the codec the request named")]
+    [Fact(DisplayName = "Payload server: the result names the codec the request named")]
     public async Task Call_NamedCodec_ResultNamesSameCodec()
     {
         var (rpc, client) = Create(new TestPolicy());
@@ -51,8 +48,7 @@ public class PayloadServerTests
         Assert.Equal("json", result.GetProperty("codec").GetString());
     }
 
-    [Fact]
-    [DisplayName("Payload server: a sequence number the scope already used is rejected")]
+    [Fact(DisplayName = "Payload server: a sequence number the scope already used is rejected")]
     public async Task Call_RepeatedSequence_IsRejected()
     {
         var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true });
@@ -64,8 +60,7 @@ public class PayloadServerTests
         Assert.Equal(ReplayRejected, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("Payload server: a repeated sequence number passes when the method does not require unique ones")]
+    [Fact(DisplayName = "Payload server: a repeated sequence number passes when the method does not require unique ones")]
     public async Task Call_RepeatedSequenceNotRequired_IsAccepted()
     {
         var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = false });
@@ -77,8 +72,7 @@ public class PayloadServerTests
         Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(again, s_key)).Difference);
     }
 
-    [Fact]
-    [DisplayName("Payload server: a frame whose timestamp is outside the tolerance is rejected")]
+    [Fact(DisplayName = "Payload server: a frame whose timestamp is outside the tolerance is rejected")]
     public async Task Call_StaleTimestamp_IsRejected()
     {
         var (rpc, _) = Create(new TestPolicy());
@@ -95,8 +89,7 @@ public class PayloadServerTests
         Assert.Equal(ReplayRejected, ex.Code);
     }
 
-    [Theory]
-    [DisplayName("Payload server: a frame is accepted up to the timestamp tolerance on either side of the server clock, and refused beyond it")]
+    [Theory(DisplayName = "Payload server: a frame is accepted up to the timestamp tolerance on either side of the server clock, and refused beyond it")]
     [InlineData(-299, true)]
     [InlineData(299, true)]
     [InlineData(-301, false)]
@@ -125,8 +118,7 @@ public class PayloadServerTests
         }
     }
 
-    [Theory]
-    [DisplayName("Payload server: a call the method policy refuses is answered -32601 without fetching a key or decrypting")]
+    [Theory(DisplayName = "Payload server: a call the method policy refuses is answered -32601 without fetching a key or decrypting")]
     [InlineData("Spec.Subtract", 1)]
     [InlineData("Spec.Echo", 0)]
     public async Task Call_PolicyRefusedMethod_IsNotDecrypted(string method, int expectedDecryptions)
@@ -153,8 +145,7 @@ public class PayloadServerTests
         Assert.Equal(expectedDecryptions, policy.KeyRequests);
     }
 
-    [Theory]
-    [DisplayName("Payload server: a call with no value to bind is invalid params, as an absent params is without the payload packages")]
+    [Theory(DisplayName = "Payload server: a call with no value to bind is invalid params, as an absent params is without the payload packages")]
     [InlineData(null)]
     [InlineData("""{"format": 0}""")]
     [InlineData("""{"format": 0, "value": null}""")]
@@ -168,8 +159,7 @@ public class PayloadServerTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
     }
 
-    [Theory]
-    [DisplayName("Payload server: a plain value of the wrong shape is invalid params, as it is without the payload packages")]
+    [Theory(DisplayName = "Payload server: a plain value of the wrong shape is invalid params, as it is without the payload packages")]
     [InlineData("Spec.Numbers", "[5, 3]")]
     [InlineData("Spec.Subtract", """{"minuend": "not a number"}""")]
     [InlineData("Spec.Abstract", """{"text": "x"}""")]
@@ -187,8 +177,7 @@ public class PayloadServerTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, withPayload.Code);
     }
 
-    [Theory]
-    [DisplayName("Payload server: a call below the method's minimum format is refused with -32602 before a key is asked for")]
+    [Theory(DisplayName = "Payload server: a call below the method's minimum format is refused with -32602 before a key is asked for")]
     [InlineData(PayloadFormat.Plain, false)]
     [InlineData(PayloadFormat.Encoded, false)]
     [InlineData(PayloadFormat.Encrypted, true)]
@@ -211,8 +200,7 @@ public class PayloadServerTests
         }
     }
 
-    [Fact]
-    [DisplayName("Payload server: without a mapper of the host's, a malformed envelope is -32602")]
+    [Fact(DisplayName = "Payload server: without a mapper of the host's, a malformed envelope is -32602")]
     public async Task Call_MalformedEnvelopeWithoutHostMapper_ReturnsInvalidParams()
     {
         var (rpc, _) = CreateWithoutMapper(new TestPolicy());
@@ -223,8 +211,7 @@ public class PayloadServerTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("Payload server: without a mapper of the host's, a failed HMAC and a replay both answer the same -32603")]
+    [Fact(DisplayName = "Payload server: without a mapper of the host's, a failed HMAC and a replay both answer the same -32603")]
     public async Task Call_SecurityFailuresWithoutHostMapper_AreIndistinguishable()
     {
         var (rpc, client) = CreateWithoutMapper(new TestPolicy { ReplayScope = "s", UniqueSequence = true });
@@ -240,8 +227,7 @@ public class PayloadServerTests
         Assert.Equal((mac.Code, mac.Message), (replay.Code, replay.Message));
     }
 
-    [Theory]
-    [DisplayName("Payload server: a host mapper set before UsePayload answers first, and what it leaves is mapped by the package")]
+    [Theory(DisplayName = "Payload server: a host mapper set before UsePayload answers first, and what it leaves is mapped by the package")]
     [InlineData(true, -32099)]
     [InlineData(false, JsonRpcErrorCodes.InvalidParams)]
     public async Task Call_HostMapperBeforeUsePayload_AnswersFirst(bool hostMapsIt, int expectedCode)
@@ -260,8 +246,7 @@ public class PayloadServerTests
         Assert.Equal(expectedCode, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("Payload server: an encrypted call fails when the application has no key for the caller")]
+    [Fact(DisplayName = "Payload server: an encrypted call fails when the application has no key for the caller")]
     public async Task Call_NoKey_IsRejected()
     {
         var (rpc, client) = Create(new TestPolicy { Key = null });
@@ -271,8 +256,7 @@ public class PayloadServerTests
         Assert.Equal(Refused, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("Payload server: a body naming another type than the parameter is rejected")]
+    [Fact(DisplayName = "Payload server: a body naming another type than the parameter is rejected")]
     public async Task Call_ForeignTypeName_IsRejected()
     {
         var (rpc, client) = Create(new TestPolicy());
@@ -282,8 +266,7 @@ public class PayloadServerTests
         Assert.Equal(Refused, ex.Code);
     }
 
-    [Fact]
-    [DisplayName("Payload server: a filter added after the payload sees the opened request and can replace the result")]
+    [Fact(DisplayName = "Payload server: a filter added after the payload sees the opened request and can replace the result")]
     public async Task Call_InnerFilter_SeesRequestAndReplacesResult()
     {
         var payloadOptions = new PayloadOptions { TypeResolver = Registry() };
