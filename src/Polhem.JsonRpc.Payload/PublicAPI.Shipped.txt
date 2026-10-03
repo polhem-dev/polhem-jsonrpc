@@ -99,6 +99,7 @@ Polhem.JsonRpc.Payload.PayloadProcessor.Options.get -> Polhem.JsonRpc.Payload.Pa
 Polhem.JsonRpc.Payload.PayloadProcessor.PayloadProcessor(Polhem.JsonRpc.Payload.PayloadOptions! options) -> void
 Polhem.JsonRpc.Payload.PayloadProcessor.Seal(object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0) -> Polhem.JsonRpc.Payload.PayloadEnvelope!
 Polhem.JsonRpc.Payload.PayloadProcessor.Unwrap(System.Text.Json.JsonElement? payload, byte[]? key = null) -> object?
+Polhem.JsonRpc.Payload.PayloadProcessor.Unwrap<T>(System.Text.Json.JsonElement? payload, byte[]? key = null) -> T?
 Polhem.JsonRpc.Payload.PayloadProcessor.Wrap(object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0) -> System.Text.Json.JsonElement
 Polhem.JsonRpc.Payload.PayloadTypeRegistry
 Polhem.JsonRpc.Payload.PayloadTypeRegistry.GetTypeName(System.Type! type) -> string!

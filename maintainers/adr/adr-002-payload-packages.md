@@ -94,10 +94,17 @@ method that requires encryption rejects a plain call) without parsing the envelo
 
 ### 5. The `type` member goes through an allow-list the application owns
 
-A client unwrapping a response resolves the body's type from `type`. Resolving a type from a name received over the
-network is the classic deserialization gadget, so the package resolves names only through an interface the application
-implements, and its built-in implementation accepts only types registered with it by name. An allow-list screens the
-whole assembly-qualified name, generic arguments included, not the part before the first comma.
+Resolving a type from a name received over the network is the classic deserialization gadget, so the package resolves
+names only through an interface the application implements, and its built-in implementation resolves only the types
+registered with it by name. An allow-list screens the whole assembly-qualified name, generic arguments included, not
+the part before the first comma.
+
+A name is resolved only where nothing else decides the type: a client that unwraps a result without saying what it
+expects. Where the reader has decided the type itself, the server from the method's parameter (decision 4) and a client
+through `Unwrap<T>`, the name is only compared with that type's name, and the built-in implementation accepts the name
+of any type without registration. The methods the server exposes are then the allow-list, and an application does not
+register its contract types a second time. Comparing a name never loads a type, so this stays safe under trimming and
+Native AOT.
 
 Polhem implements the interface with its existing allow-list and assembly-qualified names, so the names on the wire do
 not change.

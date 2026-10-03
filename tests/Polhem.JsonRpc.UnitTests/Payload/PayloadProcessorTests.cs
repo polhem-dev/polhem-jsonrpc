@@ -90,6 +90,61 @@ public class PayloadProcessorTests
         Assert.Throws<InvalidOperationException>(() => processor.OpenResult(forged, null, out _));
     }
 
+    [Theory]
+    [DisplayName("Processor: a client that names the result type unwraps it with nothing registered")]
+    [InlineData(PayloadFormat.Encoded)]
+    [InlineData(PayloadFormat.Encrypted)]
+    public void UnwrapOfT_Unregistered_RoundTrips(PayloadFormat format)
+    {
+        var processor = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
+
+        var element = processor.Wrap(new VectorPing { ClientName = "a" }, format, key: s_key, sequence: 1);
+
+        Assert.Equal("a", processor.Unwrap<VectorPing>(element, s_key)!.ClientName);
+    }
+
+    [Fact]
+    [DisplayName("Processor: a client that names the result type binds a plain envelope to it")]
+    public void UnwrapOfT_Plain_BindsJsonValue()
+    {
+        var processor = new PayloadProcessor(new PayloadOptions());
+
+        var ping = processor.Unwrap<VectorPing>(processor.Wrap(new VectorPing { ClientName = "a" }, PayloadFormat.Plain));
+
+        Assert.Equal("a", ping!.ClientName);
+    }
+
+    [Fact]
+    [DisplayName("Processor: a client refuses a result whose type name differs from the type it expects")]
+    public void UnwrapOfT_TypeMismatch_Throws()
+    {
+        var processor = new PayloadProcessor(new PayloadOptions());
+        var element = processor.Wrap(new VectorPing(), PayloadFormat.Encoded);
+
+        Assert.Throws<InvalidOperationException>(() => processor.Unwrap<string>(element));
+    }
+
+    [Fact]
+    [DisplayName("Processor: a server decodes into its parameter type with nothing registered")]
+    public void OpenRequest_Unregistered_Decodes()
+    {
+        var processor = new PayloadProcessor(new PayloadOptions());
+        var envelope = processor.Seal(new VectorPing { ClientName = "a" }, PayloadFormat.Encoded);
+
+        var ping = Assert.IsType<VectorPing>(processor.OpenRequest(envelope, typeof(VectorPing), null, out _));
+        Assert.Equal("a", ping.ClientName);
+    }
+
+    [Fact]
+    [DisplayName("Processor: a client that does not name the result type still refuses a type that is not registered")]
+    public void Unwrap_Unregistered_Throws()
+    {
+        var processor = new PayloadProcessor(new PayloadOptions());
+        var element = processor.Wrap(new VectorPing(), PayloadFormat.Encoded);
+
+        Assert.Throws<InvalidOperationException>(() => processor.Unwrap(element));
+    }
+
     [Fact]
     [DisplayName("Processor: a tampered ciphertext fails authentication")]
     public void Open_TamperedCiphertext_ThrowsCryptographicException()

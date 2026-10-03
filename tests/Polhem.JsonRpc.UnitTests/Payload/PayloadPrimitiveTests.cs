@@ -64,4 +64,27 @@ public class PayloadPrimitiveTests
         Assert.Throws<InvalidOperationException>(() => registry.Register(typeof(VectorPing), "other"));
         Assert.Equal("Polhem.JsonRpc.UnitTests.Payload.VectorPing, Polhem.JsonRpc.UnitTests", registry.GetTypeName(typeof(VectorPing)));
     }
+
+    [Fact]
+    [DisplayName("Type registry: an unregistered type is named by default and accepted only as the type the reader chose")]
+    public void TypeRegistry_Unregistered_NamedButNotResolved()
+    {
+        var registry = new PayloadTypeRegistry();
+        var name = registry.GetTypeName(typeof(VectorPing));
+
+        Assert.Equal("Polhem.JsonRpc.UnitTests.Payload.VectorPing, Polhem.JsonRpc.UnitTests", name);
+        Assert.True(registry.IsNameOf(name, typeof(VectorPing)));
+        Assert.False(registry.IsNameOf(name, typeof(string)));
+        Assert.False(registry.TryResolveType(name, out _));
+    }
+
+    [Fact]
+    [DisplayName("Type registry: a type registered under its own name is accepted only under that name")]
+    public void TypeRegistry_CustomName_ReplacesDefaultName()
+    {
+        var registry = new PayloadTypeRegistry().Register(typeof(VectorPing), VectorPing.PolhemTypeName);
+
+        Assert.True(registry.IsNameOf(VectorPing.PolhemTypeName, typeof(VectorPing)));
+        Assert.False(registry.IsNameOf("Polhem.JsonRpc.UnitTests.Payload.VectorPing, Polhem.JsonRpc.UnitTests", typeof(VectorPing)));
+    }
 }

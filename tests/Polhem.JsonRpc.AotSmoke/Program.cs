@@ -55,6 +55,14 @@ foreach (var format in new[] { PayloadFormat.Encoded, PayloadFormat.Encrypted })
 var plain = processor.Unwrap(processor.Wrap(new PayloadArgs("plain", 1), PayloadFormat.Plain));
 if (plain is not JsonElement { ValueKind: JsonValueKind.Object }) { failures.Add("the plain payload did not round-trip"); }
 
+// A reader that names the type needs nothing registered, in either an encoded or a plain envelope.
+var unregistered = new PayloadProcessor(new PayloadOptions { SerializerOptions = payloadJson, JsonCodec = new JsonPayloadCodec(payloadJson) });
+foreach (var format in new[] { PayloadFormat.Plain, PayloadFormat.Encrypted })
+{
+    var wrapped = unregistered.Wrap(new PayloadArgs("typed", 2), format, key: key);
+    if (unregistered.Unwrap<PayloadArgs>(wrapped, key) is not { Name: "typed", Count: 2 }) { failures.Add($"the typed {format} payload did not round-trip"); }
+}
+
 foreach (var failure in failures) { await Console.Error.WriteLineAsync($"FAIL: {failure}"); }
 await Console.Out.WriteLineAsync(failures.Count == 0 ? "AOT smoke test passed." : "AOT smoke test failed.");
 return failures.Count == 0 ? 0 : 1;

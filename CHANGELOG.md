@@ -21,8 +21,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 - `Polhem.JsonRpc.Payload` (optional): the payload envelope around `params` and `result` (`format`, `value`, `type`,
   `codec`), the JSON codec, gzip with a limit on the decompressed size, AES-256-CBC with HMAC-SHA256, the 17-byte
-  replay frame, and `PayloadProcessor`, which wraps parameters and unwraps results per call. It supports trimming and
-  Native AOT. The wire format is the one the Polhem framework and polhem-connector-js already speak
+  replay frame, and `PayloadProcessor`, which wraps parameters and unwraps results per call. A reader that decides the
+  type itself (a server from the method's parameter, a client through `Unwrap<T>`) only checks the envelope's `type`
+  against it, so contract types are registered only for a client that resolves results by name. It supports trimming
+  and Native AOT. The wire format is the one the Polhem framework and polhem-connector-js already speak
   ([ADR-002](maintainers/adr/adr-002-payload-packages.md)).
 - `Polhem.JsonRpc.Payload.Server` (optional): `PayloadFilter`, which opens the envelope of a request, checks the frame's
   timestamp and sequence number, and answers in the same format and codec; `IPayloadServerPolicy` for the key, the

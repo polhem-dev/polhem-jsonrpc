@@ -14,7 +14,8 @@ builder.Services.AddJsonRpcServer(options =>
 
 `IPayloadServerPolicy` is where the application answers what the package cannot know: the key of an encrypted call,
 the scope a sequence number must be unique in, which methods reject a repeated one, and the type to decode into. The
-type is always decided by the server; the `type` member of a request is only checked against it.
+type is always decided by the server; the `type` member of a request is only checked against it, so the contract types
+are not registered with `PayloadOptions.TypeResolver`.
 `MemoryPayloadReplayStore` remembers sequence numbers in the process; a deployment with several instances needs a
 shared `IPayloadReplayStore`.
 

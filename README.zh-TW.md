@@ -140,7 +140,7 @@ builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, 
 
 // 用戶端：每次呼叫包裝參數、還原結果。
 var parameters = payload.Wrap(request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-var result = (AddResponse)payload.Unwrap(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+var result = payload.Unwrap<AddResponse>(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
 ```
 
 兩端使用相同的 `PayloadOptions` 設定；金鑰如何協商由應用程式決定。[PayloadQuickStart](samples/PayloadQuickStart.Server/README.zh-TW.md)

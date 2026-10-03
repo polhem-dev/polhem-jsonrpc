@@ -4,16 +4,26 @@ using System.Diagnostics.CodeAnalysis;
 namespace Polhem.JsonRpc.Payload;
 
 /// <summary>
-/// The default <see cref="IPayloadTypeResolver"/>: accepts only the types registered with it.
+/// The default <see cref="IPayloadTypeResolver"/>: resolves a name only to a type registered with it, and accepts the
+/// name of any type the reader chose itself.
 /// </summary>
 /// <remarks>
-/// A type is named <c>FullName, AssemblyName</c> unless it is registered under a name of its own. Registering is the
-/// whole allow-list: a name that was not registered never resolves, and the registry never loads a type by name.
+/// A type is named <c>FullName, AssemblyName</c> unless it is registered under a name of its own.
+/// <para>
+/// Registering is the allow-list for <see cref="TryResolveType"/>, where the name chooses the type: a name that was not
+/// registered never resolves, and the registry never loads a type by name. <see cref="IsNameOf"/> needs no
+/// registration, because there the reader has already chosen the type, a server from the parameter of the method it
+/// resolved; the name is only compared with that type's name. So a server and a client that reads results with
+/// <see cref="PayloadProcessor.Unwrap{T}"/> register nothing.
+/// </para>
 /// </remarks>
 public sealed class PayloadTypeRegistry : IPayloadTypeResolver
 {
     private readonly ConcurrentDictionary<string, Type> _types = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Type, string> _names = new();
+
+    // `Assembly.GetName()` builds a new `AssemblyName` on every call, and an unregistered type is named on every payload.
+    private readonly ConcurrentDictionary<Type, string> _defaultNames = new();
 
     /// <summary>Registers a type under its default name.</summary>
     /// <typeparam name="T">The type.</typeparam>
@@ -49,13 +59,11 @@ public sealed class PayloadTypeRegistry : IPayloadTypeResolver
     }
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidOperationException">The type is not registered.</exception>
+    /// <remarks>A type that is not registered gets its default name.</remarks>
     public string GetTypeName(Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
-        return _names.TryGetValue(type, out var name)
-            ? name
-            : throw new InvalidOperationException($"The type '{type.FullName}' is not registered as a payload type.");
+        return _names.TryGetValue(type, out var name) ? name : DefaultNameOf(type);
     }
 
     /// <inheritdoc/>
@@ -66,12 +74,18 @@ public sealed class PayloadTypeRegistry : IPayloadTypeResolver
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The name must be the one <see cref="GetTypeName"/> writes for <paramref name="type"/>: its registered name, or its
+    /// default name when it is not registered.
+    /// </remarks>
     public bool IsNameOf(string typeName, Type type)
     {
         ArgumentNullException.ThrowIfNull(typeName);
         ArgumentNullException.ThrowIfNull(type);
-        return _types.TryGetValue(typeName, out var registered) && registered == type;
+        return string.Equals(typeName, GetTypeName(type), StringComparison.Ordinal);
     }
+
+    private string DefaultNameOf(Type type) => _defaultNames.GetOrAdd(type, DefaultName);
 
     private static string DefaultName(Type type) => type.FullName + ", " + type.Assembly.GetName().Name;
 }

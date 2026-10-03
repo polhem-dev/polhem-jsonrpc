@@ -33,11 +33,7 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
         return new JsonRpcConnector(new HttpTransport(http, new Uri("/api", UriKind.Relative)));
     }
 
-    private static PayloadProcessor CreateProcessor() => new(new PayloadOptions
-    {
-        RequireFrame = true,
-        TypeResolver = new PayloadTypeRegistry().Register<AddRequest>().Register<AddResponse>(),
-    });
+    private static PayloadProcessor CreateProcessor() => new(new PayloadOptions { RequireFrame = true });
 
     [Fact]
     [DisplayName("PayloadQuickStart sample: an encrypted Calculator.Add is answered encrypted")]
@@ -49,7 +45,7 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
             payload.Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: _key, sequence: 1));
 
         Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
-        Assert.Equal(3, Assert.IsType<AddResponse>(payload.Unwrap(result, _key)).Sum);
+        Assert.Equal(3, payload.Unwrap<AddResponse>(result, _key)!.Sum);
     }
 
     [Fact]

@@ -29,7 +29,8 @@ public interface IPayloadTypeResolver
 
     /// <summary>
     /// Says whether a name read from an envelope is allowed and names <paramref name="type"/>. A server uses it to check
-    /// a request against the type it decided to decode into; the name never chooses that type.
+    /// a request against the type it decided to decode into, and a client a result against the type it expects; the
+    /// name never chooses that type.
     /// </summary>
     /// <param name="typeName">The name read from the envelope.</param>
     /// <param name="type">The type the server decodes into.</param>
