@@ -10,6 +10,12 @@ namespace Polhem.JsonRpc.Payload.Server;
 /// Every member receives the request context, whose <see cref="JsonRpcRequestContext.Services"/>
 /// and <see cref="JsonRpcRequestContext.Items"/> carry what an earlier filter or the object
 /// factory established about the caller.
+/// <para>
+/// <see cref="GetKeyAsync"/> is asked only for an encrypted call. <see cref="RequiresUniqueSequence"/> and
+/// <see cref="GetReplayScope"/> are asked about a plain or encoded call too, when frames are required, and then before
+/// any key; for an encrypted call they are asked after it. Answer them from the context alone, not from state
+/// <see cref="GetKeyAsync"/> leaves behind (<c>PayloadServerTests.Call_UniqueSequenceRequiredButNotEncrypted_IsRefused</c>).
+/// </para>
 /// </remarks>
 public interface IPayloadServerPolicy
 {
@@ -47,9 +53,11 @@ public interface IPayloadServerPolicy
     /// <param name="context">The request context.</param>
     /// <returns><see langword="true"/> to check the sequence number. The default checks none.</returns>
     /// <remarks>
-    /// Only an encrypted frame is covered by the HMAC; anybody can write the frame of a plain or encoded call. So a
-    /// method that answers <see langword="true"/> refuses plain and encoded calls with an
-    /// <see cref="InvalidPayloadException"/>, and checks the sequence number of encrypted ones.
+    /// Sequence numbers are checked only where there is something to check: <see cref="PayloadOptions.RequireFrame"/> is
+    /// on and <see cref="GetReplayScope"/> answers a scope. Then a method that answers <see langword="true"/> checks the
+    /// sequence number of an encrypted call, and refuses a plain or encoded one with an
+    /// <see cref="InvalidPayloadException"/>, because only an encrypted frame is covered by the HMAC. Without frames or a
+    /// scope nothing is checked, and a repeated call runs again.
     /// </remarks>
     bool RequiresUniqueSequence(JsonRpcRequestContext context) => false;
 

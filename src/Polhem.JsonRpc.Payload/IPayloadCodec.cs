@@ -6,6 +6,11 @@ namespace Polhem.JsonRpc.Payload;
 /// </summary>
 /// <remarks>
 /// An implementation used on a client built with Native AOT must not fall back to reflection-based serialization.
+/// <para>
+/// A reader takes a body that does not start with the gzip header (<c>1F 8B</c>) as uncompressed. A codec whose output
+/// can start with those bytes works today, because every writer using gzip still compresses every body. A writer that leaves small
+/// bodies uncompressed must still compress such a body (ADR-002, decision 2, amended).
+/// </para>
 /// </remarks>
 public interface IPayloadCodec
 {

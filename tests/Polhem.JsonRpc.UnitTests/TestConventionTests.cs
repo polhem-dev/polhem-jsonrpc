@@ -8,10 +8,14 @@ namespace Polhem.JsonRpc.UnitTests;
 /// </summary>
 public class TestConventionTests
 {
+    // Non-public and static test methods count too: xUnit runs a [Fact] whatever its accessibility.
+    private const BindingFlags Declared =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+
     public static TheoryData<string> TestMethods =>
     [
         .. typeof(TestConventionTests).Assembly.GetTypes()
-            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            .SelectMany(type => type.GetMethods(Declared))
             .Where(method => method.GetCustomAttribute<FactAttribute>() is not null)
             .Select(method => $"{method.DeclaringType!.Name}.{method.Name}"),
     ];
@@ -33,8 +37,10 @@ public class TestConventionTests
     private static MethodInfo Find(string test)
     {
         var dot = test.IndexOf('.', StringComparison.Ordinal);
+        // A test's name may be shared by a helper overload, so only the method that carries [Fact] is taken.
         return typeof(TestConventionTests).Assembly.GetTypes()
-            .Single(type => type.Name == test[..dot] && type.GetMethod(test[(dot + 1)..]) is not null)
-            .GetMethod(test[(dot + 1)..])!;
+            .Where(type => type.Name == test[..dot])
+            .SelectMany(type => type.GetMethods(Declared))
+            .Single(method => method.Name == test[(dot + 1)..] && method.GetCustomAttribute<FactAttribute>() is not null);
     }
 }

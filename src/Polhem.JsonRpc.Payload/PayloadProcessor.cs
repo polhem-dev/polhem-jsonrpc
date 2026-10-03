@@ -177,6 +177,10 @@ public sealed class PayloadProcessor
     /// The type name is missing, not allowed or names another type, the key is missing, or the body decompresses beyond
     /// the budget.
     /// </exception>
+    /// <remarks>
+    /// A body that fails to decompress, for any reason, uses up what is left of the budget, because the failure may
+    /// already have cost that much; the encoded and encrypted calls after it in the message are then refused.
+    /// </remarks>
     public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, PayloadDecompressionBudget budget, out PayloadFrame? frame)
     {
         ArgumentNullException.ThrowIfNull(budget);
@@ -220,9 +224,20 @@ public sealed class PayloadProcessor
         var codec = _options.ResolveCodec(envelope.Codec);
         try
         {
-            var plain = budget is null
-                ? _options.Compressor.Decompress(bytes)
-                : _options.Compressor.Decompress(bytes, budget.Remaining);
+            byte[] plain;
+            try
+            {
+                plain = budget is null
+                    ? _options.Compressor.Decompress(bytes)
+                    : _options.Compressor.Decompress(bytes, budget.Remaining);
+            }
+            catch (Exception) when (budget is not null)
+            {
+                // A body that fails to decompress has already cost what it decompressed before failing, up to the whole
+                // remainder. Charging the remainder keeps the next call of the batch from starting over at it.
+                budget.Spend(budget.Remaining);
+                throw;
+            }
             budget?.Spend(plain.Length);
             return codec.Deserialize(plain, type);
         }

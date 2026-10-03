@@ -60,4 +60,59 @@ public partial class PayloadServerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new PayloadOptions { MaxDecompressedBytesPerMessage = 0 });
     }
+
+    [Theory(DisplayName = "Payload server: without frames or a replay scope nothing is checked, so a plain call to a method that requires unique sequence numbers runs, as in 1.0")]
+    [InlineData(false, "session-1")]
+    [InlineData(true, null)]
+    public async Task Call_UniqueSequenceWithoutFramesOrScope_IsAccepted(bool requireFrame, string? scope)
+    {
+        var payloadOptions = new PayloadOptions { RequireFrame = requireFrame, TypeResolver = Registry() };
+        var dispatcher = DispatcherFixture.Create(options =>
+            options.UsePayload(payloadOptions, new TestPolicy { ReplayScope = scope, UniqueSequence = true }));
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+
+        var client = new PayloadProcessor(payloadOptions);
+
+        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Plain));
+
+        Assert.Equal(2, ((JsonElement)client.Unwrap(result)!).GetProperty("difference").GetInt32());
+    }
+
+    [Theory(DisplayName = "Payload server: frames required after UsePayload still make a method that requires unique sequence numbers refuse plain and encoded calls")]
+    [InlineData(PayloadFormat.Plain)]
+    [InlineData(PayloadFormat.Encoded)]
+    public async Task Call_RequireFrameSetAfterUsePayload_RefusesUnencrypted(PayloadFormat format)
+    {
+        var payloadOptions = new PayloadOptions { TypeResolver = Registry() };
+        var policy = new TestPolicy { ReplayScope = "session-1", UniqueSequence = true };
+        var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, policy));
+        payloadOptions.RequireFrame = true;
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+        var client = new PayloadProcessor(payloadOptions);
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() =>
+            rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), format, sequence: 1)));
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
+        Assert.Equal(0, policy.KeyRequests);
+    }
+
+    [Fact(DisplayName = "Payload server: a body that fails past the decompression budget uses up the rest of it, so the next call of the batch is refused")]
+    public async Task Batch_BodyFailingPastBudget_ExhaustsTheBudget()
+    {
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), MaxDecompressedBytesPerMessage = 1024 * 1024 };
+        var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, new TestPolicy()));
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+        var client = new PayloadProcessor(payloadOptions);
+        var batch = rpc.CreateBatch();
+        var tooLarge = batch.Add<JsonElement>("Spec.Update",
+            client.Wrap(new UpdateRequest(new string('a', 1536 * 1024)), PayloadFormat.Encoded, sequence: 1));
+        var small = batch.Add<JsonElement>("Spec.Update",
+            client.Wrap(new UpdateRequest("small"), PayloadFormat.Encoded, sequence: 2));
+
+        await batch.SendAsync();
+
+        await Assert.ThrowsAsync<JsonRpcErrorException>(() => tooLarge);
+        await Assert.ThrowsAsync<JsonRpcErrorException>(() => small);
+    }
 }

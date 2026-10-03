@@ -25,7 +25,8 @@ public sealed class PayloadFilter : IJsonRpcFilter
     /// <summary>Initializes a new instance.</summary>
     /// <remarks>
     /// <see cref="PayloadOptions.FrameTimestampTolerance"/>, <see cref="PayloadOptions.TimeProvider"/> and
-    /// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/> are read here, once. The tolerance and the clock go
+    /// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/> are read here, once; the other settings are read on
+    /// each call. The tolerance and the clock go
     /// together with the lifetime of the in-memory replay store they decide: a tolerance raised later would let a frame
     /// outlive the scope that remembers its sequence number.
     /// </remarks>
@@ -56,8 +57,14 @@ public sealed class PayloadFilter : IJsonRpcFilter
             throw new InvalidPayloadException("The method requires a more protected payload format.");
         }
         // Only an encrypted frame is covered by the HMAC, so only an encrypted call can prove its sequence number is new.
-        // A method that requires unique sequence numbers refuses the others rather than letting them repeat unchecked.
-        if (envelope.Format != PayloadFormat.Encrypted && _policy.RequiresUniqueSequence(context))
+        // Where sequence numbers are checked at all (frames on, a replay scope for the caller), a method that requires
+        // unique ones refuses the other formats rather than letting them repeat unchecked. Without frames or a scope
+        // nothing is checked for any format, so nothing is refused either, as in 1.0.
+        if (envelope.Format != PayloadFormat.Encrypted
+            // Read on each call, as the processor reads it to decide whether a frame is extracted at all.
+            && _processor.Options.RequireFrame
+            && _policy.RequiresUniqueSequence(context)
+            && _policy.GetReplayScope(context) is not null)
         {
             throw new InvalidPayloadException("The method requires an encrypted payload, whose sequence number can be checked.");
         }

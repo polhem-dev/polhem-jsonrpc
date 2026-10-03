@@ -20,13 +20,15 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `PayloadOptions.MaxDecompressedBytesPerMessage` (default 50 MiB): how much a server decompresses for one message in
   total, the call alone or all the calls of a batch. `PayloadDecompressionBudget`,
   `IPayloadCompressor.Decompress(byte[], long)` (with a default implementation) and an overload of
-  `PayloadProcessor.OpenRequest` carry it.
+  `PayloadProcessor.OpenRequest` carry it. `PayloadFilter` reads the setting once, when it is created.
 
 ### Changed
 
 - `JsonRpcDispatcher` resolves the methods of an object type once, the first time the type is used, and asks the method
   policy about each of them then, once, rather than one method name at a time; the answers are kept for the
-  dispatcher's life. A method the policy throws for is not callable, and the type's other methods still are.
+  dispatcher's life.
+- **Wire-visible:** a method the policy throws for is not callable and is answered `-32601 Method not found`, every
+  time; the type's other methods still are. Before, each such call failed with `-32603`, or what the host's `ExceptionMapper` made of the exception.
 - **Wire-visible:** `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
   `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
 - **Wire-visible:** `UsePayload` answers `InvalidPayloadException` (a malformed envelope, or a call below the method's minimum format) with `-32602 Invalid params` instead of
@@ -51,15 +53,22 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - **Wire format (readers):** `GzipPayloadCompressor` reads a body that does not start with the gzip header as it is,
   uncompressed. This is the
   first step towards leaving small bodies uncompressed: every reader has to accept them before a writer sends one.
-  The only limit on decompression stays `MaxDecompressedBytes` (50 MiB) per body; an encoded body is decompressed
-  without a key, so a deployment that cares requires encrypted calls with `IPayloadServerPolicy.GetMinimumFormat`.
-- **Wire-visible:** a method whose `IPayloadServerPolicy.RequiresUniqueSequence` is true refuses plain and encoded
+  An encoded body is decompressed without a key; besides the limits on decompression below, a deployment that cares
+  requires encrypted calls with `IPayloadServerPolicy.GetMinimumFormat`.
+- **Wire-visible:** where sequence numbers are checked (`PayloadOptions.RequireFrame` on, and a replay scope from
+  `IPayloadServerPolicy.GetReplayScope`), a method whose `RequiresUniqueSequence` is true refuses plain and encoded
   calls with `-32602`. Only an encrypted frame is covered by the HMAC; anybody can write the frame of an encoded call,
-  so it could neither prove its sequence number new nor be allowed to move the scope's window. In 1.0.0 such a call
-  was checked, and a forged one could lock out the genuine encrypted calls after it.
-- A batch shares one decompression budget (`MaxDecompressedBytesPerMessage`). An encoded body is decompressed without
-  a key; with gzip compressed at its best level, one 4 MiB request of 62 bodies could otherwise make the server
-  allocate about 11 GiB and spend about 10 seconds of CPU.
+  so it can neither prove its sequence number new nor be allowed to move the scope's window. In 1.0.0 an encoded call
+  was checked, and a forged one could lock out the genuine encrypted calls after it; a plain call carries no frame and
+  was never checked. Without frames or a scope nothing is checked or refused, as before. The policy answers
+  `RequiresUniqueSequence` and `GetReplayScope` for a plain or encoded call without being asked for a key, so it has
+  to answer them from the request context.
+- **Behavior change:** a message shares one decompression budget (`MaxDecompressedBytesPerMessage`), the call alone or
+  all the calls of a batch, each call drawing on what the calls before it left, notifications included. An encoded
+  body is decompressed without a key; with gzip compressed at its best level, one 4 MiB request of 62 bodies could
+  otherwise make the server allocate about 11 GiB and spend about 10 seconds of CPU. The budget sits on top of each
+  body's own limit, `GzipPayloadCompressor.MaxDecompressedBytes`: neither raises the other. A body that fails to
+  decompress uses up the rest of the budget, and a body sent uncompressed draws on it by its length.
 
 ### Fixed
 
