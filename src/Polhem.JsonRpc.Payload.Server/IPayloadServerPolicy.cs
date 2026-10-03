@@ -25,6 +25,19 @@ public interface IPayloadServerPolicy
     /// <returns>The scope, or <see langword="null"/> when sequence numbers are not checked for this caller.</returns>
     string? GetReplayScope(JsonRpcRequestContext context) => null;
 
+    /// <summary>
+    /// Gets the lowest format the method accepts. A call in a lower format is refused before a key is asked for or its
+    /// body is read.
+    /// </summary>
+    /// <param name="context">The request context.</param>
+    /// <returns>The format. The default is <see cref="PayloadFormat.Plain"/>, which accepts every format.</returns>
+    /// <remarks>
+    /// The frame and its replay checks only bind a caller that has to use them. A plain call carries no frame, and an
+    /// encoded call carries one that anybody can write, so only <see cref="PayloadFormat.Encrypted"/> makes them
+    /// impossible to skip.
+    /// </remarks>
+    PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadFormat.Plain;
+
     /// <summary>Says whether the method rejects a sequence number the scope already used.</summary>
     /// <param name="context">The request context.</param>
     /// <returns><see langword="true"/> to check the sequence number. The default checks none.</returns>

@@ -21,13 +21,18 @@ var payload = new PayloadOptions { RequireFrame = true };
 builder.Services.AddJsonRpcServer(options => options.UsePayload(payload, policy));
 ```
 
-filter 向應用程式詢問只有它知道的事（`DemoKeyPolicy.cs`）：這次呼叫的金鑰、序號必須唯一的範圍，以及方法是否拒絕重複的序號。
+filter 向應用程式詢問只有它知道的事（`DemoKeyPolicy.cs`）：這次呼叫的金鑰、序號必須唯一的範圍、方法是否拒絕重複的序號，
+以及方法接受的最低格式。
 
 ```csharp
 public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context) => ValueTask.FromResult<byte[]?>(key);
 public string? GetReplayScope(JsonRpcRequestContext context) => /* X-Client-Id header */;
 public bool RequiresUniqueSequence(JsonRpcRequestContext context) => true;
+public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadFormat.Encrypted;
 ```
+
+- 只有加密的呼叫帶著呼叫端無法偽造的 frame：plain 呼叫沒有 frame，encoded 呼叫的 frame 則誰都能寫。要求 `Encrypted`
+  才能讓防重放檢查無法被略過。低於此格式的呼叫會在讀取內容之前就回 `-32602 Invalid params`。
 
 - 方法本身（`Calculator.cs`）和不用外殼時一樣：filter 在呼叫前開啟請求、呼叫後以請求的格式與 codec 封裝結果。
 - 請求解碼成什麼型別由伺服器決定（方法的參數型別），用戶端寫的 `type` 只拿來比對。因此不需要登錄任何合約型別：

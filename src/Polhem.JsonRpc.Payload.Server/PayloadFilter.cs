@@ -36,6 +36,10 @@ public sealed class PayloadFilter : IJsonRpcFilter
         var cancellationToken = context.CancellationToken;
 
         var envelope = PayloadEnvelope.Read(context.Request.Params);
+        if (envelope.Format < _policy.GetMinimumFormat(context))
+        {
+            throw new InvalidPayloadException("The method requires a more protected payload format.");
+        }
         var key = envelope.Format == PayloadFormat.Encrypted
             ? await _policy.GetKeyAsync(context).ConfigureAwait(false)
             : null;

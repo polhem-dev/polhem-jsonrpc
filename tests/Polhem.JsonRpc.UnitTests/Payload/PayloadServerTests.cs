@@ -172,6 +172,79 @@ public class PayloadServerTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, withPayload.Code);
     }
 
+    [Theory]
+    [DisplayName("Payload server: a call below the method's minimum format is refused with -32602 before a key is asked for")]
+    [InlineData(PayloadFormat.Plain, false)]
+    [InlineData(PayloadFormat.Encoded, false)]
+    [InlineData(PayloadFormat.Encrypted, true)]
+    public async Task Call_BelowMinimumFormat_IsRefused(PayloadFormat format, bool accepted)
+    {
+        var policy = new TestPolicy { MinimumFormat = PayloadFormat.Encrypted };
+        var (rpc, client) = CreateWithoutMapper(policy);
+        var parameters = client.Wrap(new SubtractRequest(5, 3), format, key: s_key, sequence: 1);
+
+        if (accepted)
+        {
+            await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
+            Assert.Equal(1, policy.KeyRequests);
+        }
+        else
+        {
+            var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
+            Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
+            Assert.Equal(0, policy.KeyRequests);
+        }
+    }
+
+    [Fact]
+    [DisplayName("Payload server: without a mapper of the host's, a malformed envelope is -32602")]
+    public async Task Call_MalformedEnvelopeWithoutHostMapper_ReturnsInvalidParams()
+    {
+        var (rpc, _) = CreateWithoutMapper(new TestPolicy());
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
+            DispatcherFixture.Element("""{"format": 1, "value": "not Base64!"}""")));
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
+    }
+
+    [Fact]
+    [DisplayName("Payload server: without a mapper of the host's, a failed HMAC and a replay both answer the same -32603")]
+    public async Task Call_SecurityFailuresWithoutHostMapper_AreIndistinguishable()
+    {
+        var (rpc, client) = CreateWithoutMapper(new TestPolicy { ReplayScope = "s", UniqueSequence = true });
+        var forged = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted,
+            key: RandomNumberGenerator.GetBytes(AesCbcHmacPayloadEncryptor.KeySize), sequence: 1);
+        var genuine = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 2);
+        await rpc.InvokeAsync<JsonElement>(Subtract, genuine);
+
+        var mac = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, forged));
+        var replay = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, genuine));
+
+        Assert.Equal((JsonRpcErrorCodes.InternalError, "Internal error"), (mac.Code, mac.Message));
+        Assert.Equal((mac.Code, mac.Message), (replay.Code, replay.Message));
+    }
+
+    [Theory]
+    [DisplayName("Payload server: a host mapper set before UsePayload answers first, and what it leaves is mapped by the package")]
+    [InlineData(true, -32099)]
+    [InlineData(false, JsonRpcErrorCodes.InvalidParams)]
+    public async Task Call_HostMapperBeforeUsePayload_AnswersFirst(bool hostMapsIt, int expectedCode)
+    {
+        var dispatcher = DispatcherFixture.Create(options =>
+        {
+            options.ExceptionMapper = (exception, _) =>
+                hostMapsIt && exception is InvalidPayloadException ? new JsonRpcError(-32099, "Host") : null;
+            options.UsePayload(new PayloadOptions { TypeResolver = Registry() }, new TestPolicy());
+        });
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
+            DispatcherFixture.Element("""{"format": 7}""")));
+
+        Assert.Equal(expectedCode, ex.Code);
+    }
+
     [Fact]
     [DisplayName("Payload server: an encrypted call fails when the application has no key for the caller")]
     public async Task Call_NoKey_IsRejected()
@@ -222,6 +295,13 @@ public class PayloadServerTests
     private static PayloadTypeRegistry Registry() => new PayloadTypeRegistry()
         .Register<SubtractRequest>().Register<SubtractResponse>().Register<UpperRequest>();
 
+    private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithoutMapper(TestPolicy policy)
+    {
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry() };
+        var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, policy));
+        return (new JsonRpcConnector(new InProcessTransport(dispatcher)), new PayloadProcessor(payloadOptions));
+    }
+
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) Create(TestPolicy policy, TimeProvider? clock = null)
     {
         var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = clock ?? TimeProvider.System };
@@ -245,6 +325,10 @@ public class PayloadServerTests
         public string? ReplayScope { get; init; }
 
         public bool UniqueSequence { get; init; }
+
+        public PayloadFormat MinimumFormat { get; init; }
+
+        public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => MinimumFormat;
 
         public int KeyRequests { get; private set; }
 

@@ -53,6 +53,27 @@ public class MemoryPayloadReplayStoreTests
         Assert.Equal(1, store.Count);
     }
 
+    [Fact]
+    [DisplayName("Replay store: a number accepted while a sweep forgets its idle scope is still refused when sent again")]
+    public async Task TryAccept_DuringSweepOfIdleScope_ReplayStillRefused()
+    {
+        for (var round = 0; round < 2000; round++)
+        {
+            var clock = new ManualClock();
+            var store = new MemoryPayloadReplayStore(TimeSpan.FromMinutes(1), clock);
+            await store.TryAcceptAsync("idle", 1);
+            clock.Advance(TimeSpan.FromMinutes(2));
+
+            // The first call into "other" sweeps "idle" while the second call accepts a number into it.
+            using var start = new Barrier(2);
+            var sweep = Task.Run(() => { start.SignalAndWait(); return store.TryAcceptAsync("other", 1).AsTask(); });
+            var accept = Task.Run(() => { start.SignalAndWait(); return store.TryAcceptAsync("idle", 5).AsTask(); });
+            await Task.WhenAll(sweep, accept);
+
+            Assert.False(await store.TryAcceptAsync("idle", 5), $"replay accepted in round {round}");
+        }
+    }
+
     private sealed class ManualClock : TimeProvider
     {
         private long _ticks;

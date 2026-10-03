@@ -19,6 +19,10 @@ public sealed class MemoryPayloadReplayStore : IPayloadReplayStore
     private int _sweeping;
 
     /// <summary>Initializes a new instance whose scopes live for twice the default frame timestamp tolerance.</summary>
+    /// <remarks>
+    /// A host that changes <see cref="PayloadOptions.FrameTimestampTolerance"/> uses the other constructor, as
+    /// <see cref="PayloadFilter"/> does when it creates its own store.
+    /// </remarks>
     public MemoryPayloadReplayStore() : this(new PayloadOptions().FrameTimestampTolerance * 2) { }
 
     /// <summary>Initializes a new instance.</summary>
@@ -43,10 +47,19 @@ public sealed class MemoryPayloadReplayStore : IPayloadReplayStore
         cancellationToken.ThrowIfCancellationRequested();
 
         SweepIfDue();
-        long now = _clock.GetTimestamp();
-        var entry = _entries.GetOrAdd(scope, static (_, timestamp) => new Entry(timestamp), now);
-        Volatile.Write(ref entry.LastTouchedTimestamp, now);
-        return new ValueTask<bool>(entry.Window.TryAccept(sequence));
+        while (true)
+        {
+            long now = _clock.GetTimestamp();
+            var entry = _entries.GetOrAdd(scope, static (_, timestamp) => new Entry(timestamp), now);
+            lock (entry.Gate)
+            {
+                // A sweep removed the entry between the lookup and the lock. Accepting into it would record the number
+                // in a window about to be forgotten, so the scope's current entry is looked up again.
+                if (entry.IsRemoved) { continue; }
+                entry.LastTouchedTimestamp = now;
+                return new ValueTask<bool>(entry.Window.TryAccept(sequence));
+            }
+        }
     }
 
     private void SweepIfDue()
@@ -61,10 +74,17 @@ public sealed class MemoryPayloadReplayStore : IPayloadReplayStore
             Volatile.Write(ref _lastSweepAtTimestamp, now);
             foreach (var pair in _entries)
             {
-                // Strictly greater, so an entry idle for exactly the lifetime is kept.
-                if (_clock.GetElapsedTime(Volatile.Read(ref pair.Value.LastTouchedTimestamp), now) > _lifetime)
+                var entry = pair.Value;
+                lock (entry.Gate)
                 {
-                    _entries.TryRemove(pair);
+                    // Strictly greater, so an entry idle for exactly the lifetime is kept. Decided and marked under the
+                    // entry's lock, so a request that touches the entry either lands before and keeps it, or after and
+                    // sees it removed.
+                    if (_clock.GetElapsedTime(entry.LastTouchedTimestamp, now) > _lifetime)
+                    {
+                        entry.IsRemoved = true;
+                        _entries.TryRemove(pair);
+                    }
                 }
             }
         }
@@ -76,8 +96,12 @@ public sealed class MemoryPayloadReplayStore : IPayloadReplayStore
 
     private sealed class Entry(long touchedAt)
     {
+        public Lock Gate { get; } = new();
+
         public ReplayWindow Window { get; } = new();
 
-        public long LastTouchedTimestamp = touchedAt;
+        public long LastTouchedTimestamp { get; set; } = touchedAt;
+
+        public bool IsRemoved { get; set; }
     }
 }

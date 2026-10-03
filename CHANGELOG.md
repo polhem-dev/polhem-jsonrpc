@@ -13,6 +13,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   the system clock, and `PayloadFilter` passes it to the in-memory replay store it creates.
 - `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`: refuses a batch larger than the limit before reading any of
   its entries.
+- `IPayloadServerPolicy.GetMinimumFormat`: the lowest format a method accepts. A call in a lower format is answered
+  `-32602` before a key is asked for or its body is read. The default accepts every format, as before.
+- `GzipPayloadCompressor.MaxCompressionRatio` and a constructor that sets it.
 
 ### Changed
 
@@ -20,6 +23,12 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   policy about each of them then, rather than one method name at a time.
 - `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
   `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
+- `UsePayload` answers `InvalidPayloadException` (a malformed envelope) with `-32602 Invalid params` instead of
+  `-32603 Internal error`. An `ExceptionMapper` set before `UsePayload` still answers first; every other payload failure
+  stays `-32603`, so the answer does not say which check failed.
+- `GzipPayloadCompressor` also refuses a body that decompresses to more than 100 times its compressed size
+  (`DefaultMaxCompressionRatio`), unless it decompresses to 1 MiB or less. An encoded body is decompressed without a
+  key, so the size limit alone let a request make the server decompress far more than it sent.
 
 ### Fixed
 
@@ -30,6 +39,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   dispatcher: the call is answered `-32603` and the rest of the batch is answered as usual. A call that already failed
   keeps its own error.
 - A batch whose caller cancels stops before its next call instead of running every remaining call.
+- `MemoryPayloadReplayStore` could accept a replayed sequence number when a call reached an idle scope while a sweep
+  was removing it.
 
 ## [1.0.0] - 2026-10-03
 

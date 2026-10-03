@@ -12,6 +12,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `PayloadOptions.TimeProvider`：寫入 frame 時間戳與檢查時間戳所用的時鐘，預設為系統時鐘；`PayloadFilter` 自行建立的記憶體
   replay store 也使用它。
 - `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`：批次超過上限時，在讀取任何項目之前就拒絕。
+- `IPayloadServerPolicy.GetMinimumFormat`：方法接受的最低格式。低於它的呼叫會在詢問金鑰或讀取內容之前就回 `-32602`。
+  預設接受所有格式，與先前相同。
+- `GzipPayloadCompressor.MaxCompressionRatio`，以及設定它的建構子。
 
 ### 變更
 
@@ -19,6 +22,10 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   而不再逐個方法名稱處理。
 - `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
+- `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
+  在 `UsePayload` 之前設定的 `ExceptionMapper` 仍然優先；其他 payload 失敗維持 `-32603`，回應不會透露是哪一項檢查失敗。
+- `GzipPayloadCompressor` 另外拒絕解壓後超過壓縮前 100 倍的內容（`DefaultMaxCompressionRatio`），解壓後在 1 MiB 以內者除外。
+  encoded 內容不需金鑰就會被解壓，只靠大小上限時，一個請求可以讓伺服器解壓遠多於它送出的資料量。
 
 ### 修正
 
@@ -28,6 +35,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `IJsonRpcObjectFactory.ReleaseObjectAsync` 或 `ExceptionMapper` 擲出的例外不再逃出 dispatcher：該呼叫回
   `-32603`，批次中其餘呼叫照常回應；原本就已失敗的呼叫保留它自己的錯誤。
 - 呼叫端取消的批次會在下一個呼叫之前停止，不再把剩下的呼叫全部跑完。
+- `MemoryPayloadReplayStore` 在呼叫抵達一個閒置 scope、而清理工作正好在移除它時，可能接受重放的序號。
 
 ## [1.0.0] - 2026-10-03
 
