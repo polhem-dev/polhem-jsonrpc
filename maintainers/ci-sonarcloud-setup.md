@@ -18,7 +18,7 @@ same key appears in the README badges (both languages).
 
 ## When the analysis runs
 
-On every push to `main` and every pull request, in its own job, so that the `build` job stays the gate for
+On every push to `main` and every pull request that changes anything other than `.md` files, in its own job, so that the `build` job stays the gate for
 `TreatWarningsAsErrors` (the scanner turns warnings back into warnings). The job skips itself when the `SONAR_TOKEN`
 secret is not available, as on pull requests from forks. Coverage comes from the collector of the test SDK
 (`--collect "Code Coverage;Format=xml"`).
