@@ -2,10 +2,20 @@
 
 [English](CHANGELOG.md) | **繁體中文**
 
-Polhem.JsonRpc、Polhem.JsonRpc.Server、Polhem.JsonRpc.AspNetCore 與 Polhem.JsonRpc.Client 的重要變更。格式依循
+Polhem.JsonRpc 各套件的重要變更。格式依循
 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版號依循[語意化版本](https://semver.org/lang/zh-TW/)。
 
 ## [Unreleased]
+
+### 新增
+
+- `Polhem.JsonRpc.Payload`（選用）：包住 `params` 與 `result` 的 payload 外殼（`format`、`value`、`type`、`codec`）、
+  JSON codec、限制解壓縮後大小的 gzip、AES-256-CBC 加 HMAC-SHA256、17 bytes 的重放 frame，以及逐次呼叫包裝參數、還原
+  結果的 `PayloadProcessor`。支援 trimming 與 Native AOT。線上格式就是 Polhem 框架與 polhem-connector-js 已在使用的格式
+  （[ADR-002](maintainers/adr/adr-002-payload-packages.md)，英文）。
+- `Polhem.JsonRpc.Payload.Server`（選用）：`PayloadFilter` 開啟請求的外殼、檢查 frame 的時間戳與序號，並以相同格式與
+  codec 回應；`IPayloadServerPolicy` 提供金鑰、重放範圍與解碼型別；`MemoryPayloadReplayStore`；以及
+  `JsonRpcServerOptions.UsePayload`。
 
 ## [0.1.0] - 2026-10-02
 
