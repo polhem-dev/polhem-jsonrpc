@@ -35,6 +35,9 @@ dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
 
 ## Workflow
 
+- How changes reach `main`, and who merges them, is the polhem-dev organization's contributing guide,
+  <https://github.com/polhem-dev/.github/blob/main/CONTRIBUTING.md>: contributors work from a fork and open a pull
+  request, and only the maintainer merges. `main` is protected, so nothing is pushed to it directly.
 - Every change reaches `main` through a pull request. Agents name their branches `claude/<topic>`.
 - Build and test locally before pushing when the environment allows it.
 - **Never push a `v*` tag without the user's explicit consent.** It publishes the packages to nuget.org, and a
