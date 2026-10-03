@@ -57,8 +57,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - When the server answers a whole batch with one error (too large, for instance), each call of the batch now fails with
   that error, instead of "The server did not answer this call of the batch".
 - A batch whose `IdGenerator` repeated an id left a task that never completed.
-- The non-generic `InvokeAsync` and `InvokeAsync<JsonElement>` no longer need `JsonElement` in a source-generated
-  serializer context, so they work under Native AOT; the non-generic one does not read the result at all.
+- `JsonRpcConnector` no longer needs `JsonElement` in a source-generated serializer context, for a `JsonElement`
+  sent as parameters (what `PayloadProcessor.Wrap` returns) or read as the result, so the payload flow works under
+  Native AOT. The non-generic `InvokeAsync` does not read the result at all.
 - A trimmed application, such as an iOS head, no longer gets warning IL2072 from `PayloadParameterBinder` or
   `DefaultParameterBinder`. `Polhem.JsonRpc.Server`, `Polhem.JsonRpc.AspNetCore` and `Polhem.JsonRpc.Payload.Server`
   now run the trim analyzer, though they still do not claim to support trimming.

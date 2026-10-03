@@ -39,6 +39,10 @@ internal sealed class FakeServerHandler : HttpMessageHandler
 
     private static JsonRpcResponse Answer(JsonRpcRequest request)
     {
+        if (request.Method == "payload.echo")
+        {
+            return JsonRpcResponse.Success(request.Id, request.Params);
+        }
         if (request.Method == "math.fail")
         {
             return JsonRpcResponse.Failure(request.Id, new JsonRpcError(-32001, "Failed on purpose"));

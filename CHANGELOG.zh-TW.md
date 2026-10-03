@@ -49,8 +49,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - 伺服器以單一錯誤回應整個批次時（例如批次過大），批次中的每個呼叫現在都以該錯誤失敗，而非「The server did not answer
   this call of the batch」。
 - `IdGenerator` 產生重複 id 時，批次中會有一個 task 永遠不會完成。
-- 非泛型的 `InvokeAsync` 與 `InvokeAsync<JsonElement>` 不再需要在 source-generated 序列化 context 中列出 `JsonElement`，
-  因此可在 Native AOT 下使用；非泛型版本完全不讀取結果。
+- `JsonRpcConnector` 不論以 `JsonElement` 作為參數送出（`PayloadProcessor.Wrap` 的回傳值）或讀取為結果，都不再需要在
+  source-generated 序列化 context 中列出 `JsonElement`，因此 payload 流程可在 Native AOT 下使用。非泛型的 `InvokeAsync` 完全不讀取結果。
 - 經過 trimming 的應用程式（例如 iOS head）不再從 `PayloadParameterBinder` 或 `DefaultParameterBinder` 收到 IL2072 警告。
   `Polhem.JsonRpc.Server`、`Polhem.JsonRpc.AspNetCore` 與 `Polhem.JsonRpc.Payload.Server` 現在會執行 trim analyzer，
   但仍不宣稱支援 trimming。
