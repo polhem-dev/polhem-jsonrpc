@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Polhem.JsonRpc.Server;
@@ -16,7 +17,7 @@ internal sealed class DefaultParameterBinder(JsonSerializerOptions options) : IJ
         var method = context.Method ?? throw new InvalidOperationException("The method is not resolved.");
         if (context.Request.Params is not { } parameters)
         {
-            return method.ParameterType.IsValueType ? Activator.CreateInstance(method.ParameterType) : null;
+            return DefaultValueOf(method.ParameterType);
         }
 
         if (parameters.ValueKind != JsonValueKind.Object)
@@ -37,4 +38,8 @@ internal sealed class DefaultParameterBinder(JsonSerializerOptions options) : IJ
             throw new JsonRpcErrorException(JsonRpcErrorCodes.InvalidParams, InvalidParamsMessage);
         }
     }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "Binders run under JsonRpcDispatcher, whose constructor requires unreferenced code: the parameter type is read from the application's method by reflection, and keeping it is the application's part.")]
+    private static object? DefaultValueOf(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 }

@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <Description>ASP.NET Core endpoint for Polhem.JsonRpc.Server: MapJsonRpc and the HTTP request handler.</Description>
+    <!-- The server is not trim-compatible: JsonRpcDispatcher requires unreferenced code. The analyzer still runs, so
+         every reflection call outside that requirement is a build error until it is annotated or justified. -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>

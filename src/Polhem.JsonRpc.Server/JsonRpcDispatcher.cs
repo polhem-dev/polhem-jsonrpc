@@ -190,9 +190,13 @@ public sealed class JsonRpcDispatcher
 
     // Exact, case-sensitive name match, like the Polhem framework's `Type.GetMethod(action)`. A name with more than
     // one resolvable method is ambiguous and not resolved.
-    [UnconditionalSuppressMessage("Trimming", "IL2070",
+    private MethodInfo? FindAction(Type type, string action) => _actions.GetOrAdd((type, action), ResolveAction);
+
+    // The suppression sits on this method rather than on `FindAction`: a lambda compiles to a method of its own,
+    // which a suppression on the method that declares it does not cover.
+    [UnconditionalSuppressMessage("Trimming", "IL2080",
         Justification = "The constructor requires unreferenced code; the object types come from the application's factory.")]
-    private MethodInfo? FindAction(Type type, string action) => _actions.GetOrAdd((type, action), key =>
+    private MethodInfo? ResolveAction((Type Type, string Action) key)
     {
         MethodInfo? found = null;
         foreach (var candidate in key.Type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
@@ -205,7 +209,7 @@ public sealed class JsonRpcDispatcher
             found = candidate;
         }
         return found is not null && _policy.IsCallable(found) ? found : null;
-    });
+    }
 
     [UnconditionalSuppressMessage("Trimming", "IL2075",
         Justification = "The constructor requires unreferenced code; Result is read from the task type the method declares.")]

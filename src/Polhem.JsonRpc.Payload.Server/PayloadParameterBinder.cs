@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Polhem.JsonRpc.Server;
 
@@ -35,7 +36,7 @@ public sealed class PayloadParameterBinder : IJsonRpcParameterBinder
         switch (payload.Value)
         {
             case null:
-                return method.ParameterType.IsValueType ? Activator.CreateInstance(method.ParameterType) : null;
+                return DefaultValueOf(method.ParameterType);
             case JsonElement element when payload.Format == PayloadFormat.Plain:
                 try
                 {
@@ -51,4 +52,8 @@ public sealed class PayloadParameterBinder : IJsonRpcParameterBinder
                 throw new InvalidOperationException("The decoded payload is not of the parameter type of the method.");
         }
     }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "Binders run under JsonRpcDispatcher, whose constructor requires unreferenced code: the parameter type is read from the application's method by reflection, and keeping it is the application's part.")]
+    private static object? DefaultValueOf(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 }

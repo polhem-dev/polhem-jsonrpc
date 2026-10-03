@@ -3,6 +3,9 @@
   <PropertyGroup>
     <Description>Server half of Polhem.JsonRpc.Payload: a dispatcher filter that opens the payload envelope, checks the replay-protection frame and seals the result.</Description>
     <PackageTags>$(PackageTags);encryption;compression</PackageTags>
+    <!-- The server is not trim-compatible: JsonRpcDispatcher requires unreferenced code. The analyzer still runs, so
+         every reflection call outside that requirement is a build error until it is annotated or justified. -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>
