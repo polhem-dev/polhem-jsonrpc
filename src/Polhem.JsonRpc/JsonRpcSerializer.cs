@@ -38,7 +38,8 @@ public static class JsonRpcSerializer
 
     /// <summary>
     /// Reads an incoming message like <see cref="ReadRequests(ReadOnlyMemory{byte})"/>, and refuses a batch larger than
-    /// <paramref name="maxBatchSize"/> before reading any of its entries.
+    /// <paramref name="maxBatchSize"/> from the length of the parsed array, before a request is read from any of its
+    /// entries.
     /// </summary>
     /// <param name="utf8Json">The message as UTF-8 JSON.</param>
     /// <param name="maxBatchSize">The largest number of requests a batch may hold.</param>
