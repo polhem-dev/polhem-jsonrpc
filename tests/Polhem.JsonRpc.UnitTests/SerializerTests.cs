@@ -16,6 +16,30 @@ public class SerializerTests
     }
 
     [Theory]
+    [DisplayName("Serializer: a batch larger than the limit is read as a single invalid request, and one within it as a batch")]
+    [InlineData(2, false)]
+    [InlineData(3, true)]
+    public void ReadRequests_MaxBatchSize_RefusesLargerBatch(int maxBatchSize, bool isBatch)
+    {
+        var json = Encoding.UTF8.GetBytes("""[{"jsonrpc":"2.0","method":"a.b","id":1},{"jsonrpc":"2.0","method":"a.b","id":2},{"jsonrpc":"2.0","method":"a.b","id":3}]""");
+
+        var parsed = JsonRpcSerializer.ReadRequests(json, maxBatchSize);
+
+        if (isBatch)
+        {
+            Assert.True(parsed.IsBatch);
+            Assert.Equal(3, parsed.Entries.Count);
+        }
+        else
+        {
+            Assert.False(parsed.IsBatch);
+            var entry = Assert.Single(parsed.Entries);
+            Assert.False(entry.IsValid);
+            Assert.Equal(JsonRpcErrorCodes.InvalidRequest, entry.Error!.Code);
+        }
+    }
+
+    [Theory]
     [DisplayName("Serializer: string, number and null ids round-trip")]
     [InlineData("\"abc\"")]
     [InlineData("42")]

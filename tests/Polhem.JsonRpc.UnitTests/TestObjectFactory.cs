@@ -8,10 +8,15 @@ namespace Polhem.JsonRpc.UnitTests;
 /// </summary>
 internal sealed class TestObjectFactory : IJsonRpcObjectFactory
 {
+    // The longest ProgId a method name may carry; one character more is not a method name.
+    public const string LongProgId = "Long-ProgId_That_Fills_Every_One_Of_The_64_Characters_Allowed-XY";
+
     public object? CreateObject(string progId, JsonRpcRequestContext context) => progId switch
     {
         "Spec" => new SpecTarget(),
         "Disposable" => new DisposableTarget(),
+        LongProgId => new SpecTarget(),
+        LongProgId + "X" => new SpecTarget(),
         _ => null,
     };
 

@@ -34,7 +34,19 @@ public static class JsonRpcSerializer
     /// The entries of the message. Invalid JSON and an empty array each give a single invalid entry, answered with
     /// a single error object.
     /// </returns>
-    public static JsonRpcRequestParseResult ReadRequests(ReadOnlyMemory<byte> utf8Json)
+    public static JsonRpcRequestParseResult ReadRequests(ReadOnlyMemory<byte> utf8Json) => ReadRequests(utf8Json, int.MaxValue);
+
+    /// <summary>
+    /// Reads an incoming message like <see cref="ReadRequests(ReadOnlyMemory{byte})"/>, and refuses a batch larger than
+    /// <paramref name="maxBatchSize"/> before reading any of its entries.
+    /// </summary>
+    /// <param name="utf8Json">The message as UTF-8 JSON.</param>
+    /// <param name="maxBatchSize">The largest number of requests a batch may hold.</param>
+    /// <returns>
+    /// The entries of the message. Invalid JSON, an empty array and a batch larger than <paramref name="maxBatchSize"/>
+    /// each give a single invalid entry, answered with a single error object.
+    /// </returns>
+    public static JsonRpcRequestParseResult ReadRequests(ReadOnlyMemory<byte> utf8Json, int maxBatchSize)
     {
         JsonDocument document;
         try
@@ -54,12 +66,15 @@ public static class JsonRpcSerializer
                 return Single(ReadRequest(root));
             }
 
-            if (root.GetArrayLength() == 0)
+            // The length is known from the parsed document, so an oversized batch is refused before a request object
+            // is built for each of its entries.
+            var length = root.GetArrayLength();
+            if (length == 0 || length > maxBatchSize)
             {
                 return Single(InvalidRequest(JsonRpcId.Null));
             }
 
-            var entries = new List<JsonRpcParsedRequest>(root.GetArrayLength());
+            var entries = new List<JsonRpcParsedRequest>(length);
             foreach (var element in root.EnumerateArray())
             {
                 entries.Add(ReadRequest(element));

@@ -153,6 +153,25 @@ public class PayloadServerTests
         Assert.Equal(expectedDecryptions, policy.KeyRequests);
     }
 
+    [Theory]
+    [DisplayName("Payload server: a plain value of the wrong shape is invalid params, as it is without the payload packages")]
+    [InlineData("Spec.Numbers", "[5, 3]")]
+    [InlineData("Spec.Subtract", """{"minuend": "not a number"}""")]
+    [InlineData("Spec.Abstract", """{"text": "x"}""")]
+    public async Task Call_PlainParamsOfWrongShape_ReturnsInvalidParamsLikeDefaultBinder(string method, string value)
+    {
+        var (rpc, _) = Create(new TestPolicy());
+        var plain = new JsonRpcConnector(new InProcessTransport(DispatcherFixture.Create()));
+        var envelope = DispatcherFixture.Element($$"""{"format": 0, "value": {{value}}}""");
+
+        var withPayload = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(method, envelope));
+        var without = await Assert.ThrowsAsync<JsonRpcErrorException>(
+            () => plain.InvokeAsync<JsonElement>(method, DispatcherFixture.Element(value)));
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, without.Code);
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, withPayload.Code);
+    }
+
     [Fact]
     [DisplayName("Payload server: an encrypted call fails when the application has no key for the caller")]
     public async Task Call_NoKey_IsRejected()

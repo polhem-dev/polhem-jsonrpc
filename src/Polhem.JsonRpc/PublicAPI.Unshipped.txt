@@ -1,1 +1,2 @@
 #nullable enable
+static Polhem.JsonRpc.JsonRpcSerializer.ReadRequests(System.ReadOnlyMemory<byte> utf8Json, int maxBatchSize) -> Polhem.JsonRpc.JsonRpcRequestParseResult!

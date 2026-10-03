@@ -11,6 +11,25 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 - `PayloadOptions.TimeProvider`: the clock frames are stamped with and their timestamps checked against. It defaults to
   the system clock, and `PayloadFilter` passes it to the in-memory replay store it creates.
+- `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`: refuses a batch larger than the limit before reading any of
+  its entries.
+
+### Changed
+
+- `JsonRpcDispatcher` resolves the methods of an object type once, the first time the type is used, and asks the method
+  policy about each of them then, rather than one method name at a time.
+- `PayloadParameterBinder` answers a plain value that is not an object, or that System.Text.Json cannot create, with
+  `-32602 Invalid params` instead of `-32603 Internal error`, as the dispatcher's own binder does.
+
+### Fixed
+
+- A method name the caller made up no longer stays in the dispatcher's method cache, so names that resolve to nothing
+  cannot grow its memory. The lookup runs before any filter, so before authentication.
+- A batch larger than `MaxBatchSize` is refused before a request object is built for each of its entries.
+- An exception from `IJsonRpcObjectFactory.ReleaseObjectAsync` or from `ExceptionMapper` no longer escapes the
+  dispatcher: the call is answered `-32603` and the rest of the batch is answered as usual. A call that already failed
+  keeps its own error.
+- A batch whose caller cancels stops before its next call instead of running every remaining call.
 
 ## [1.0.0] - 2026-10-03
 

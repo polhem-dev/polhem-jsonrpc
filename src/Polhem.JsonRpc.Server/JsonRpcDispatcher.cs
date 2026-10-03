@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -27,7 +28,7 @@ public sealed class JsonRpcDispatcher
 
     private readonly IJsonRpcObjectFactory _objectFactory;
     private readonly IJsonRpcMethodPolicy _policy;
-    private readonly ConcurrentDictionary<(Type Type, string Action), MethodInfo?> _actions = new();
+    private readonly ConcurrentDictionary<Type, FrozenDictionary<string, MethodInfo>> _actions = new();
     private readonly IJsonRpcParameterBinder _binder;
     private readonly IJsonRpcFilter[] _filters;
     private readonly JsonSerializerOptions _serializerOptions;
@@ -70,17 +71,12 @@ public sealed class JsonRpcDispatcher
     public async Task<JsonRpcDispatchResult> DispatchMessageAsync(ReadOnlyMemory<byte> utf8Json, JsonRpcTransportInfo transport, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(transport);
-        var parsed = JsonRpcSerializer.ReadRequests(utf8Json);
-
-        if (parsed.IsBatch && parsed.Entries.Count > _maxBatchSize)
-        {
-            var tooLarge = JsonRpcResponse.Failure(JsonRpcId.Null, new JsonRpcError(JsonRpcErrorCodes.InvalidRequest, InvalidRequestMessage));
-            return new JsonRpcDispatchResult(isBatch: false, [tooLarge]);
-        }
+        var parsed = JsonRpcSerializer.ReadRequests(utf8Json, _maxBatchSize);
 
         var responses = new List<JsonRpcResponse>(parsed.Entries.Count);
         foreach (var entry in parsed.Entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!entry.IsValid)
             {
                 responses.Add(JsonRpcResponse.Failure(entry.ErrorId, entry.Error));
@@ -111,6 +107,7 @@ public sealed class JsonRpcDispatcher
         var responses = new List<JsonRpcResponse>(requests.Count);
         foreach (var request in requests)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var response = await DispatchAsync(request, transport, cancellationToken).ConfigureAwait(false);
             if (response is not null) { responses.Add(response); }
         }
@@ -130,7 +127,7 @@ public sealed class JsonRpcDispatcher
         ArgumentNullException.ThrowIfNull(transport);
         var context = new JsonRpcRequestContext(request, transport, cancellationToken) { SerializerOptions = _serializerOptions };
 
-        JsonRpcResponse response;
+        JsonRpcResponse? response = null;
         object? instance = null;
         try
         {
@@ -158,19 +155,43 @@ public sealed class JsonRpcDispatcher
         {
             // NOTE: this is the boundary between the caller and the host's code. Every failure, including one the
             // host did not foresee, has to become an error response; letting it escape would end the whole batch or
-            // the HTTP request instead of answering this one call.
+            // the HTTP request instead of answering this one call. The release and the exception mapper are held to
+            // the same rule; `DispatcherTests` pins all three with the `..._ReleaseThrows_...` and
+            // `..._ExceptionMapperThrows_...` tests and `DispatchAsync_UnexpectedException_DoesNotLeakMessage`.
             response = JsonRpcResponse.Failure(request.Id, MapException(ex, context));
         }
         finally
         {
-            if (instance is not null)
+            if (instance is not null
+                && await ReleaseObjectAsync(instance, context).ConfigureAwait(false) is { } releaseError
+                && response is { IsSuccess: true })
             {
-                await _objectFactory.ReleaseObjectAsync(instance, context).ConfigureAwait(false);
+                // A call that failed keeps its own error; one that succeeded is answered with the release's.
+                response = JsonRpcResponse.Failure(request.Id, releaseError);
             }
         }
 
         if (request.IsNotification) { return null; }
-        return response;
+        return response!;
+    }
+
+    private async ValueTask<JsonRpcError?> ReleaseObjectAsync(object instance, JsonRpcRequestContext context)
+    {
+        try
+        {
+            await _objectFactory.ReleaseObjectAsync(instance, context).ConfigureAwait(false);
+            return null;
+        }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // NOTE: the release is the host's code as well, so its failure is answered like any other instead of
+            // ending the batch, or the HTTP request, after its calls have already run.
+            return MapException(ex, context);
+        }
     }
 
     private ValueTask RunFiltersAsync(JsonRpcRequestContext context, int index)
@@ -188,27 +209,26 @@ public sealed class JsonRpcDispatcher
         context.ReturnType = valueType;
     }
 
-    // Exact, case-sensitive name match, like the Polhem framework's `Type.GetMethod(action)`. A name with more than
-    // one resolvable method is ambiguous and not resolved.
-    private MethodInfo? FindAction(Type type, string action) => _actions.GetOrAdd((type, action), ResolveAction);
+    // Exact, case-sensitive name match, like the Polhem framework's `Type.GetMethod(action)`. The table is built once
+    // per object type, from the application's code only, so a name the caller makes up is looked up but never stored.
+    private MethodInfo? FindAction(Type type, string action) => _actions.GetOrAdd(type, ResolveActions).GetValueOrDefault(action);
 
-    // The suppression sits on this method rather than on `FindAction`: a lambda compiles to a method of its own,
-    // which a suppression on the method that declares it does not cover.
-    [UnconditionalSuppressMessage("Trimming", "IL2080",
+    // The suppression sits on this method rather than on `FindAction`, which only hands it to the cache as a
+    // delegate: the reflection runs here.
+    [UnconditionalSuppressMessage("Trimming", "IL2070",
         Justification = "The constructor requires unreferenced code; the object types come from the application's factory.")]
-    private MethodInfo? ResolveAction((Type Type, string Action) key)
+    private FrozenDictionary<string, MethodInfo> ResolveActions(Type type)
     {
-        MethodInfo? found = null;
-        foreach (var candidate in key.Type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+        // A name with more than one resolvable method is ambiguous and not resolved; null marks it.
+        var actions = new Dictionary<string, MethodInfo?>(StringComparer.Ordinal);
+        foreach (var candidate in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (!string.Equals(candidate.Name, key.Action, StringComparison.Ordinal) || !JsonRpcMethod.IsResolvableAction(candidate))
-            {
-                continue;
-            }
-            if (found is not null) { return null; }
-            found = candidate;
+            if (!JsonRpcMethod.IsResolvableAction(candidate)) { continue; }
+            actions[candidate.Name] = actions.ContainsKey(candidate.Name) ? null : candidate;
         }
-        return found is not null && _policy.IsCallable(found) ? found : null;
+        return actions
+            .Where(pair => pair.Value is not null && _policy.IsCallable(pair.Value))
+            .ToFrozenDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal);
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2075",
@@ -252,11 +272,25 @@ public sealed class JsonRpcDispatcher
     private JsonRpcError MapException(Exception exception, JsonRpcRequestContext context)
     {
         if (exception is JsonRpcErrorException rpc) { return rpc.Error; }
-        if (_exceptionMapper?.Invoke(exception, context) is { } mapped) { return mapped; }
+        if (MapWithHostMapper(exception, context) is { } mapped) { return mapped; }
 
         JsonElement? data = _includeExceptionDetails
             ? JsonSerializer.SerializeToElement(exception.Message, JsonRpcServerJsonContext.Default.String)
             : null;
         return new JsonRpcError(JsonRpcErrorCodes.InternalError, InternalErrorMessage, data);
+    }
+
+    private JsonRpcError? MapWithHostMapper(Exception exception, JsonRpcRequestContext context)
+    {
+        try
+        {
+            return _exceptionMapper?.Invoke(exception, context);
+        }
+        catch (Exception)
+        {
+            // NOTE: a mapper that throws must not turn the failure of one call into the loss of the whole batch, so it
+            // falls back to the default answer, which reveals the mapper's exception no more than the original's.
+            return null;
+        }
     }
 }

@@ -87,6 +87,42 @@ public class DispatcherTests
         Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
     }
 
+    [Theory]
+    [DisplayName("A ProgId of exactly 64 characters is resolved, and one of 65 is not a method name")]
+    [InlineData(TestObjectFactory.LongProgId, false)]
+    [InlineData(TestObjectFactory.LongProgId + "X", true)]
+    public async Task DispatchAsync_ProgIdAtLengthLimit_IsResolvedUpTo64(string progId, bool refused)
+    {
+        var response = await CallAsync(DispatcherFixture.Create(), progId + ".Subtract", """{"minuend": 5, "subtrahend": 3}""");
+
+        if (refused)
+        {
+            Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+        }
+        else
+        {
+            Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
+        }
+    }
+
+    [Fact]
+    [DisplayName("Names the caller makes up are looked up but never cached, so they cannot grow the dispatcher's memory")]
+    public async Task DispatchAsync_ManyUnknownActions_CacheHoldsOneEntryPerType()
+    {
+        var dispatcher = DispatcherFixture.Create();
+
+        for (var i = 0; i < 1000; i++)
+        {
+            await CallAsync(dispatcher, $"Spec.Unknown{i}", "{}");
+        }
+        await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""");
+
+        // White-box on purpose: the size of the cache is the property, and nothing public reveals it.
+        var cache = (System.Collections.ICollection)typeof(JsonRpcDispatcher)
+            .GetField("_actions", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(dispatcher)!;
+        Assert.Single(cache.Cast<object>());
+    }
+
     [Fact]
     [DisplayName("A public method outside the {Action}Request/{Action}Response convention is not callable")]
     public async Task DispatchAsync_UnconventionalMethod_ReturnsMethodNotFound()
@@ -368,6 +404,65 @@ public class DispatcherTests
         Assert.Equal([JsonRpcTransportKind.InProcess], seen);
     }
 
+    [Fact]
+    [DisplayName("A release that throws answers a call that succeeded with -32603, keeps the error of one that failed, and leaves the rest of the batch answered")]
+    public async Task DispatchMessageAsync_ReleaseThrows_AnswersEachCall()
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.ObjectFactory = new ThrowingReleaseFactory());
+        const string Batch = """
+            [{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": 3, "subtrahend": 1}, "id": 1},
+             {"jsonrpc": "2.0", "method": "Spec.Reject", "params": {"text": "x"}, "id": 2}]
+            """;
+
+        using var answer = await DispatcherFixture.RunAsync(dispatcher, Batch);
+
+        var codes = answer!.RootElement.EnumerateArray()
+            .ToDictionary(r => r.GetProperty("id").GetInt32(), r => r.GetProperty("error").GetProperty("code").GetInt32());
+        Assert.Equal(JsonRpcErrorCodes.InternalError, codes[1]);
+        Assert.Equal(-32050, codes[2]);
+    }
+
+    [Fact]
+    [DisplayName("An exception mapper that throws falls back to the default -32603 and leaves the rest of the batch answered")]
+    public async Task DispatchMessageAsync_ExceptionMapperThrows_FallsBackToInternalError()
+    {
+        var dispatcher = DispatcherFixture.Create(o => o.ExceptionMapper = (_, _) => throw new InvalidOperationException("Mapper bug"));
+        const string Batch = """
+            [{"jsonrpc": "2.0", "method": "Spec.Fail", "params": {"text": "x"}, "id": 1},
+             {"jsonrpc": "2.0", "method": "Spec.Subtract", "params": {"minuend": 3, "subtrahend": 1}, "id": 2}]
+            """;
+
+        using var answer = await DispatcherFixture.RunAsync(dispatcher, Batch);
+
+        var responses = answer!.RootElement.EnumerateArray().ToDictionary(r => r.GetProperty("id").GetInt32());
+        Assert.Equal(JsonRpcErrorCodes.InternalError, responses[1].GetProperty("error").GetProperty("code").GetInt32());
+        Assert.Equal("Internal error", responses[1].GetProperty("error").GetProperty("message").GetString());
+        Assert.Equal(2, responses[2].GetProperty("result").GetProperty("difference").GetInt32());
+    }
+
+    [Theory]
+    [DisplayName("A batch whose caller cancels stops before its next call")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DispatchBatch_CancelledMidway_StopsBeforeNextCall(bool asMessage)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new CancelAfterCallFilter(cancellation)));
+        var first = Guid.NewGuid().ToString();
+        var second = Guid.NewGuid().ToString();
+        var requests = new[] { first, second }
+            .Select((text, i) => new JsonRpcRequest("Spec.Update", DispatcherFixture.Element($$"""{"text": "{{text}}"}"""), JsonRpcId.FromNumber(i)))
+            .ToList();
+
+        Task run = asMessage
+            ? dispatcher.DispatchMessageAsync(JsonRpcSerializer.SerializeRequests(requests), DispatcherFixture.Http(), cancellation.Token)
+            : dispatcher.DispatchBatchAsync(requests, DispatcherFixture.Http(), cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+        Assert.Contains(first, SpecTarget.Updates);
+        Assert.DoesNotContain(second, SpecTarget.Updates);
+    }
+
     private sealed class AllowAllPolicy : IJsonRpcMethodPolicy
     {
         public bool IsCallable(MethodInfo method) => true;
@@ -416,6 +511,26 @@ public class DispatcherTests
             await next(context);
             var response = (DescribeResponse)context.ReturnValue!;
             context.Result = JsonSerializer.SerializeToElement($"{response.Kind.Name}:{response.Text}");
+        }
+    }
+
+    private sealed class ThrowingReleaseFactory : IJsonRpcObjectFactory
+    {
+        private readonly TestObjectFactory _inner = new();
+
+        public object? CreateObject(string progId, JsonRpcRequestContext context) => _inner.CreateObject(progId, context);
+
+        public ValueTask ReleaseObjectAsync(object instance, JsonRpcRequestContext context) =>
+            throw new InvalidOperationException("Release failed");
+    }
+
+    // Lets the call run, then cancels, as a client that disconnects during a batch.
+    private sealed class CancelAfterCallFilter(CancellationTokenSource cancellation) : IJsonRpcFilter
+    {
+        public async ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            await next(context);
+            await cancellation.CancelAsync();
         }
     }
 

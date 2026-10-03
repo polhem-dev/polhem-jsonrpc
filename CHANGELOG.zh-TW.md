@@ -11,6 +11,23 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 - `PayloadOptions.TimeProvider`：寫入 frame 時間戳與檢查時間戳所用的時鐘，預設為系統時鐘；`PayloadFilter` 自行建立的記憶體
   replay store 也使用它。
+- `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`：批次超過上限時，在讀取任何項目之前就拒絕。
+
+### 變更
+
+- `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy，
+  而不再逐個方法名稱處理。
+- `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
+  而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
+
+### 修正
+
+- 呼叫端自行編造的方法名稱不再留在 dispatcher 的方法快取中，解析不到任何方法的名稱無法再讓記憶體成長。
+  這個查找在任何 filter 之前執行，也就是在驗證之前。
+- 超過 `MaxBatchSize` 的批次會在逐一建立請求物件之前就被拒絕。
+- `IJsonRpcObjectFactory.ReleaseObjectAsync` 或 `ExceptionMapper` 擲出的例外不再逃出 dispatcher：該呼叫回
+  `-32603`，批次中其餘呼叫照常回應；原本就已失敗的呼叫保留它自己的錯誤。
+- 呼叫端取消的批次會在下一個呼叫之前停止，不再把剩下的呼叫全部跑完。
 
 ## [1.0.0] - 2026-10-03
 

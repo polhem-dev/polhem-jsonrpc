@@ -8,6 +8,8 @@ namespace Polhem.JsonRpc.Server;
 /// <c>null</c> (the default value for a value type); an array is rejected, because a method has one parameter and
 /// positional parameters would have to be matched by position.
 /// </summary>
+// NOTE: `PayloadParameterBinder` in Polhem.JsonRpc.Payload.Server applies the same rules to a plain payload value.
+// `PayloadServerTests.Call_PlainParamsOfWrongShape_ReturnsInvalidParamsLikeDefaultBinder` sends the same inputs to both.
 internal sealed class DefaultParameterBinder(JsonSerializerOptions options) : IJsonRpcParameterBinder
 {
     private const string InvalidParamsMessage = "Invalid params";
