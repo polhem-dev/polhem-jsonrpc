@@ -21,6 +21,11 @@ public static class JsonRpcServerOptionsPayloadExtensions
     /// added after it see the opened <see cref="PayloadRequest"/> and the method's own return value. Set another
     /// parameter binder afterwards to replace <see cref="PayloadParameterBinder"/>.
     /// <para>
+    /// <see cref="InvalidPayloadException"/> covers a malformed envelope, a call below the format
+    /// <see cref="IPayloadServerPolicy.GetMinimumFormat"/> answers, and a plain or encoded call that
+    /// <see cref="IPayloadServerPolicy.RequiresUniqueSequence"/> refuses.
+    /// </para>
+    /// <para>
     /// The <see cref="JsonRpcServerOptions.ExceptionMapper"/> set before this call keeps answering first; only an
     /// exception it leaves (returns <see langword="null"/> for) is mapped here. Every other payload failure, a replayed
     /// frame, a failed HMAC, a foreign type name or a missing key alike, is left to the default

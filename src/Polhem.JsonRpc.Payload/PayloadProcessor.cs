@@ -220,9 +220,20 @@ public sealed class PayloadProcessor
         var codec = _options.ResolveCodec(envelope.Codec);
         try
         {
-            var plain = budget is null
-                ? _options.Compressor.Decompress(bytes)
-                : _options.Compressor.Decompress(bytes, budget.Remaining);
+            byte[] plain;
+            try
+            {
+                plain = budget is null
+                    ? _options.Compressor.Decompress(bytes)
+                    : _options.Compressor.Decompress(bytes, budget.Remaining);
+            }
+            catch (Exception) when (budget is not null)
+            {
+                // A body that fails to decompress has already cost what it decompressed before failing, up to the whole
+                // remainder. Charging the remainder keeps the next call of the batch from starting over at it.
+                budget.Spend(budget.Remaining);
+                throw;
+            }
             budget?.Spend(plain.Length);
             return codec.Deserialize(plain, type);
         }

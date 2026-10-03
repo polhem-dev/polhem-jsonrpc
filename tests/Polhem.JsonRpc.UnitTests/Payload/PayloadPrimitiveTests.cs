@@ -23,6 +23,14 @@ public class PayloadPrimitiveTests
         Assert.Equal(json, new GzipPayloadCompressor().Decompress(json));
     }
 
+    [Fact(DisplayName = "Gzip: a budget larger than the compressor's own limit does not lift that limit")]
+    public void Gzip_DecompressWithLargerBudget_KeepsOwnLimit()
+    {
+        var compressed = new GzipPayloadCompressor().Compress(new byte[4096]);
+
+        Assert.Throws<InvalidDataException>(() => new GzipPayloadCompressor(1024).Decompress(compressed, long.MaxValue));
+    }
+
     [Fact(DisplayName = "Gzip: a body that compresses very well decompresses up to the size limit")]
     public void Gzip_DecompressHighlyCompressible_Succeeds()
     {

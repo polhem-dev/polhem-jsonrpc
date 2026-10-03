@@ -17,13 +17,14 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `JsonRpcRequestContext.MessageItems`：同一則訊息的所有呼叫共用的值（單一呼叫，或 batch 的全部呼叫），供需要為整則訊息計量的 filter 使用。
 - `PayloadOptions.MaxDecompressedBytesPerMessage`（預設 50 MiB）：伺服器為一則訊息（單一呼叫或整個 batch）解壓的總量上限。
   由 `PayloadDecompressionBudget`、`IPayloadCompressor.Decompress(byte[], long)`（含預設實作）與 `PayloadProcessor.OpenRequest`
-  的一個多載承載。
+  的一個多載承載。`PayloadFilter` 只在建立時讀取一次這個設定。
 
 ### 變更
 
 - `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy
-  （每個方法只問一次），而不再逐個方法名稱處理；答案在 dispatcher 存續期間保留。policy 擲出例外的方法不可呼叫，
-  該型別的其他方法不受影響。
+  （每個方法只問一次），而不再逐個方法名稱處理；答案在 dispatcher 存續期間保留。
+- **wire 可見：** policy 擲出例外的方法不可呼叫，每次都回 `-32601 Method not found`；該型別的其他方法不受影響。
+  先前每次呼叫都以 `-32603` 失敗，或由主機的 `ExceptionMapper` 轉換該例外。
 - **wire 可見：** `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
 - **wire 可見：** `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼，或低於方法最低格式的呼叫）回 `-32602 Invalid params`，而非 `-32603 Internal error`。
@@ -41,13 +42,18 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - **wire 可見：** 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
 - **行為變更：** record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
 - **wire 格式（讀取端）：** `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
-  所有讀取端都接受之後，寫出端才會送出未壓縮的內容。解壓的唯一上限仍是每個內容 `MaxDecompressedBytes`（50 MiB）；
-  encoded 內容不需金鑰就會被解壓，在意的部署請以 `IPayloadServerPolicy.GetMinimumFormat` 要求加密呼叫。
-- **wire 可見：** `IPayloadServerPolicy.RequiresUniqueSequence` 為 true 的方法，拒絕 plain 與 encoded 呼叫並回 `-32602`。
+  所有讀取端都接受之後，寫出端才會送出未壓縮的內容。encoded 內容不需金鑰就會被解壓；除了下方的解壓上限，
+  在意的部署請以 `IPayloadServerPolicy.GetMinimumFormat` 要求加密呼叫。
+- **wire 可見：** 在會檢查序號的部署（`PayloadOptions.RequireFrame` 開啟，且 `IPayloadServerPolicy.GetReplayScope`
+  回傳了 replay scope），`RequiresUniqueSequence` 為 true 的方法拒絕 plain 與 encoded 呼叫並回 `-32602`。
   只有加密的 frame 受 HMAC 保護；encoded 呼叫的 frame 誰都能寫，既無法證明序號是新的，也不能讓它推進 scope 的 window。
-  在 1.0.0，這類呼叫會被檢查，而偽造的呼叫可使之後合法的加密呼叫被拒。
-- 一個 batch 共用一份解壓額度（`MaxDecompressedBytesPerMessage`）。encoded 內容不需金鑰就會解壓；以最高壓縮等級的 gzip，
-  一個含 62 個內容的 4 MiB 請求原本可讓伺服器配置約 11 GiB、耗費約 10 秒 CPU。
+  在 1.0.0，encoded 呼叫會被檢查，偽造的呼叫可使之後合法的加密呼叫被拒；plain 呼叫沒有 frame，從未被檢查。
+  沒有 frame 或沒有 scope 時，一如以往，不檢查也不拒絕。
+- **行為變更：** 一則訊息共用一份解壓額度（`MaxDecompressedBytesPerMessage`）：單一呼叫，或 batch 的全部呼叫；
+  每個呼叫使用前面的呼叫剩下的額度，notification 也算在內。encoded 內容不需金鑰就會解壓；以最高壓縮等級的 gzip，
+  一個含 62 個內容的 4 MiB 請求原本可讓伺服器配置約 11 GiB、耗費約 10 秒 CPU。這份額度疊加在每個內容自己的上限
+  `GzipPayloadCompressor.MaxDecompressedBytes` 之上，兩者互不放寬。解壓失敗的內容會用掉剩餘的全部額度；
+  未壓縮送出的內容依其長度計入額度。
 
 ### 修正
 

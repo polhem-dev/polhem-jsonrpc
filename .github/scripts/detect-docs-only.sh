@@ -20,7 +20,7 @@ if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ] && git rev-parse -q --verify 'H
   files=$(git diff --name-only --no-renames 'HEAD^1' HEAD)
   echo "Changed files:"
   printf '%s\n' "$files"
-  if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qv '\.md$'; then
+  if [ -n "$files" ] && ! grep -qv '\.md$' <<< "$files"; then
     build=false
     # A Markdown file with a C# snippet is checked by ReadmeSnippetTests, which reads it at test time, so a change to
     # one builds. Both sides are looked at, so adding, changing or removing a snippet all count.

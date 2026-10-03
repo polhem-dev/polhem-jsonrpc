@@ -6,13 +6,16 @@ namespace Polhem.JsonRpc.Payload;
 /// Compresses payload bodies with gzip, and refuses to decompress beyond a size limit.
 /// </summary>
 /// <remarks>
-/// The limit guards against a small body that expands without bound. It applies to each body: a batch makes the server
-/// decompress each of its bodies up to it, and an encoded body is decompressed without a key, so a deployment that cares
-/// requires encrypted calls (<c>IPayloadServerPolicy.GetMinimumFormat</c>).
+/// The limit guards against a small body that expands without bound. It applies to each body. A server also bounds what
+/// one message decompresses in total, the call alone or all the calls of a batch, with
+/// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/>; a body stops at whichever of the two it reaches first.
+/// An encoded body is decompressed without a key, so a deployment that cares requires encrypted calls
+/// (<c>IPayloadServerPolicy.GetMinimumFormat</c>).
 /// <para>
-/// A body that does not start with the gzip header is read as it is, uncompressed. JSON and MessagePack bodies never
-/// start with those bytes, so a writer may leave a small body uncompressed once every reader accepts that
-/// (ADR-002, decision 2, amended).
+/// A body that does not start with the gzip header (<c>1F 8B</c>) is read as it is, uncompressed. A body written by the
+/// built-in JSON codec, or by MessagePack, never starts with those bytes; a custom codec may, so a writer that leaves a
+/// body uncompressed must still compress one that starts with them. Writers leave small bodies uncompressed only once
+/// every reader accepts that (ADR-002, decision 2, amended).
 /// </para>
 /// </remarks>
 public sealed class GzipPayloadCompressor : IPayloadCompressor

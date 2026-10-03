@@ -3,6 +3,9 @@ namespace Polhem.JsonRpc.AspNetCore;
 /// <summary>
 /// Settings for <see cref="JsonRpcHttpHandler"/>.
 /// </summary>
+/// <remarks>
+/// The handler reads these settings on each request, so a change applies from the next request on.
+/// </remarks>
 public sealed class JsonRpcHttpOptions
 {
     /// <summary>

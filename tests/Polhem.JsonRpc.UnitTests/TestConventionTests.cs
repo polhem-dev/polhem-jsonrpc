@@ -8,10 +8,14 @@ namespace Polhem.JsonRpc.UnitTests;
 /// </summary>
 public class TestConventionTests
 {
+    // Non-public and static test methods count too: xUnit runs a [Fact] whatever its accessibility.
+    private const BindingFlags Declared =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+
     public static TheoryData<string> TestMethods =>
     [
         .. typeof(TestConventionTests).Assembly.GetTypes()
-            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            .SelectMany(type => type.GetMethods(Declared))
             .Where(method => method.GetCustomAttribute<FactAttribute>() is not null)
             .Select(method => $"{method.DeclaringType!.Name}.{method.Name}"),
     ];
@@ -34,7 +38,7 @@ public class TestConventionTests
     {
         var dot = test.IndexOf('.', StringComparison.Ordinal);
         return typeof(TestConventionTests).Assembly.GetTypes()
-            .Single(type => type.Name == test[..dot] && type.GetMethod(test[(dot + 1)..]) is not null)
-            .GetMethod(test[(dot + 1)..])!;
+            .Single(type => type.Name == test[..dot] && type.GetMethod(test[(dot + 1)..], Declared) is not null)
+            .GetMethod(test[(dot + 1)..], Declared)!;
     }
 }
