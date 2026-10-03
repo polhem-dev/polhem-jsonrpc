@@ -6,7 +6,8 @@ A JSON-RPC server whose parameters and results travel encrypted, with replay pro
 `Polhem.JsonRpc.Payload.Server` package on top of [QuickStart.Server](../QuickStart.Server/README.md). It answers
 `Calculator.Add` at `http://localhost:5081/api`.
 
-Both ends need the same 64-byte key. Generate one and export it in each terminal:
+Both ends need the same 64-byte demo key, from which each client's own key is derived. Generate one and export it in
+each terminal:
 
 ```bash
 export PayloadDemoKey=$(openssl rand -base64 64 | tr -d '\n')
@@ -19,14 +20,23 @@ dotnet run --project samples/PayloadQuickStart.Server
 
 ```csharp
 var payload = new PayloadOptions { RequireFrame = true };
-builder.Services.AddJsonRpcServer(options => options.UsePayload(payload, policy));
+builder.Services.AddJsonRpcServer(options =>
+{
+    options.ExceptionMapper = (exception, _) => exception is ReplayRejectedException
+        ? new JsonRpcError(-32005, "Replay rejected")
+        : null;
+    options.UsePayload(payload, policy);
+});
 ```
+
+The exception mapper answers a replayed call with `-32005`, a code this sample chooses; without it every payload failure
+is `-32603`. It is set before `UsePayload`, which keeps it answering first and maps a malformed envelope to `-32602`.
 
 The filter asks the application what only it knows (`DemoKeyPolicy.cs`): the key of a call, the scope a sequence
 number must be unique in, whether the method rejects a repeated one, and the lowest format it accepts.
 
 ```csharp
-public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context) => ValueTask.FromResult<byte[]?>(key);
+public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context) => /* derived from the demo key and X-Client-Id */;
 public string? GetReplayScope(JsonRpcRequestContext context) => /* the X-Client-Id header */;
 public bool RequiresUniqueSequence(JsonRpcRequestContext context) => true;
 public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadFormat.Encrypted;
@@ -41,7 +51,10 @@ public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadF
 - The server decides the type a request decodes into, the parameter type of the method, and the `type` the client
   writes is only checked against it. So no contract type is registered: the methods the server exposes are the
   allow-list.
-- One key for every client keeps the sample short. A real application gives each session its own key, agreed at
+- The replay scope must be something the key authenticates, or a captured call replayed under a new scope is accepted
+  again. The `X-Client-Id` header is not authenticated by itself, so the key is derived from it
+  (`HMACSHA512(demoKey, clientId)`): a call replayed under another client id fails its HMAC.
+- Deriving keys from one demo key keeps the sample short. A real application gives each session its own key, agreed at
   sign-in, and uses the session as the replay scope. How keys are agreed is outside the payload packages.
 - `MemoryPayloadReplayStore` remembers sequence numbers in the process. Several server instances need a shared
   `IPayloadReplayStore`.

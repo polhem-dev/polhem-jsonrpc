@@ -16,8 +16,9 @@ public sealed class JsonRpcHttpOptions
     /// to answer every call with 200.
     /// </summary>
     /// <remarks>
-    /// The JSON-RPC error is in the body whatever the status is. A host uses this to keep an older wire format that
-    /// answers some errors with 4xx or 5xx. A batch is always answered with 200, because its responses may disagree.
+    /// The JSON-RPC error is in the body whatever the status is. A host uses this to answer some errors with a 4xx or
+    /// 5xx status, for proxies and logs that read the status. A batch is always answered with 200, because its responses
+    /// may disagree.
     /// </remarks>
     public Func<JsonRpcResponse, int>? StatusCodeSelector { get; set; }
 }

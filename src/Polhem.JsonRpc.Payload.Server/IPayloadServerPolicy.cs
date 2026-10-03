@@ -21,6 +21,11 @@ public interface IPayloadServerPolicy
     /// <summary>
     /// Gets the scope a sequence number must be unique in, usually the caller's session.
     /// </summary>
+    /// <remarks>
+    /// IMPORTANT: take the scope from something the call's key authenticates, such as the session the key belongs to.
+    /// A scope read from an unauthenticated header lets a captured call be replayed under a new scope, where its
+    /// sequence number has not been seen.
+    /// </remarks>
     /// <param name="context">The request context.</param>
     /// <returns>The scope, or <see langword="null"/> when sequence numbers are not checked for this caller.</returns>
     string? GetReplayScope(JsonRpcRequestContext context) => null;

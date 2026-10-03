@@ -33,6 +33,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   `SerializerOptions` was read then, and the rest on every call, so adding an interceptor while calls ran could throw.
 - `JsonRpcConnector` refuses a response that carries the id of another request, and an `IdGenerator` that returns no
   id. A batch refuses a call whose id is null or already in the batch.
+- The PayloadQuickStart sample derives each client's key from the demo key and its `X-Client-Id`, so a call replayed
+  under another client id no longer starts over in a fresh replay scope. It also requires encrypted calls.
 
 ### Fixed
 
@@ -50,6 +52,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - A batch whose `IdGenerator` repeated an id left a task that never completed.
 - The non-generic `InvokeAsync` and `InvokeAsync<JsonElement>` no longer need `JsonElement` in a source-generated
   serializer context, so they work under Native AOT; the non-generic one does not read the result at all.
+- A trimmed application, such as an iOS head, no longer gets warning IL2072 from `PayloadParameterBinder` or
+  `DefaultParameterBinder`. `Polhem.JsonRpc.Server`, `Polhem.JsonRpc.AspNetCore` and `Polhem.JsonRpc.Payload.Server`
+  now run the trim analyzer, though they still do not claim to support trimming.
 
 ## [1.0.0] - 2026-10-03
 

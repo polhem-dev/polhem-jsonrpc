@@ -159,7 +159,7 @@ public static class JsonRpcSerializer
     /// <remarks>
     /// Reading is lenient where a server that predates this library differs from the specification: a missing
     /// <c>id</c> reads as <see cref="JsonRpcId.Null"/>, a response with neither <c>result</c> nor <c>error</c> reads
-    /// as a success with no result, and members other than the four the specification defines are ignored.
+    /// as a success with no result, and members other than <c>jsonrpc</c>, <c>result</c>, <c>error</c> and <c>id</c> are ignored.
     /// </remarks>
     public static JsonRpcResponse ReadResponse(JsonElement element)
     {

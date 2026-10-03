@@ -5,9 +5,10 @@ namespace Polhem.JsonRpc.Server;
 /// came with it.
 /// </summary>
 /// <remarks>
-/// IMPORTANT: only transport code creates this object, and <see cref="Kind"/> is never taken from the request
-/// itself. A host may grant in-process calls more than remote ones, so a remote caller must not be able to claim to
-/// be in process through a header or a parameter.
+/// IMPORTANT: only transport code should create this object, and it must never take <see cref="Kind"/> from the
+/// request itself. A host may grant in-process calls more than remote ones, so a remote caller must not be able to
+/// claim to be in process through a header or a parameter. The built-in transports set the kind themselves;
+/// <c>HttpHandlerTests.Post_HeaderClaimsInProcess_StillMarkedHttp</c> holds the HTTP one to it.
 /// </remarks>
 public sealed class JsonRpcTransportInfo
 {
@@ -22,7 +23,10 @@ public sealed class JsonRpcTransportInfo
     /// </summary>
     /// <param name="kind">The transport that delivered the call.</param>
     /// <param name="services">The services of the call's scope, or <c>null</c> when there are none.</param>
-    /// <param name="headers">The headers that came with the call, compared case-insensitively, or <c>null</c>.</param>
+    /// <param name="headers">
+    /// The headers that came with the call, or <c>null</c>. Pass a dictionary that compares names case-insensitively, as
+    /// the HTTP transport does, because header names are case-insensitive.
+    /// </param>
     /// <param name="remoteAddress">The address of the caller, or <c>null</c> when unknown.</param>
     /// <param name="items">Values the transport passes to filters and the object factory, or <c>null</c>.</param>
     public JsonRpcTransportInfo(

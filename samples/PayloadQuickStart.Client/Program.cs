@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Polhem.JsonRpc;
 using Polhem.JsonRpc.Client;
@@ -10,11 +12,14 @@ if (string.IsNullOrEmpty(base64Key))
     Console.Error.WriteLine("Set PayloadDemoKey to the same Base64 key the server uses.");
     return 1;
 }
-var key = Convert.FromBase64String(base64Key);
+
+// The server counts sequence numbers per client, and derives each client's key from the demo key and its id the same
+// way, so a call replayed under another client id does not decrypt.
+var clientId = Guid.NewGuid().ToString("N");
+var key = HMACSHA512.HashData(Convert.FromBase64String(base64Key), Encoding.UTF8.GetBytes(clientId));
 
 using var http = new HttpClient { BaseAddress = new Uri(args.FirstOrDefault() ?? "http://localhost:5081/api") };
-// The server counts sequence numbers per client.
-http.DefaultRequestHeaders.Add("X-Client-Id", Guid.NewGuid().ToString("N"));
+http.DefaultRequestHeaders.Add("X-Client-Id", clientId);
 var rpc = new JsonRpcConnector(new HttpTransport(http));
 
 // The same options as the server: frames on.

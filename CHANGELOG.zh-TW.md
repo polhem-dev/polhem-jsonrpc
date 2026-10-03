@@ -29,6 +29,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `JsonRpcConnector` 只在建立時讀取一次 `JsonRpcClientOptions`（含 interceptor）。先前只有 `SerializerOptions` 在建立時讀取，
   其餘每次呼叫都重讀，因此在呼叫進行中新增 interceptor 可能擲出例外。
 - `JsonRpcConnector` 拒絕帶著另一個請求 id 的回應，也拒絕不產生 id 的 `IdGenerator`；批次拒絕 id 為 null 或與批次內重複的呼叫。
+- PayloadQuickStart 範例改由示範金鑰與 `X-Client-Id` 推導每個用戶端的金鑰，換一個 client id 重送的呼叫不再落入全新的防重放範圍。
+  範例也改為只接受加密的呼叫。
 
 ### 修正
 
@@ -44,6 +46,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `IdGenerator` 產生重複 id 時，批次中會有一個 task 永遠不會完成。
 - 非泛型的 `InvokeAsync` 與 `InvokeAsync<JsonElement>` 不再需要在 source-generated 序列化 context 中列出 `JsonElement`，
   因此可在 Native AOT 下使用；非泛型版本完全不讀取結果。
+- 經過 trimming 的應用程式（例如 iOS head）不再從 `PayloadParameterBinder` 或 `DefaultParameterBinder` 收到 IL2072 警告。
+  `Polhem.JsonRpc.Server`、`Polhem.JsonRpc.AspNetCore` 與 `Polhem.JsonRpc.Payload.Server` 現在會執行 trim analyzer，
+  但仍不宣稱支援 trimming。
 
 ## [1.0.0] - 2026-10-03
 

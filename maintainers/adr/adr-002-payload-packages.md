@@ -18,6 +18,9 @@ replay are a protocol of their own, and an application that wants an encrypted J
 clients already speak it: the Polhem framework's .NET client and the TypeScript client `polhem-connector-js`. Writing it
 again for each application, from the specification of the bytes, is the error-prone part.
 
+> Corrected (2026-10-03): `polhem-connector-js` speaks the envelope, gzip and the encryption, but not the frame, and
+> reads only the `json` codec. A server that sets `RequireFrame` cannot serve it until it writes frames.
+
 What is specific to Polhem is the policy around it: where the session key comes from, which methods must be encrypted,
 which methods reject a repeated sequence number, which types a `type` member may name, and MessagePack with Polhem's own
 formatters as the default codec.
@@ -62,6 +65,10 @@ Neither package is needed for plain JSON-RPC. The core packages do not reference
 Each of these is pinned by vectors that the Polhem implementation produced before the extraction
 (`tests/Polhem.JsonRpc.UnitTests/Payload/PayloadWireVectorTests.cs`); a vector that has to change means the wire changed.
 
+> Corrected (2026-10-03): the vectors pin what a reader accepts, because each is decoded from Polhem's bytes. What a
+> writer produces is not compared with them, so a writer that drifts, a JSON codec writing other member names for
+> instance, still passes them.
+
 ### 3. The client wraps and unwraps; there is no interceptor
 
 The format of a call (plain, encoded or encrypted), its codec, its key and its sequence number are chosen per call.
@@ -91,6 +98,11 @@ What the filter cannot decide is asked of the application through interfaces:
 
 The package exposes how it reads `format`, so an access filter that runs before it can apply its own rules (Polhem: a
 method that requires encryption rejects a plain call) without parsing the envelope again.
+
+> Amended (2026-10-03): the policy can also answer this itself. `IPayloadServerPolicy.GetMinimumFormat` names the
+> lowest format a method accepts, and the filter refuses a lower one before it asks for a key. Its default accepts every
+> format, so an application with its own access filter is unaffected. Only `Encrypted` binds a caller to the frame: a
+> plain call carries none, and anybody can write the frame of an encoded one.
 
 ### 5. The `type` member goes through an allow-list the application owns
 
