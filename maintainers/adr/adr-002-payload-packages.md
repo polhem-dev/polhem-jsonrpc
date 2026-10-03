@@ -59,7 +59,8 @@ Neither package is needed for plain JSON-RPC. The core packages do not reference
 - **Compression** is gzip, with a limit on the decompressed size, because a small compressed body can expand without
   bound.
 
-Each of these is pinned by test vectors captured from the Polhem implementation before the extraction.
+Each of these is pinned by vectors that the Polhem implementation produced before the extraction
+(`tests/Polhem.JsonRpc.UnitTests/Payload/PayloadWireVectorTests.cs`); a vector that has to change means the wire changed.
 
 ### 3. The client wraps and unwraps; there is no interceptor
 
