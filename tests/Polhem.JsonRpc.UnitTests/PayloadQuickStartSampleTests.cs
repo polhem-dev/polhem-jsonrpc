@@ -76,11 +76,13 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
         Assert.Equal(JsonRpcErrorCodes.InternalError, ex.Code);
     }
 
-    [Fact(DisplayName = "PayloadQuickStart sample: a plain call is refused with -32602, because the sample requires encryption")]
-    public async Task CalculatorAdd_Plain_IsRefused()
+    [Theory(DisplayName = "PayloadQuickStart sample: a plain or encoded call is refused with -32602, because the sample requires encryption")]
+    [InlineData(PayloadFormat.Plain)]
+    [InlineData(PayloadFormat.Encoded)]
+    public async Task CalculatorAdd_BelowEncrypted_IsRefused(PayloadFormat format)
     {
         var (rpc, _) = Connect();
-        var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Plain);
+        var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, format, sequence: 1);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters));
 
