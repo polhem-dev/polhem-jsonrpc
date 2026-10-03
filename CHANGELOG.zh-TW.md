@@ -17,8 +17,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ### 變更
 
-- `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy，
-  而不再逐個方法名稱處理。
+- `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy
+  （每個方法只問一次），而不再逐個方法名稱處理；答案在 dispatcher 存續期間保留。policy 擲出例外的方法不可呼叫，
+  該型別的其他方法不受影響。
 - `PayloadParameterBinder` 收到不是物件、或 System.Text.Json 無法建立的 plain 值時，回 `-32602 Invalid params`
   而非 `-32603 Internal error`，與 dispatcher 自己的 binder 一致。
 - `UsePayload` 對 `InvalidPayloadException`（格式錯誤的外殼）回 `-32602 Invalid params`，而非 `-32603 Internal error`。

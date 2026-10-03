@@ -8,6 +8,11 @@ namespace Polhem.JsonRpc.Server;
 /// <remarks>
 /// The default is <see cref="JsonRpcNamingConventionPolicy"/>. A host replaces it to admit methods by its own rule,
 /// for example by an attribute that also carries access requirements.
+/// <para>
+/// <see cref="JsonRpcDispatcher"/> asks about every method of a type once, the first time an object of that type is
+/// called, and keeps the answers for its whole life: a rule that should change while the server runs belongs in a
+/// filter. A method the policy throws for is not callable. <c>DispatcherTests</c> pins both.
+/// </para>
 /// </remarks>
 public interface IJsonRpcMethodPolicy
 {
