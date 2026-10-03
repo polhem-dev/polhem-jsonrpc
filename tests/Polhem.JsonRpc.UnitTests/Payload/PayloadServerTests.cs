@@ -90,6 +90,8 @@ public class PayloadServerTests
     }
 
     [Theory(DisplayName = "Payload server: a frame is accepted up to the timestamp tolerance on either side of the server clock, and refused beyond it")]
+    [InlineData(-300, true)]
+    [InlineData(300, true)]
     [InlineData(-299, true)]
     [InlineData(299, true)]
     [InlineData(-301, false)]
@@ -302,6 +304,65 @@ public class PayloadServerTests
 
         Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result, s_key)).Difference);
     }
+
+    [Theory(DisplayName = "Payload server: without a mapper of the host's, every payload rejection other than a malformed envelope answers the same -32603")]
+    [InlineData("foreign type")]
+    [InlineData("no key")]
+    [InlineData("unknown codec")]
+    [InlineData("frame of another version")]
+    [InlineData("stale timestamp")]
+    public async Task Call_RejectionWithoutHostMapper_ReturnsInternalError(string rejection)
+    {
+        var (rpc, client) = CreateWithoutMapper(new TestPolicy { Key = rejection == "no key" ? null : s_key });
+        var parameters = rejection switch
+        {
+            "foreign type" => client.Wrap(new UpperRequest("a"), PayloadFormat.Encoded, sequence: 1),
+            "unknown codec" => DispatcherFixture.Element("""{"format": 1, "value": "AAAA", "codec": "unknown"}"""),
+            "frame of another version" => FramedEnvelope(PayloadFrameVersion2(), PayloadFormat.Encrypted),
+            "stale timestamp" => FramedEnvelope(new PayloadFrame(DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeMilliseconds(), 1).Prepend(SubtractBody()), PayloadFormat.Encrypted),
+            _ => client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1),
+        };
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
+
+        Assert.Equal((JsonRpcErrorCodes.InternalError, "Internal error"), (ex.Code, ex.Message));
+    }
+
+    [Fact(DisplayName = "Payload server: an access filter added before UsePayload runs first, so a call it rejects is never decrypted")]
+    public async Task Call_AccessFilterBeforeUsePayload_RejectsBeforeDecryption()
+    {
+        var encryptor = new CountingEncryptor();
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), Encryptor = encryptor };
+        var dispatcher = DispatcherFixture.Create(options =>
+        {
+            options.Filters.Add(new DelegateFilter((_, _) => throw new JsonRpcErrorException(-32001, "Unauthorized")));
+            options.UsePayload(payloadOptions, new TestPolicy());
+        });
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+        var parameters = new PayloadProcessor(payloadOptions).Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
+
+        Assert.Equal(-32001, ex.Code);
+        Assert.Equal(0, encryptor.Decryptions);
+    }
+
+    private static byte[] SubtractBody() =>
+        new GzipPayloadCompressor().Compress(Encoding.UTF8.GetBytes("""{"minuend":5,"subtrahend":3}"""));
+
+    private static byte[] PayloadFrameVersion2()
+    {
+        var framed = new PayloadFrame(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 1).Prepend(SubtractBody());
+        framed[0] = 2;
+        return framed;
+    }
+
+    private static JsonElement FramedEnvelope(byte[] framed, PayloadFormat format) => new PayloadEnvelope
+    {
+        Format = format,
+        Body = new AesCbcHmacPayloadEncryptor().Encrypt(framed, s_key),
+        TypeName = Registry().GetTypeName(typeof(SubtractRequest)),
+    }.ToElement();
 
     [Fact(DisplayName = "Payload server: an encrypted call fails when the application has no key for the caller")]
     public async Task Call_NoKey_IsRejected()
