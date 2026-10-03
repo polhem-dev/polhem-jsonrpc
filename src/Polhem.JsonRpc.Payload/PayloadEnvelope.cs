@@ -114,8 +114,9 @@ public sealed class PayloadEnvelope
         {
             WriteTo(writer);
         }
-        using var document = JsonDocument.Parse(buffer.WrittenMemory);
-        return document.RootElement.Clone();
+        // ParseValue gives an element that owns its data, so it needs no Clone and no document to dispose.
+        var reader = new Utf8JsonReader(buffer.WrittenSpan);
+        return JsonElement.ParseValue(ref reader);
     }
 
     /// <summary>Writes the envelope.</summary>

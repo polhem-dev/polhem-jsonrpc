@@ -5,11 +5,11 @@ Every change, including the maintainers', reaches `main` through a pull request.
 
 ## Branch protection on `main`
 
-Set with the classic branch protection API on 2026-10-01:
+Set with the classic branch protection API on 2026-10-01; `aot` added to the required checks on 2026-10-03:
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| `required_status_checks.contexts` | `["build", "docs"]` | The `build` job of `build-ci.yml` and the `docs` job of `docs-check.yml` must pass |
+| `required_status_checks.contexts` | `["build", "docs", "aot"]` | The `build` and `aot` jobs of `build-ci.yml` and the `docs` job of `docs-check.yml` must pass |
 | `required_status_checks.strict` | `true` | The branch must be up to date with `main` before it merges |
 | `enforce_admins` | `true` | The rules apply to administrators too |
 | `required_pull_request_reviews.required_approving_review_count` | `0` | A pull request is required, but no approval: with a single maintainer, GitHub does not let authors approve their own |
@@ -17,9 +17,10 @@ Set with the classic branch protection API on 2026-10-01:
 
 Show the current rules with `gh api repos/polhem-dev/polhem-jsonrpc/branches/main/protection`.
 
-The `aot` and `sonarcloud` jobs are not required checks. Making one required means adding its job name to
-`contexts`; renaming a required job means changing the protection too, otherwise every pull request waits for a check
-that no longer exists.
+The `sonarcloud` job is not a required check. `aot` is: with auto-merge on, a check that is not required cannot stop a
+pull request that fails it, and only running the published binary shows that the packages work under Native AOT.
+Making a job required means adding its job name to `contexts`; renaming a required job means changing the protection
+too, otherwise every pull request waits for a check that no longer exists.
 
 A required check must start on every pull request, so the `pull_request` trigger of `build-ci.yml` has no
 `paths-ignore`; only its `push` trigger ignores `.md` files. A pull request that changes only `.md` files is recognized

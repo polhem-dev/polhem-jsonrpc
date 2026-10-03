@@ -67,7 +67,9 @@ Each of these is pinned by vectors that the Polhem implementation produced befor
 
 > Corrected (2026-10-03): the vectors pin what a reader accepts, because each is decoded from Polhem's bytes. What a
 > writer produces is not compared with them, so a writer that drifts, a JSON codec writing other member names for
-> instance, still passes them.
+> instance, still passes them. Since then, two writer vectors take apart what this package writes with code of their
+> own and compare its JSON body with the body inside Polhem's vector; the compressed and encrypted bytes themselves
+> cannot be compared, because gzip output may vary and the IV is random.
 
 ### 3. The client wraps and unwraps; there is no interceptor
 
