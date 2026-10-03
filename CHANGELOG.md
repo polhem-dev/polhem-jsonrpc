@@ -2,11 +2,21 @@
 
 **English** | [繁體中文](CHANGELOG.zh-TW.md)
 
-Notable changes to Polhem.JsonRpc, Polhem.JsonRpc.Server, Polhem.JsonRpc.AspNetCore and Polhem.JsonRpc.Client. The
-format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Added
+
+- `Polhem.JsonRpc.Payload` (optional): the payload envelope around `params` and `result` (`format`, `value`, `type`,
+  `codec`), the JSON codec, gzip with a limit on the decompressed size, AES-256-CBC with HMAC-SHA256, the 17-byte
+  replay frame, and `PayloadProcessor`, which wraps parameters and unwraps results per call. It supports trimming and
+  Native AOT. The wire format is the one the Polhem framework and polhem-connector-js already speak
+  ([ADR-002](maintainers/adr/adr-002-payload-packages.md)).
+- `Polhem.JsonRpc.Payload.Server` (optional): `PayloadFilter`, which opens the envelope of a request, checks the frame's
+  timestamp and sequence number, and answers in the same format and codec; `IPayloadServerPolicy` for the key, the
+  replay scope and the type to decode into; `MemoryPayloadReplayStore`; and `JsonRpcServerOptions.UsePayload`.
 
 ## [0.1.0] - 2026-10-02
 

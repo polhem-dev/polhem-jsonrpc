@@ -19,6 +19,8 @@
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.Server\Polhem.JsonRpc.Server.csproj" />
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.AspNetCore\Polhem.JsonRpc.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.Client\Polhem.JsonRpc.Client.csproj" />
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload\Polhem.JsonRpc.Payload.csproj" />
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload.Server\Polhem.JsonRpc.Payload.Server.csproj" />
     <ProjectReference Include="..\..\samples\QuickStart.Server\QuickStart.Server.csproj" />
   </ItemGroup>
 

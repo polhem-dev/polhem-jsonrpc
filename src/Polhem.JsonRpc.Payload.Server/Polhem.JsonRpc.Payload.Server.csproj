@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Server half of Polhem.JsonRpc.Payload: a dispatcher filter that opens the payload envelope, checks the replay-protection frame and seals the result.</Description>
+    <PackageTags>$(PackageTags);encryption;compression</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polhem.JsonRpc.Payload\Polhem.JsonRpc.Payload.csproj" />
+    <ProjectReference Include="..\Polhem.JsonRpc.Server\Polhem.JsonRpc.Server.csproj" />
+  </ItemGroup>
+
+</Project>

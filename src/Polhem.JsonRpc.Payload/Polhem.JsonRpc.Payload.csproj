@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Optional payload envelope for Polhem.JsonRpc: codecs, gzip compression, AES-CBC-HMAC encryption and a replay-protection frame around params and results.</Description>
+    <PackageTags>$(PackageTags);encryption;compression</PackageTags>
+    <!-- Runs on iOS, Android and WebAssembly. The trim and AOT analyzers turn every incompatible call into a build error. -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polhem.JsonRpc\Polhem.JsonRpc.csproj" />
+  </ItemGroup>
+
+</Project>

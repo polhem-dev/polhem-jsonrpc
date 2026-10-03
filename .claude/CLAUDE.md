@@ -12,10 +12,11 @@
 
 ## Project overview
 
-JSON-RPC 2.0 for .NET on System.Text.Json, in four packages: `Polhem.JsonRpc` (shared message types and transport
+JSON-RPC 2.0 for .NET on System.Text.Json. The core packages are `Polhem.JsonRpc` (shared message types and transport
 abstraction), `Polhem.JsonRpc.Server` (dispatcher), `Polhem.JsonRpc.AspNetCore` (HTTP endpoint) and
-`Polhem.JsonRpc.Client` (connector). The design and its reasons are in `maintainers/adr/`; read the relevant ADR before
-changing behavior it describes.
+`Polhem.JsonRpc.Client` (connector). The optional `Polhem.JsonRpc.Payload` packages add the payload envelope, its
+encryption and replay protection; their bytes are a wire format other clients implement (ADR-002, decision 2). The
+design and its reasons are in `maintainers/adr/`; read the relevant ADR before changing behavior it describes.
 
 - **Version**: `src/Directory.Build.props`, the only place it is declared.
 - **Dependencies**: the packages depend on nothing but .NET, plus ASP.NET Core for `Polhem.JsonRpc.AspNetCore`.
