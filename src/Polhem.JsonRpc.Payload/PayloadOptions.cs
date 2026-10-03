@@ -24,6 +24,7 @@ public sealed class PayloadOptions
     private IPayloadTypeResolver _typeResolver = new PayloadTypeRegistry();
     private TimeSpan _frameTimestampTolerance = TimeSpan.FromMinutes(5);
     private TimeProvider _timeProvider = TimeProvider.System;
+    private long _maxDecompressedBytesPerMessage = GzipPayloadCompressor.DefaultMaxDecompressedBytes;
 
     /// <summary>
     /// Gets or sets the options the value of a plain envelope is serialized and deserialized with. The default is the
@@ -104,6 +105,25 @@ public sealed class PayloadOptions
         {
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
             _frameTimestampTolerance = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets how many bytes a server decompresses for one message in total: the call alone, or all the calls of a
+    /// batch. The default is 50 MiB, the same as one body's limit, so a batch cannot multiply it.
+    /// </summary>
+    /// <remarks>
+    /// An encoded body is decompressed without a key, so without this a small batch could make the server decompress the
+    /// per-body limit once for each of its calls. A compressor that does not implement
+    /// <see cref="IPayloadCompressor.Decompress(byte[], long)"/> is bounded only by its own limit.
+    /// </remarks>
+    public long MaxDecompressedBytesPerMessage
+    {
+        get => _maxDecompressedBytesPerMessage;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _maxDecompressedBytesPerMessage = value;
         }
     }
 

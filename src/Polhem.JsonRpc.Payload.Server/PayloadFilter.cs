@@ -17,12 +17,17 @@ public sealed class PayloadFilter : IJsonRpcFilter
     private readonly IPayloadReplayStore _replayStore;
     private readonly TimeProvider _clock;
     private readonly TimeSpan _tolerance;
+    private readonly long _maxDecompressedBytesPerMessage;
+
+    // The key of the message's decompression budget in JsonRpcRequestContext.MessageItems.
+    private const string BudgetItem = "Polhem.JsonRpc.Payload.DecompressionBudget";
 
     /// <summary>Initializes a new instance.</summary>
     /// <remarks>
-    /// <see cref="PayloadOptions.FrameTimestampTolerance"/> and <see cref="PayloadOptions.TimeProvider"/> are read here,
-    /// once, together with the lifetime of the in-memory replay store they decide: a tolerance raised later would let a
-    /// frame outlive the scope that remembers its sequence number.
+    /// <see cref="PayloadOptions.FrameTimestampTolerance"/>, <see cref="PayloadOptions.TimeProvider"/> and
+    /// <see cref="PayloadOptions.MaxDecompressedBytesPerMessage"/> are read here, once. The tolerance and the clock go
+    /// together with the lifetime of the in-memory replay store they decide: a tolerance raised later would let a frame
+    /// outlive the scope that remembers its sequence number.
     /// </remarks>
     /// <param name="options">The payload settings shared with the clients.</param>
     /// <param name="policy">The application's answers about each call.</param>
@@ -34,6 +39,7 @@ public sealed class PayloadFilter : IJsonRpcFilter
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _clock = options.TimeProvider;
         _tolerance = options.FrameTimestampTolerance;
+        _maxDecompressedBytesPerMessage = options.MaxDecompressedBytesPerMessage;
         _replayStore = replayStore ?? new MemoryPayloadReplayStore(_tolerance * 2, _clock);
     }
 
@@ -49,12 +55,23 @@ public sealed class PayloadFilter : IJsonRpcFilter
         {
             throw new InvalidPayloadException("The method requires a more protected payload format.");
         }
+        // Only an encrypted frame is covered by the HMAC, so only an encrypted call can prove its sequence number is new.
+        // A method that requires unique sequence numbers refuses the others rather than letting them repeat unchecked.
+        if (envelope.Format != PayloadFormat.Encrypted && _policy.RequiresUniqueSequence(context))
+        {
+            throw new InvalidPayloadException("The method requires an encrypted payload, whose sequence number can be checked.");
+        }
         var key = envelope.Format == PayloadFormat.Encrypted
             ? await _policy.GetKeyAsync(context).ConfigureAwait(false)
             : null;
 
         // The frame rides inside the body, so the replay checks can only run once the body is decrypted.
-        var value = _processor.OpenRequest(envelope, _policy.GetPayloadType(context), key, out var frame);
+        if (!context.MessageItems.TryGetValue(BudgetItem, out var item) || item is not PayloadDecompressionBudget budget)
+        {
+            budget = new PayloadDecompressionBudget(_maxDecompressedBytesPerMessage);
+            context.MessageItems[BudgetItem] = budget;
+        }
+        var value = _processor.OpenRequest(envelope, _policy.GetPayloadType(context), key, budget, out var frame);
         if (frame != null)
         {
             ValidateTimestamp(frame);

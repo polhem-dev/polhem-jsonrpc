@@ -122,7 +122,7 @@ public sealed class PayloadProcessor
     /// </summary>
     /// <remarks>
     /// WARNING: a server never opens a request this way, because the type would then be chosen by the caller. Use
-    /// <see cref="OpenRequest"/>.
+    /// <see cref="OpenRequest(PayloadEnvelope, Type, byte[], out PayloadFrame)"/>.
     /// </remarks>
     /// <param name="envelope">The envelope.</param>
     /// <param name="key">The key; required when the envelope is encrypted.</param>
@@ -142,7 +142,7 @@ public sealed class PayloadProcessor
             throw new InvalidOperationException("The payload names no type to decode into.");
         if (!_options.TypeResolver.TryResolveType(envelope.TypeName, out var type))
             throw new InvalidOperationException("The payload type is not in the allowed types.");
-        return Decode(envelope, key, type, out frame);
+        return Decode(envelope, key, type, budget: null, out frame);
     }
 
     /// <summary>
@@ -161,9 +161,32 @@ public sealed class PayloadProcessor
     /// The type name is missing, not allowed or names another type, or the key is missing.
     /// </exception>
     public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
-        => OpenAs(envelope, type, key, out frame);
+        => OpenAs(envelope, type, key, budget: null, out frame);
+
+    /// <summary>
+    /// Opens a request envelope like <see cref="OpenRequest(PayloadEnvelope, Type, byte[], out PayloadFrame)"/>, drawing
+    /// the decompressed size on a budget the calls of one message share.
+    /// </summary>
+    /// <param name="envelope">The envelope.</param>
+    /// <param name="type">The type the server decodes into.</param>
+    /// <param name="key">The key; required when the envelope is encrypted.</param>
+    /// <param name="budget">What the message may still decompress; the decompressed size is taken from it.</param>
+    /// <param name="frame">The frame read from the body, or <see langword="null"/> when frames are not required.</param>
+    /// <returns>The value, as <see cref="OpenRequest(PayloadEnvelope, Type, byte[], out PayloadFrame)"/> returns it.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The type name is missing, not allowed or names another type, the key is missing, or the body decompresses beyond
+    /// the budget.
+    /// </exception>
+    public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, PayloadDecompressionBudget budget, out PayloadFrame? frame)
+    {
+        ArgumentNullException.ThrowIfNull(budget);
+        return OpenAs(envelope, type, key, budget, out frame);
+    }
 
     private object? OpenAs(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
+        => OpenAs(envelope, type, key, budget: null, out frame);
+
+    private object? OpenAs(PayloadEnvelope envelope, Type type, byte[]? key, PayloadDecompressionBudget? budget, out PayloadFrame? frame)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         ArgumentNullException.ThrowIfNull(type);
@@ -175,10 +198,10 @@ public sealed class PayloadProcessor
             throw new InvalidOperationException("The payload names no type to decode into.");
         if (!_options.TypeResolver.IsNameOf(envelope.TypeName, type))
             throw new InvalidOperationException("The payload type does not match the type the reader expects.");
-        return Decode(envelope, key, type, out frame);
+        return Decode(envelope, key, type, budget, out frame);
     }
 
-    private object? Decode(PayloadEnvelope envelope, byte[]? key, Type type, out PayloadFrame? frame)
+    private object? Decode(PayloadEnvelope envelope, byte[]? key, Type type, PayloadDecompressionBudget? budget, out PayloadFrame? frame)
     {
         var bytes = envelope.Body ?? throw new InvalidPayloadException("An encoded payload envelope has no body.");
 
@@ -197,7 +220,11 @@ public sealed class PayloadProcessor
         var codec = _options.ResolveCodec(envelope.Codec);
         try
         {
-            return codec.Deserialize(_options.Compressor.Decompress(bytes), type);
+            var plain = budget is null
+                ? _options.Compressor.Decompress(bytes)
+                : _options.Compressor.Decompress(bytes, budget.Remaining);
+            budget?.Spend(plain.Length);
+            return codec.Deserialize(plain, type);
         }
         catch (Exception ex)
         {

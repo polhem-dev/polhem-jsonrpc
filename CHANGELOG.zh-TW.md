@@ -15,6 +15,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `IPayloadServerPolicy.GetMinimumFormat`：方法接受的最低格式。低於它的呼叫會在詢問金鑰或讀取內容之前就回 `-32602`。
   預設接受所有格式，與先前相同。
 - `JsonRpcRequestContext.MessageItems`：同一則訊息的所有呼叫共用的值（單一呼叫，或 batch 的全部呼叫），供需要為整則訊息計量的 filter 使用。
+- `PayloadOptions.MaxDecompressedBytesPerMessage`（預設 50 MiB）：伺服器為一則訊息（單一呼叫或整個 batch）解壓的總量上限。
+  由 `PayloadDecompressionBudget`、`IPayloadCompressor.Decompress(byte[], long)`（含預設實作）與 `PayloadProcessor.OpenRequest`
+  的一個多載承載。
 
 ### 變更
 
@@ -40,6 +43,11 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
   所有讀取端都接受之後，寫出端才會送出未壓縮的內容。解壓的唯一上限仍是每個內容 `MaxDecompressedBytes`（50 MiB）；
   encoded 內容不需金鑰就會被解壓，在意的部署請以 `IPayloadServerPolicy.GetMinimumFormat` 要求加密呼叫。
+- **wire 可見：** `IPayloadServerPolicy.RequiresUniqueSequence` 為 true 的方法，拒絕 plain 與 encoded 呼叫並回 `-32602`。
+  只有加密的 frame 受 HMAC 保護；encoded 呼叫的 frame 誰都能寫，既無法證明序號是新的，也不能讓它推進 scope 的 window。
+  在 1.0.0，這類呼叫會被檢查，而偽造的呼叫可使之後合法的加密呼叫被拒。
+- 一個 batch 共用一份解壓額度（`MaxDecompressedBytesPerMessage`）。encoded 內容不需金鑰就會解壓；以最高壓縮等級的 gzip，
+  一個含 62 個內容的 4 MiB 請求原本可讓伺服器配置約 11 GiB、耗費約 10 秒 CPU。
 
 ### 修正
 
@@ -62,8 +70,6 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - frame 時間戳與伺服器時鐘的差距超出 64 位元整數範圍時，會和其他超出容許範圍的時間戳一樣被拒絕，不再因算術溢位而失敗。
 - `PayloadFilter` 在建立時一次讀取 `FrameTimestampTolerance` 與 `TimeProvider`，與它們決定的 replay store 保存時間一致。
   先前在 `UsePayload` 之後調高容許範圍，攔截到的呼叫可在其 scope 被遺忘後重送成功。
-- 只記錄加密 frame 的序號。encoded 內容的 frame 誰都能寫，偽造的 encoded 呼叫先前可推進 scope 的 window，
-  使之後合法的加密呼叫被拒。
 
 ## [1.0.0] - 2026-10-03
 
