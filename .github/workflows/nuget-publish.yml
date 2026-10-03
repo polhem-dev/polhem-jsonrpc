@@ -45,7 +45,7 @@ jobs:
           $removed = Get-ChildItem -Path src -Recurse -Filter PublicAPI.Shipped.txt |
             Where-Object { Select-String -Path $_.FullName -Pattern '^\*REMOVED\*' -Quiet }
           foreach ($file in @($unshipped) + @($removed)) {
-            Write-Host "::error file=$($file.FullName)::Move the public API entries into PublicAPI.Shipped.txt before tagging a release."
+            Write-Host "::error file=$($file.FullName)::Ship the public API before tagging: move the Unshipped entries into PublicAPI.Shipped.txt and delete the lines each *REMOVED* entry names."
           }
           if ($unshipped -or $removed) { exit 1 }
 

@@ -14,8 +14,8 @@ namespace PayloadQuickStart.Server;
 /// The replay scope has to cover every holder of the key. Here the client id picks the key, so each scope has a key of
 /// its own, and a call replayed under another client id fails its HMAC instead of starting over in a fresh scope. That
 /// holds only because every call is encrypted (<see cref="GetMinimumFormat"/>): a plain or encoded call has no HMAC, so
-/// with a lower minimum format a caller could change or drop the header and have its call checked in another scope, or
-/// in none. A real application gives each
+/// with a lower minimum format a caller could drop the header, and its call would be accepted without any sequence
+/// check. A real application gives each
 /// session its own key, agreed at sign-in (the Polhem framework wraps it with RSA), and uses the session as the replay
 /// scope. How keys are agreed is outside the payload packages.
 /// </remarks>

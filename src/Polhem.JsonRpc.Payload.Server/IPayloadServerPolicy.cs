@@ -34,8 +34,9 @@ public interface IPayloadServerPolicy
     /// IMPORTANT: the scope must cover every holder of the call's key. The HMAC proves only that a holder of the key
     /// wrote the frame, so a captured call replayed under another scope that uses the same key is accepted there, where
     /// its sequence number has not been seen (<c>PayloadServerTests.Call_ReplayedUnderAnotherScopeSharingTheKey_IsAccepted</c>).
-    /// Give each session its own key and use the session as the scope, or, where several sessions share a key, a scope
-    /// derived from the key's identity. Take it from the caller's session as an earlier filter or the object factory
+    /// Give each session its own key and use the session as the scope. A scope shared by several holders of one key
+    /// would make them share one run of sequence numbers, because the scope remembers only a window below the highest
+    /// number it has seen, so where a key is shared, sequence numbers stop only callers without the key. Take it from the caller's session as an earlier filter or the object factory
     /// authenticated it, and read it from the context, not from <see cref="GetKeyAsync"/>: it is asked about plain and
     /// encoded calls, for which no key is asked. A scope read from an unauthenticated header lets the caller choose it.
     /// </remarks>
