@@ -62,6 +62,12 @@ Neither package is needed for plain JSON-RPC. The core packages do not reference
 - **Compression** is gzip, with a limit on the decompressed size, because a small compressed body can expand without
   bound.
 
+> Amended for 1.1.0 (2026-10-03): a reader takes a body that does not start with the gzip header (`1F 8B`) as
+> uncompressed. A JSON or MessagePack body never starts with those bytes. Compressing a small body costs more than it
+> saves, so writers will leave small bodies uncompressed, but only in a later version, once every reader (this
+> package, the Polhem framework, polhem-connector-js) accepts them; until then every writer still compresses
+> (`PayloadProcessorTests.OpenRequest_UncompressedEncodedBody_Opens`).
+
 Each of these is pinned by vectors that the Polhem implementation produced before the extraction
 (`tests/Polhem.JsonRpc.UnitTests/Payload/PayloadWireVectorTests.cs`); a vector that has to change means the wire changed.
 
