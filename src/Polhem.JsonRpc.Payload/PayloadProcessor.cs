@@ -42,7 +42,7 @@ public sealed class PayloadProcessor
     /// The value. A plain envelope returns its value as a <see cref="JsonElement"/>, or <see langword="null"/>.
     /// </returns>
     public object? Unwrap(JsonElement? payload, byte[]? key = null)
-        => Open(PayloadEnvelope.Read(payload), key, out _);
+        => OpenResult(PayloadEnvelope.Read(payload), key, out _);
 
     /// <summary>Seals a value into an envelope.</summary>
     /// <param name="value">The value. It may be <see langword="null"/> only for a plain envelope.</param>
@@ -92,9 +92,13 @@ public sealed class PayloadProcessor
     }
 
     /// <summary>
-    /// Opens an envelope into the type its <c>type</c> member names, after checking the name through
-    /// <see cref="PayloadOptions.TypeResolver"/>. Meant for a client reading a result.
+    /// Opens a result envelope into the type its <c>type</c> member names, after checking the name through
+    /// <see cref="PayloadOptions.TypeResolver"/>. For a client reading a result from a server it trusts.
     /// </summary>
+    /// <remarks>
+    /// WARNING: a server never opens a request this way, because the type would then be chosen by the caller. Use
+    /// <see cref="OpenRequest"/>.
+    /// </remarks>
     /// <param name="envelope">The envelope.</param>
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <param name="frame">The frame read from the body, or <see langword="null"/> when frames are not required.</param>
@@ -102,7 +106,7 @@ public sealed class PayloadProcessor
     /// The value. A plain envelope returns its value as a <see cref="JsonElement"/>, or <see langword="null"/>.
     /// </returns>
     /// <exception cref="InvalidOperationException">The type name is missing or not allowed, or the key is missing.</exception>
-    public object? Open(PayloadEnvelope envelope, byte[]? key, out PayloadFrame? frame)
+    public object? OpenResult(PayloadEnvelope envelope, byte[]? key, out PayloadFrame? frame)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         frame = null;
@@ -117,8 +121,8 @@ public sealed class PayloadProcessor
     }
 
     /// <summary>
-    /// Opens an envelope into a type the reader chose, using the <c>type</c> member only to check that the writer meant
-    /// the same type. Meant for a server reading the parameters of a method.
+    /// Opens a request envelope into a type the reader chose, using the <c>type</c> member only to check that the writer
+    /// meant the same type. For a server reading the parameters of a method.
     /// </summary>
     /// <param name="envelope">The envelope.</param>
     /// <param name="type">The type to decode into, decided by the reader.</param>
@@ -131,7 +135,7 @@ public sealed class PayloadProcessor
     /// <exception cref="InvalidOperationException">
     /// The type name is missing, not allowed or names another type, or the key is missing.
     /// </exception>
-    public object? Open(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
+    public object? OpenRequest(PayloadEnvelope envelope, Type type, byte[]? key, out PayloadFrame? frame)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         ArgumentNullException.ThrowIfNull(type);

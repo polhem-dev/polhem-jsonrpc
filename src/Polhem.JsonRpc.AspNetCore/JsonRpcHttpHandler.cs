@@ -47,13 +47,13 @@ public sealed class JsonRpcHttpHandler
 
         if (!IsJson(request.ContentType))
         {
-            await WriteErrorAsync(httpContext, StatusCodes.Status415UnsupportedMediaType, "Unsupported media type", _options.WriteOptions).ConfigureAwait(false);
+            await WriteErrorAsync(httpContext, StatusCodes.Status415UnsupportedMediaType, "Unsupported media type").ConfigureAwait(false);
             return;
         }
 
         if (request.ContentLength > _options.MaxRequestBodySize)
         {
-            await WriteErrorAsync(httpContext, StatusCodes.Status413PayloadTooLarge, "Request too large", _options.WriteOptions).ConfigureAwait(false);
+            await WriteErrorAsync(httpContext, StatusCodes.Status413PayloadTooLarge, "Request too large").ConfigureAwait(false);
             return;
         }
 
@@ -70,7 +70,7 @@ public sealed class JsonRpcHttpHandler
 
         if (body is null)
         {
-            await WriteErrorAsync(httpContext, StatusCodes.Status413PayloadTooLarge, "Request too large", _options.WriteOptions).ConfigureAwait(false);
+            await WriteErrorAsync(httpContext, StatusCodes.Status413PayloadTooLarge, "Request too large").ConfigureAwait(false);
             return;
         }
 
@@ -90,7 +90,7 @@ public sealed class JsonRpcHttpHandler
             return;
         }
 
-        var content = result.Serialize(_options.WriteOptions);
+        var content = result.Serialize();
         if (content is null)
         {
             httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
@@ -131,11 +131,11 @@ public sealed class JsonRpcHttpHandler
         return result;
     }
 
-    private static async Task WriteErrorAsync(HttpContext httpContext, int statusCode, string message, JsonRpcWriteOptions writeOptions)
+    private static async Task WriteErrorAsync(HttpContext httpContext, int statusCode, string message)
     {
         var response = JsonRpcResponse.Failure(JsonRpcId.Null, new JsonRpcError(JsonRpcErrorCodes.InvalidRequest, message));
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = JsonContentType;
-        await httpContext.Response.Body.WriteAsync(JsonRpcSerializer.SerializeResponse(response, writeOptions), httpContext.RequestAborted).ConfigureAwait(false);
+        await httpContext.Response.Body.WriteAsync(JsonRpcSerializer.SerializeResponse(response), httpContext.RequestAborted).ConfigureAwait(false);
     }
 }

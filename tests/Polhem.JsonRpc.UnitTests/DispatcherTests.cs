@@ -149,17 +149,6 @@ public class DispatcherTests
     }
 
     [Fact]
-    [DisplayName("InternalErrorCode changes the code of unexpected exceptions, for an older wire format")]
-    public async Task DispatchAsync_CustomInternalErrorCode_IsUsed()
-    {
-        var dispatcher = DispatcherFixture.Create(o => o.InternalErrorCode = -32000);
-
-        var response = await CallAsync(dispatcher, "Spec.Fail", """{"text": "x"}""");
-
-        Assert.Equal(-32000, response.Error!.Code);
-    }
-
-    [Fact]
     [DisplayName("JsonRpcErrorException thrown by a method reaches the caller as it is")]
     public async Task DispatchAsync_JsonRpcErrorException_IsSentAsIs()
     {
@@ -256,17 +245,6 @@ public class DispatcherTests
     }
 
     [Fact]
-    [DisplayName("Response members added by a filter are written next to the standard ones")]
-    public async Task DispatchAsync_ResponseMembers_AreAdded()
-    {
-        var dispatcher = DispatcherFixture.Create(o => o.Filters.Add(new EchoMethodFilter()));
-
-        var response = await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 1, "subtrahend": 1}""");
-
-        Assert.Equal("Spec.Subtract", response.AdditionalMembers!["method"].GetString());
-    }
-
-    [Fact]
     [DisplayName("The filter sees the transport kind and items the transport set")]
     public async Task DispatchAsync_Filter_SeesTransportInfo()
     {
@@ -354,15 +332,6 @@ public class DispatcherTests
             await next(context);
             var response = (DescribeResponse)context.ReturnValue!;
             context.Result = JsonSerializer.SerializeToElement($"{response.Kind.Name}:{response.Text}");
-        }
-    }
-
-    private sealed class EchoMethodFilter : IJsonRpcFilter
-    {
-        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
-        {
-            context.ResponseMembers["method"] = JsonSerializer.SerializeToElement(context.Request.Method);
-            return next(context);
         }
     }
 

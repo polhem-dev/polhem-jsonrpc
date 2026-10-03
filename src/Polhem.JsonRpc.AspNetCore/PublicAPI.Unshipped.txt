@@ -1,1 +1,3 @@
 #nullable enable
+*REMOVED*Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.WriteOptions.get -> Polhem.JsonRpc.JsonRpcWriteOptions!
+*REMOVED*Polhem.JsonRpc.AspNetCore.JsonRpcHttpOptions.WriteOptions.set -> void

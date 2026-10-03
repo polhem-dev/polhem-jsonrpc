@@ -20,10 +20,4 @@ public sealed class JsonRpcHttpOptions
     /// answers some errors with 4xx or 5xx. A batch is always answered with 200, because its responses may disagree.
     /// </remarks>
     public Func<JsonRpcResponse, int>? StatusCodeSelector { get; set; }
-
-    /// <summary>
-    /// Gets or sets how responses are written. The defaults follow the specification; a host sets
-    /// <see cref="JsonRpcWriteOptions.OmitNullId"/> to keep an older wire format that leaves a null id out.
-    /// </summary>
-    public JsonRpcWriteOptions WriteOptions { get; set; } = new();
 }

@@ -7,6 +7,13 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+### 移除
+
+- 為舊線上格式提供的選項：`JsonRpcServerOptions.InternalErrorCode`、`JsonRpcRequestContext.ResponseMembers`、
+  `JsonRpcResponse.AdditionalMembers`，以及 `JsonRpcWriteOptions` 與其 `OmitNullId`（連同接收它的 `options` 參數與
+  `JsonRpcHttpOptions.WriteOptions`）。回應一律依規格寫出，讀取時忽略未知的回應成員
+  （[ADR-001](maintainers/adr/adr-001-package-split-and-design.md)，英文，決策 6）。
+
 ### 新增
 
 - `Polhem.JsonRpc.Payload`（選用）：包住 `params` 與 `result` 的 payload 外殼（`format`、`value`、`type`、`codec`）、

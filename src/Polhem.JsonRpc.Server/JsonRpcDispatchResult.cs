@@ -35,13 +35,12 @@ public sealed class JsonRpcDispatchResult
     /// <summary>
     /// Serializes the answer: an object for a single request, an array for a batch.
     /// </summary>
-    /// <param name="options">How to write the responses, or <c>null</c> for the defaults.</param>
     /// <returns>The answer as UTF-8 JSON, or <c>null</c> when there is nothing to send back.</returns>
-    public byte[]? Serialize(JsonRpcWriteOptions? options = null)
+    public byte[]? Serialize()
     {
         if (!HasContent) { return null; }
         return IsBatch
-            ? JsonRpcSerializer.SerializeResponses(Responses, options)
-            : JsonRpcSerializer.SerializeResponse(Responses[0], options);
+            ? JsonRpcSerializer.SerializeResponses(Responses)
+            : JsonRpcSerializer.SerializeResponse(Responses[0]);
     }
 }

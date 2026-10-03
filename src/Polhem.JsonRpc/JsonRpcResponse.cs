@@ -40,16 +40,6 @@ public sealed class JsonRpcResponse
     public bool IsSuccess => Error is null;
 
     /// <summary>
-    /// Gets additional members written next to <c>jsonrpc</c>, <c>result</c>, <c>error</c> and <c>id</c>, or
-    /// <c>null</c> when there are none.
-    /// </summary>
-    /// <remarks>
-    /// The specification defines only the four members above. Additional members exist so that a host can keep an
-    /// older wire format; a new protocol should not need them.
-    /// </remarks>
-    public IDictionary<string, JsonElement>? AdditionalMembers { get; set; }
-
-    /// <summary>
     /// Creates a success response.
     /// </summary>
     /// <param name="id">The id of the request.</param>

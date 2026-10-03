@@ -98,8 +98,6 @@ Polhem.JsonRpc.Payload.PayloadOptions.SerializerOptions.set -> void
 Polhem.JsonRpc.Payload.PayloadOptions.TypeResolver.get -> Polhem.JsonRpc.Payload.IPayloadTypeResolver!
 Polhem.JsonRpc.Payload.PayloadOptions.TypeResolver.set -> void
 Polhem.JsonRpc.Payload.PayloadProcessor
-Polhem.JsonRpc.Payload.PayloadProcessor.Open(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, byte[]? key, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
-Polhem.JsonRpc.Payload.PayloadProcessor.Open(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
 Polhem.JsonRpc.Payload.PayloadProcessor.Options.get -> Polhem.JsonRpc.Payload.PayloadOptions!
 Polhem.JsonRpc.Payload.PayloadProcessor.PayloadProcessor(Polhem.JsonRpc.Payload.PayloadOptions! options) -> void
 Polhem.JsonRpc.Payload.PayloadProcessor.Seal(object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0) -> Polhem.JsonRpc.Payload.PayloadEnvelope!
@@ -122,3 +120,5 @@ static Polhem.JsonRpc.Payload.NoPayloadEncryptor.Instance.get -> Polhem.JsonRpc.
 static Polhem.JsonRpc.Payload.PayloadEnvelope.Read(System.Text.Json.JsonElement? payload) -> Polhem.JsonRpc.Payload.PayloadEnvelope!
 static Polhem.JsonRpc.Payload.PayloadEnvelope.ReadFormat(System.Text.Json.JsonElement? payload) -> Polhem.JsonRpc.Payload.PayloadFormat
 static Polhem.JsonRpc.Payload.PayloadFrame.Extract(byte[]! framed, out byte[]! body) -> Polhem.JsonRpc.Payload.PayloadFrame!
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenRequest(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenResult(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, byte[]? key, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?

@@ -41,14 +41,14 @@ public sealed class PayloadFilter : IJsonRpcFilter
             : null;
 
         // The frame rides inside the body, so the replay checks can only run once the body is decrypted.
-        var value = _processor.Open(envelope, _policy.GetPayloadType(context), key, out var frame);
+        var value = _processor.OpenRequest(envelope, _policy.GetPayloadType(context), key, out var frame);
         if (frame != null)
         {
             ValidateTimestamp(frame);
             await ValidateSequenceAsync(context, frame).ConfigureAwait(false);
         }
         cancellationToken.ThrowIfCancellationRequested();
-        new PayloadRequest(envelope.Format, envelope.Codec, key, value, frame).Attach(context);
+        new PayloadRequest(envelope.Format, envelope.Codec, value, frame).Attach(context);
 
         await next(context).ConfigureAwait(false);
 

@@ -45,7 +45,7 @@ public class PayloadProcessorTests
         var processor = CreateProcessor(requireFrame: true);
         var envelope = processor.Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key, sequence: 99);
 
-        processor.Open(envelope, typeof(VectorPing), s_key, out var frame);
+        processor.OpenRequest(envelope, typeof(VectorPing), s_key, out var frame);
 
         Assert.Equal(99, frame!.Sequence);
     }
@@ -71,7 +71,7 @@ public class PayloadProcessorTests
         var processor = CreateProcessor(false);
         var envelope = processor.Seal(new VectorPing(), PayloadFormat.Encoded);
 
-        Assert.Throws<InvalidOperationException>(() => processor.Open(envelope, typeof(string), null, out _));
+        Assert.Throws<InvalidOperationException>(() => processor.OpenRequest(envelope, typeof(string), null, out _));
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class PayloadProcessorTests
             TypeName = "System.IO.FileInfo, System.Runtime",
         };
 
-        Assert.Throws<InvalidOperationException>(() => processor.Open(forged, null, out _));
+        Assert.Throws<InvalidOperationException>(() => processor.OpenResult(forged, null, out _));
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class PayloadProcessorTests
         var envelope = processor.Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key);
         envelope.Body![^40] ^= 0x01;
 
-        Assert.Throws<CryptographicException>(() => processor.Open(envelope, typeof(VectorPing), s_key, out _));
+        Assert.Throws<CryptographicException>(() => processor.OpenRequest(envelope, typeof(VectorPing), s_key, out _));
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class PayloadProcessorTests
         var envelope = CreateProcessor(requireFrame: false).Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key);
 
         Assert.Throws<ReplayRejectedException>(
-            () => CreateProcessor(requireFrame: true).Open(envelope, typeof(VectorPing), s_key, out _));
+            () => CreateProcessor(requireFrame: true).OpenRequest(envelope, typeof(VectorPing), s_key, out _));
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class PayloadProcessorTests
             TypeName = VectorPing.PolhemTypeName,
         };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => processor.Open(envelope, typeof(VectorPing), null, out _));
+        var ex = Assert.Throws<InvalidOperationException>(() => processor.OpenRequest(envelope, typeof(VectorPing), null, out _));
         Assert.NotNull(ex.InnerException);
     }
 
