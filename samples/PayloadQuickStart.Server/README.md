@@ -1,0 +1,47 @@
+# PayloadQuickStart.Server
+
+**English** | [繁體中文](README.zh-TW.md)
+
+A JSON-RPC server whose parameters and results travel encrypted, with replay protection: the optional
+`Polhem.JsonRpc.Payload.Server` package on top of [QuickStart.Server](../QuickStart.Server/README.md). It answers
+`Calculator.Add` at `http://localhost:5081/api`.
+
+Both ends need the same 64-byte key. Generate one and export it in each terminal:
+
+```bash
+export PayloadDemoKey=$(openssl rand -base64 64 | tr -d '\n')
+dotnet run --project samples/PayloadQuickStart.Server
+```
+
+## The lines that matter
+
+`Program.cs` adds the payload filter to the server with the options both ends share:
+
+```csharp
+var payload = new PayloadOptions
+{
+    RequireFrame = true,
+    TypeResolver = new PayloadTypeRegistry().Register<AddRequest>().Register<AddResponse>(),
+};
+builder.Services.AddJsonRpcServer(options => options.UsePayload(payload, policy));
+```
+
+The filter asks the application what only it knows (`DemoKeyPolicy.cs`): the key of a call, the scope a sequence
+number must be unique in, and whether the method rejects a repeated one.
+
+```csharp
+public ValueTask<byte[]?> GetKeyAsync(JsonRpcRequestContext context) => ValueTask.FromResult<byte[]?>(key);
+public string? GetReplayScope(JsonRpcRequestContext context) => /* the X-Client-Id header */;
+public bool RequiresUniqueSequence(JsonRpcRequestContext context) => true;
+```
+
+- The method itself (`Calculator.cs`) is the same as without the envelope: the filter opens the request before the
+  call and seals the result after it, in the format and codec the request used.
+- The server decides the type a request decodes into; the `type` the client writes is only checked against it.
+- One key for every client keeps the sample short. A real application gives each session its own key, agreed at
+  sign-in, and uses the session as the replay scope. How keys are agreed is outside the payload packages.
+- `MemoryPayloadReplayStore` remembers sequence numbers in the process. Several server instances need a shared
+  `IPayloadReplayStore`.
+
+Call it with [PayloadQuickStart.Client](../PayloadQuickStart.Client/README.md). The format is described in
+[ADR-002](../../maintainers/adr/adr-002-payload-packages.md).
