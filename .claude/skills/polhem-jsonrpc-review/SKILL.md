@@ -318,16 +318,44 @@ Follow the plan convention of `.claude/CLAUDE.md`: a file in `local/plans/`, a s
 - **Cross-check any "this is dead code" or "this protection does nothing" conclusion** by reading the source; a redundant
   half-condition is easily mistaken for a dead mechanism.
 
+### Lessons of this repository's own rounds
+
+- **A fix PR is reviewed adversarially before it merges.** In three rounds running, the previous round's fixes brought
+  in a P1 that nobody had looked at from an attacker's side or from how the Polhem framework calls the code. What stopped
+  it: before auto-merge is enabled, one agent reads only the PR's diff, as an attacker and as a downstream user.
+- **Mutate the code a claim is about, not only the code a test names.** A sentence in an XML doc, the CHANGELOG or an
+  ADR that says "always", "only", "once" or "before" is a claim; break the code it describes and see whether a test
+  fails. Most findings of the later rounds were such claims with nothing behind them.
+- **Restore a mutated file with a newer timestamp** (`touch`) and rebuild with `--no-incremental` before trusting a
+  green run: a file put back with its old timestamp leaves the mutant in the binaries. A mutant that does not compile
+  looks like a passing one unless the build output is checked for errors.
+- **Ask what a mechanism does not cover.** The payload HMAC was correct for what it covered; the method and direction
+  it did not cover made the replay protection bypassable (ADR-003). List the fields and paths outside each protection.
+- **Read a release as a dependency graph.** Open version ranges let one package of the family upgrade alone; a binary
+  break then reaches code nobody rebuilt (ADR-001, decision 4, amended).
+- **Stop full rounds when the agents agree they add nothing.** After that, a fix PR with its adversarial review and a
+  rerun of the round's mutation scripts before a release are enough; run a full round again when the dispatcher, a
+  transport, the payload filter or the wire format changes.
+
 ## Baseline
 
-**No round has run on this repository yet.** The first round records:
+Earlier rounds left their reports in `local/internal/health-<date>[-rN]/` and their plans in `local/plans/`
+(`plan-health-*.md`). Read the latest plan before dispatching: its score table, its lists of items scanned as clean,
+and its decisions to keep something that looks removable, with the reason, so they are not listed again. Each plan
+records:
 
 - the score table and its date;
 - the **items scanned as clean**, as concrete lists, never as "dead code 0";
-- the **guard mechanisms** confirmed to exist, run in CI and bite. Today these are believed to be: `JSONRPC9001`,
-  `DependencyGateTests`, `PublicApiAnalyzers` with the `PublicAPI.*.txt` baselines, `PayloadWireVectorTests`,
-  `SpecificationExampleTests`, the `aot` job running `tests/Polhem.JsonRpc.AotSmoke`, CA2007, and `./check-md-links.sh`
-  in Docs Check. Read the list from the code at review time rather than trusting this one;
-- decisions to keep something that looks removable, with the reason, so the next round does not list it again.
+- the **guard mechanisms** confirmed to exist, run in CI and bite;
+- decisions to keep something that looks removable, with the reason.
+
+The guard mechanisms believed to exist today: `JSONRPC9001` and `DependencyGateTests`; `PublicApiAnalyzers` with the
+`PublicAPI.*.txt` baselines, which also hold the numeric value of every error code; `PayloadWireVectorTests`, including
+the ADR-003 binding vectors; `SpecificationExampleTests`; `TestConventionTests`; `ReadmeSnippetTests` with the compiled
+`tests/Polhem.JsonRpc.ReadmeSnippets`; CA2007; the required checks `build`, `docs` and `aot` (the `aot` job runs
+`tests/Polhem.JsonRpc.AotSmoke` published with Native AOT), with `.github/scripts/detect-docs-only.sh` skipping steps
+inside each job of `build-ci.yml`; `./check-md-links.sh` in the `docs` job; and, in `nuget-publish.yml`, the checks that the tag matches
+the version, that the public API is shipped, that new package IDs are confirmed, and the AOT smoke test again. Read the
+list from the code at review time rather than trusting this one.
 
 Compute every quantity from the code at review time; never compare with a number carried over from an earlier round.
