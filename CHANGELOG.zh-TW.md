@@ -7,6 +7,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-05
+
 ### 新增
 
 - `JsonRpcServerOptions.AllowCodeCompiledAgainst10` 及其背後的檢查：**行為變更**，已載入的組件中若有以
@@ -141,6 +143,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `Polhem.JsonRpc.Client`：`JsonRpcConnector`，支援一般呼叫、notification 與 batch，`HttpTransport` 與攔截器。
   支援 trimming 與 Native AOT。
 
-[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/releases/tag/v0.1.0

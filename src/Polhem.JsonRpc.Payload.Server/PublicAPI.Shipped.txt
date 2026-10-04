@@ -3,6 +3,7 @@ Polhem.JsonRpc.Payload.Server.IPayloadReplayStore
 Polhem.JsonRpc.Payload.Server.IPayloadReplayStore.TryAcceptAsync(string! scope, long sequence, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy
 Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetKeyAsync(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> System.Threading.Tasks.ValueTask<byte[]?>
+Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetMinimumFormat(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> Polhem.JsonRpc.Payload.PayloadFormat
 Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetPayloadType(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> System.Type!
 Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetReplayScope(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> string?
 Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.RequiresUniqueSequence(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> bool

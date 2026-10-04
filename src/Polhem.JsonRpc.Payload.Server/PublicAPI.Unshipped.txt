@@ -1,2 +1,1 @@
 #nullable enable
-Polhem.JsonRpc.Payload.Server.IPayloadServerPolicy.GetMinimumFormat(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> Polhem.JsonRpc.Payload.PayloadFormat
