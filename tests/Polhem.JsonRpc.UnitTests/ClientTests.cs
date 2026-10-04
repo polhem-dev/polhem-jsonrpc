@@ -106,7 +106,9 @@ public class ClientTests
     {
         var connector = new JsonRpcConnector(new HangingTransport(), new JsonRpcClientOptions { Timeout = TimeSpan.FromMilliseconds(50) });
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => connector.InvokeAsync<int>("Any.Method", null));
+        // The outer limit turns a timeout that never fires into a failure instead of a test that never ends.
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => connector.InvokeAsync<int>("Any.Method", null).WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     [Fact(DisplayName = "Client: parameters that are not an object or array are rejected")]
@@ -121,6 +123,24 @@ public class ClientTests
         using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "result": 1, "id": 999}""")) { BaseAddress = new Uri("http://test/api") };
 
         await Assert.ThrowsAsync<JsonException>(() => new JsonRpcConnector(new HttpTransport(http)).InvokeAsync<int>("Any.Method", null));
+    }
+
+    [Fact(DisplayName = "Client: a response whose id is the string \"1\" does not answer the request whose id is the number 1")]
+    public async Task InvokeAsync_ResponseIdOfOtherKind_Throws()
+    {
+        using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "result": 1, "id": "1"}""")) { BaseAddress = new Uri("http://test/api") };
+        var connector = new JsonRpcConnector(new HttpTransport(http), new JsonRpcClientOptions { IdGenerator = () => 1 });
+
+        await Assert.ThrowsAsync<JsonException>(() => connector.InvokeAsync<int>("Any.Method", null));
+    }
+
+    [Fact(DisplayName = "Client: a response with \"error\": null is read as a success, as some servers write it")]
+    public async Task InvokeAsync_NullErrorMember_ReadsAsSuccess()
+    {
+        using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, """{"jsonrpc": "2.0", "result": 5, "error": null, "id": 1}""")) { BaseAddress = new Uri("http://test/api") };
+        var connector = new JsonRpcConnector(new HttpTransport(http), new JsonRpcClientOptions { IdGenerator = () => 1 });
+
+        Assert.Equal(5, await connector.InvokeAsync<int>("Any.Method", null));
     }
 
     [Fact(DisplayName = "Client: an IdGenerator that returns no id is refused, because the call would become a notification")]

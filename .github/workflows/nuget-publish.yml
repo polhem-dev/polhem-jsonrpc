@@ -37,7 +37,8 @@ jobs:
           }
 
       # A release moves every PublicAPI.Unshipped.txt entry into PublicAPI.Shipped.txt and drops the old lines that a
-      # *REMOVED* entry names. The analyzer accepts either file, so only this step notices a release that did half of it.
+      # *REMOVED* entry names. The analyzer accepts an entry in either file, so an entry left in Unshipped builds; only this
+      # step refuses it. A *REMOVED* line left in Shipped also fails the build (RS0024).
       - name: Check that the public API is shipped
         run: |
           $unshipped = Get-ChildItem -Path src -Recurse -Filter PublicAPI.Unshipped.txt |

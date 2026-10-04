@@ -9,6 +9,11 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ### Added
 
+- `JsonRpcServerOptions.AllowCodeCompiledAgainst10`, and a check behind it: **behavior change**, the
+  `JsonRpcDispatcher` constructor throws `InvalidOperationException` when a loaded assembly was compiled against
+  `Polhem.JsonRpc.Server` 1.0, naming it, because such code reads `JsonRpcTransportKind` with the old numbers. Set the
+  option only for code that never reads the transport kind.
+- A `JsonRpcDispatcher` constructor that takes the object factory apart from the options.
 - `PayloadProcessor.WrapRequest`, `SealResponse`, `UnwrapResult` and `UnwrapResult<T>`, and overloads of
   `OpenRequest` and `OpenResult` that take the JSON-RPC method: they bind an encrypted payload to its call (see
   Changed). `IPayloadEncryptor` gains `Encrypt` and `Decrypt` overloads that authenticate associated data.
@@ -62,7 +67,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   takes every HTTP call for an in-process one. This version breaks binary compatibility in a minor release, an exception
   to Semantic Versioning: the Polhem framework releases a build against it at the same time and deprecates the one
   before. An application that upgrades these packages but still runs code compiled against 1.0 lets unauthenticated
-  HTTP calls through as in-process ones.
+  HTTP calls through as in-process ones. **Upgrade every `Polhem.JsonRpc` package together:** the 1.0 packages accept
+  any later version of each other, so upgrading only one of them, `Polhem.JsonRpc.Payload.Server` for instance, can
+  bring in `Polhem.JsonRpc.Server` 1.1 under `Polhem.JsonRpc.AspNetCore` 1.0, which then marks every HTTP call as in
+  process. The `JsonRpcDispatcher` constructor now throws in that case (see Added).
 - **Wire-visible:** A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
   bind `null`, so the method usually failed and the caller got `-32603`.
 - **Behavior change:** a record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.
@@ -88,6 +96,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ### Fixed
 
+- `AddJsonRpcServer` no longer writes the object factory it resolves into the shared `JsonRpcServerOptions`. A second
+  service provider built from the same services used the first provider's factory, and failed once that provider was
+  disposed.
 - `HttpTransport` gives each request a `Content-Type` value of its own. All requests of the process shared one, so a
   handler that changed it in place, adding a parameter for instance, changed every later request, of every
   `HttpClient`, until the header grew too long to send.

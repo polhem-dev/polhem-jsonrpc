@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Polhem.JsonRpc.AspNetCore;
+using Polhem.JsonRpc.Client;
 using Polhem.JsonRpc.Server;
 
 namespace Polhem.JsonRpc.UnitTests;
@@ -176,6 +177,28 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.Equal("first,second", token);
     }
 
+    [Fact(DisplayName = "HTTP: the call sees a cancellation token that the client's disconnect cancels")]
+    public async Task Post_Call_SeesRequestAbortedToken()
+    {
+        bool? cancellable = null;
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddJsonRpcServer(options =>
+        {
+            options.ObjectFactory = new TestObjectFactory();
+            options.Filters.Add(new TokenReadingFilter(token => cancellable = token.CanBeCanceled));
+        });
+        await using var app = builder.Build();
+        app.MapJsonRpc("/api");
+        await app.StartAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.PostAsync("/api", new StringContent(Subtract, Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(cancellable);
+    }
+
     [Fact(DisplayName = "HTTP: AddJsonRpcServer adds to the options a framework registered first, after its filters")]
     public async Task AddJsonRpcServer_RegisteredOptions_AreSharedAndExtended()
     {
@@ -195,6 +218,26 @@ public sealed class HttpHandlerTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(["framework", "application"], order);
+    }
+
+    [Fact(DisplayName = "HTTP: two service providers built from the same services each use their own object factory, and the shared options are not changed")]
+    public async Task AddJsonRpcServer_TwoProviders_EachUsesItsOwnFactory()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IJsonRpcObjectFactory, TestObjectFactory>();
+        services.AddJsonRpcServer();
+        var first = services.BuildServiceProvider();
+        await using var second = services.BuildServiceProvider();
+        var firstDispatcher = first.GetRequiredService<JsonRpcDispatcher>();
+        var secondDispatcher = second.GetRequiredService<JsonRpcDispatcher>();
+
+        await first.DisposeAsync();
+        var result = await new JsonRpcConnector(new InProcessTransport(secondDispatcher)).InvokeAsync<JsonElement>(
+            "Spec.Subtract", DispatcherFixture.Element("""{"minuend": 3, "subtrahend": 1}"""));
+
+        Assert.NotSame(firstDispatcher, secondDispatcher);
+        Assert.Null(second.GetRequiredService<JsonRpcServerOptions>().ObjectFactory);
+        Assert.Equal(2, result.GetProperty("difference").GetInt32());
     }
 
     [Fact(DisplayName = "HTTP: AddJsonRpcServer applies configureHttp to HTTP options a framework registered first")]
@@ -218,6 +261,15 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
         {
             read(context.Transport.Headers.GetValueOrDefault(name));
+            return next(context);
+        }
+    }
+
+    private sealed class TokenReadingFilter(Action<CancellationToken> read) : IJsonRpcFilter
+    {
+        public ValueTask InvokeAsync(JsonRpcRequestContext context, JsonRpcFilterDelegate next)
+        {
+            read(context.CancellationToken);
             return next(context);
         }
     }

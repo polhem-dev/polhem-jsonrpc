@@ -9,6 +9,10 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ### 新增
 
+- `JsonRpcServerOptions.AllowCodeCompiledAgainst10` 及其背後的檢查：**行為變更**，已載入的組件中若有以
+  `Polhem.JsonRpc.Server` 1.0 編譯的，`JsonRpcDispatcher` 的建構子會擲出 `InvalidOperationException` 並列出其名稱，
+  因為這類程式碼以舊數值讀取 `JsonRpcTransportKind`。只有在那些程式碼從不讀取 transport kind 時才設定此選項。
+- 新增一個 `JsonRpcDispatcher` 建構子，物件工廠與選項分開傳入。
 - `PayloadProcessor.WrapRequest`、`SealResponse`、`UnwrapResult` 與 `UnwrapResult<T>`，以及 `OpenRequest`、`OpenResult`
   帶 JSON-RPC method 的多載：把加密 payload 綁定到它的呼叫（見「變更」）。`IPayloadEncryptor` 新增驗證附加資料的
   `Encrypt` 與 `Decrypt` 多載。
@@ -51,6 +55,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   以 1.0 編譯的程式碼仍用舊數值比較，會把每個 HTTP 呼叫當成 in-process。
   此版本在 minor 版中破壞 binary 相容性，是語意化版本的例外：Polhem 框架會同時發佈以此版編譯的版本並停用前一版。
   升級這些套件、卻仍執行以 1.0 編譯之程式碼的應用程式，會把未經驗證的 HTTP 呼叫當成 in-process 放行。
+  **所有 `Polhem.JsonRpc` 套件必須一起升級：** 1.0 的套件彼此接受任何更新的版本，只升級其中一個（例如
+  `Polhem.JsonRpc.Payload.Server`）就可能在 `Polhem.JsonRpc.AspNetCore` 1.0 底下帶進 `Polhem.JsonRpc.Server` 1.1，
+  使每個 HTTP 呼叫都被標成 in-process。`JsonRpcDispatcher` 的建構子現在遇到這種情況會擲出例外（見「新增」）。
 - **wire 可見：** 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
 - **行為變更：** record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
 - **wire 格式（讀取端）：** `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：
@@ -70,6 +77,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ### 修正
 
+- `AddJsonRpcServer` 不再把它解析出的物件工廠寫回共用的 `JsonRpcServerOptions`。先前由同一組服務建立的第二個
+  service provider 會使用第一個 provider 的工廠，第一個 provider 被釋放後就會失敗。
 - `HttpTransport` 為每個請求建立自己的 `Content-Type` 值。先前整個行程的請求共用同一個，handler 若就地修改它（例如加一個參數），
   之後每個請求、每個 `HttpClient` 都會跟著改，直到 header 長到無法送出。
 - 呼叫端自行編造的方法名稱不再留在 dispatcher 的方法快取中，解析不到任何方法的名稱無法再讓記憶體成長。

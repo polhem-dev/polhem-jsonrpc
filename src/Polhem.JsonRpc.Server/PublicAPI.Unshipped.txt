@@ -4,3 +4,6 @@
 Polhem.JsonRpc.Server.JsonRpcTransportKind.Http = 0 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
 Polhem.JsonRpc.Server.JsonRpcTransportKind.InProcess = 1 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
 Polhem.JsonRpc.Server.JsonRpcRequestContext.MessageItems.get -> System.Collections.Generic.IDictionary<string!, object?>!
+Polhem.JsonRpc.Server.JsonRpcServerOptions.AllowCodeCompiledAgainst10.get -> bool
+Polhem.JsonRpc.Server.JsonRpcServerOptions.AllowCodeCompiledAgainst10.set -> void
+Polhem.JsonRpc.Server.JsonRpcDispatcher.JsonRpcDispatcher(Polhem.JsonRpc.Server.JsonRpcServerOptions! options, Polhem.JsonRpc.Server.IJsonRpcObjectFactory! objectFactory) -> void

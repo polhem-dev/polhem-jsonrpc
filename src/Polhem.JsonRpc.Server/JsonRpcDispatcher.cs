@@ -40,25 +40,70 @@ public sealed class JsonRpcDispatcher
     /// Initializes a new instance of the <see cref="JsonRpcDispatcher"/> class.
     /// </summary>
     /// <param name="options">The settings. <see cref="JsonRpcServerOptions.ObjectFactory"/> is required.</param>
+    /// <exception cref="ArgumentException">A required setting is missing.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, and
+    /// <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is not set.
+    /// </exception>
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]
     public JsonRpcDispatcher(JsonRpcServerOptions options)
+        : this(options, RequiredFactory(options))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonRpcDispatcher"/> class with an object factory of its own, which
+    /// takes the place of <see cref="JsonRpcServerOptions.ObjectFactory"/>.
+    /// </summary>
+    /// <param name="options">The settings.</param>
+    /// <param name="objectFactory">The factory that creates the object for the ProgId of a method name.</param>
+    /// <remarks>
+    /// The options are not changed, so several dispatchers, one per service provider for instance, can share them with
+    /// a factory each.
+    /// </remarks>
+    /// <exception cref="ArgumentException">A required setting is missing.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, and
+    /// <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is not set.
+    /// </exception>
+    [RequiresUnreferencedCode(ReflectionMessage)]
+    [RequiresDynamicCode(ReflectionMessage)]
+    public JsonRpcDispatcher(JsonRpcServerOptions options, IJsonRpcObjectFactory objectFactory)
+        : this(options, objectFactory, CompiledVersionGuard.FindStaleInProcess)
+    {
+    }
+
+    // The check of loaded assemblies is passed in so that tests can give the constructor a stale assembly without
+    // loading one, which would make every dispatcher of the test run refuse to start.
+    [RequiresUnreferencedCode(ReflectionMessage)]
+    [RequiresDynamicCode(ReflectionMessage)]
+    internal JsonRpcDispatcher(JsonRpcServerOptions options, IJsonRpcObjectFactory objectFactory, Func<IReadOnlyList<string>> findStale)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(objectFactory);
+        ArgumentNullException.ThrowIfNull(findStale);
+        if (!options.AllowCodeCompiledAgainst10) { CompiledVersionGuard.ThrowIfAny(findStale()); }
         var serializerOptions = options.SerializerOptions ?? throw new ArgumentException("SerializerOptions is required.", nameof(options));
 
         // `GetTypeInfo` does not fall back to reflection the way `JsonSerializer.Serialize(value, options)` does.
         _serializerOptions = serializerOptions.TypeInfoResolver is null
             ? new JsonSerializerOptions(serializerOptions) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() }
             : serializerOptions;
-        _objectFactory = options.ObjectFactory
-            ?? throw new ArgumentException("ObjectFactory is required: it creates the object for the ProgId of a method name.", nameof(options));
+        _objectFactory = objectFactory;
         _policy = options.MethodPolicy ?? throw new ArgumentException("MethodPolicy is required.", nameof(options));
         _binder = options.ParameterBinder ?? new DefaultParameterBinder(_serializerOptions);
         _filters = [.. options.Filters];
         _exceptionMapper = options.ExceptionMapper;
         _includeExceptionDetails = options.IncludeExceptionDetails;
         _maxBatchSize = options.MaxBatchSize;
+    }
+
+    private static IJsonRpcObjectFactory RequiredFactory(JsonRpcServerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.ObjectFactory
+            ?? throw new ArgumentException("ObjectFactory is required: it creates the object for the ProgId of a method name.", nameof(options));
     }
 
     /// <summary>

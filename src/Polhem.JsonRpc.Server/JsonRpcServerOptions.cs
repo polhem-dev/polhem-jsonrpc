@@ -65,4 +65,17 @@ public sealed class JsonRpcServerOptions
     /// Zero or a negative value refuses every batch; a single request is not affected.
     /// </remarks>
     public int MaxBatchSize { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the dispatcher starts while code compiled against
+    /// <c>Polhem.JsonRpc.Server</c> 1.0 is loaded. The default is <see langword="false"/>: the constructor of
+    /// <see cref="JsonRpcDispatcher"/> throws <see cref="InvalidOperationException"/> naming that code.
+    /// </summary>
+    /// <remarks>
+    /// 1.1 renumbered <see cref="JsonRpcTransportKind"/>, and code compiled against 1.0, such as
+    /// <c>Polhem.JsonRpc.AspNetCore</c> 1.0 brought in by upgrading only another package, takes every HTTP call for an
+    /// in-process one. Set this only when the code named in the exception never reads the transport kind. The check
+    /// sees the assemblies loaded when the dispatcher is created.
+    /// </remarks>
+    public bool AllowCodeCompiledAgainst10 { get; set; }
 }

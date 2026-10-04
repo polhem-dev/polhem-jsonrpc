@@ -221,9 +221,9 @@ public sealed class PayloadProcessor
     /// <returns>
     /// The value. A plain envelope returns its value as a <see cref="JsonElement"/>, or <see langword="null"/>.
     /// </returns>
-    /// <exception cref="InvalidOperationException">The type name is missing or not allowed, or the key is missing.</exception>
+    /// <exception cref="InvalidOperationException">The type name is missing or not allowed, the key is missing, the body could not be decoded, or <see cref="NoPayloadEncryptor"/> is set without <see cref="PayloadOptions.AllowNoEncryption"/>.</exception>
     /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
-    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body fails authentication.</exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body is malformed or fails authentication, or the key is not the size the encryptor needs.</exception>
     /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
     /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
     /// <exception cref="InvalidOperationException">The envelope is encrypted: an encrypted payload is bound to its method, so use the method that takes it (ADR-003).</exception>
@@ -274,10 +274,11 @@ public sealed class PayloadProcessor
     /// reader to bind.
     /// </returns>
     /// <exception cref="InvalidOperationException">
-    /// The type name is missing, not allowed or names another type, or the key is missing.
+    /// The type name is missing, not allowed or names another type, the key is missing, the body could not be decoded,
+    /// or <see cref="NoPayloadEncryptor"/> is set without <see cref="PayloadOptions.AllowNoEncryption"/>.
     /// </exception>
     /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
-    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body fails authentication.</exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body is malformed or fails authentication, or the key is not the size the encryptor needs.</exception>
     /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
     /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
     /// <exception cref="InvalidOperationException">The envelope is encrypted: an encrypted payload is bound to its method, so use the method that takes it (ADR-003).</exception>
@@ -316,7 +317,7 @@ public sealed class PayloadProcessor
     /// the budget.
     /// </exception>
     /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
-    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body fails authentication.</exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body is malformed or fails authentication, or the key is not the size the encryptor needs.</exception>
     /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
     /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
     /// <remarks>

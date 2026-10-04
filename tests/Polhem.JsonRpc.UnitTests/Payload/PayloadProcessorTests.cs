@@ -38,6 +38,14 @@ public class PayloadProcessorTests
         Assert.Equal("a", element.GetProperty("clientName").GetString());
     }
 
+    [Fact(DisplayName = "Processor: a plain null, the answer of every method that returns nothing, is written as format 0 with a null value and an empty type, as Polhem writes it")]
+    public void Wrap_PlainNull_WritesNullValue()
+    {
+        var element = CreateProcessor(false).Wrap(null, PayloadFormat.Plain);
+
+        Assert.Equal("""{"format":0,"value":null,"type":""}""", element.GetRawText());
+    }
+
     [Fact(DisplayName = "Processor: the frame carries the sequence the writer passed")]
     public void Open_RequireFrame_ReturnsWriterSequence()
     {

@@ -109,6 +109,13 @@ requests as in-process; the HTTP handler marks every request as HTTP. The identi
 > (`DispatcherTests.TransportKind_Default_IsNotInProcess`). The renumbering is a binary break: a host compiled against
 > 1.0 compares with the old numbers and, against 1.1, takes every HTTP call for an in-process one. The Polhem framework
 > releases a build against 1.1 at the same time and deprecates the one before it.
+>
+> Amended (2026-10-05): the 1.0 packages accept any later version of each other, so `Polhem.JsonRpc.AspNetCore` 1.0 can
+> run on `Polhem.JsonRpc.Server` 1.1 without the Polhem framework taking part. The `JsonRpcDispatcher` constructor
+> therefore throws while an assembly compiled against `Polhem.JsonRpc.Server` 1.0 is loaded, unless
+> `JsonRpcServerOptions.AllowCodeCompiledAgainst10` is set (`CompiledVersionGuardTests.Dispatcher_StaleAssembly_Throws`,
+> `CompiledVersionGuardTests.Dispatcher_StaleAssemblyAllowed_Starts`). The check sees the assemblies loaded when the
+> dispatcher is created; an assembly a host loads later, on the first call, is not seen.
 
 ### 5. Compression and encryption are not part of the packages
 

@@ -40,6 +40,22 @@ public partial class PayloadServerTests
         Assert.Empty(store.Asked);
     }
 
+    [Fact(DisplayName = "Payload server: the clock that checks request timestamps is the one set when UsePayload ran, not one set later")]
+    public async Task Call_ClockChangedAfterUsePayload_KeepsTheFirstClock()
+    {
+        var serverNow = DateTimeOffset.UtcNow;
+        var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = new FixedClock(serverNow) };
+        var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, new TestPolicy()));
+        payloadOptions.TimeProvider = new FixedClock(serverNow.AddHours(1));
+        var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
+        var client = new PayloadProcessor(new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = new FixedClock(serverNow) });
+
+        var result = await rpc.InvokeAsync<JsonElement>(Subtract,
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
+
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result, s_key)).Difference);
+    }
+
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithStore(IPayloadReplayStore store, TimeProvider clock)
     {
         var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = clock };
