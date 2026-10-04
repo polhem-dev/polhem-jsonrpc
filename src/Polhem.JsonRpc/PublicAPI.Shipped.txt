@@ -72,6 +72,7 @@ static Polhem.JsonRpc.JsonRpcResponse.Failure(Polhem.JsonRpc.JsonRpcId id, Polhe
 static Polhem.JsonRpc.JsonRpcResponse.Success(Polhem.JsonRpc.JsonRpcId id, System.Text.Json.JsonElement? result) -> Polhem.JsonRpc.JsonRpcResponse!
 static Polhem.JsonRpc.JsonRpcSerializer.ReadRequest(System.Text.Json.JsonElement element) -> Polhem.JsonRpc.JsonRpcParsedRequest!
 static Polhem.JsonRpc.JsonRpcSerializer.ReadRequests(System.ReadOnlyMemory<byte> utf8Json) -> Polhem.JsonRpc.JsonRpcRequestParseResult!
+static Polhem.JsonRpc.JsonRpcSerializer.ReadRequests(System.ReadOnlyMemory<byte> utf8Json, int maxBatchSize) -> Polhem.JsonRpc.JsonRpcRequestParseResult!
 static Polhem.JsonRpc.JsonRpcSerializer.ReadResponse(System.Text.Json.JsonElement element) -> Polhem.JsonRpc.JsonRpcResponse!
 static Polhem.JsonRpc.JsonRpcSerializer.ReadResponses(System.ReadOnlyMemory<byte> utf8Json) -> System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!
 static Polhem.JsonRpc.JsonRpcSerializer.SerializeRequest(Polhem.JsonRpc.JsonRpcRequest! request) -> byte[]!

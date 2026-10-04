@@ -2,11 +2,14 @@
 Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor
 Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor.AesCbcHmacPayloadEncryptor() -> void
 Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor.Decrypt(byte[]! bytes, byte[]! key) -> byte[]!
+Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor.Decrypt(byte[]! bytes, byte[]! key, System.ReadOnlySpan<byte> associatedData) -> byte[]!
 Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor.Encrypt(byte[]! bytes, byte[]! key) -> byte[]!
+Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor.Encrypt(byte[]! bytes, byte[]! key, System.ReadOnlySpan<byte> associatedData) -> byte[]!
 Polhem.JsonRpc.Payload.AesCbcHmacPayloadEncryptor.Name.get -> string!
 Polhem.JsonRpc.Payload.GzipPayloadCompressor
 Polhem.JsonRpc.Payload.GzipPayloadCompressor.Compress(byte[]! bytes) -> byte[]!
 Polhem.JsonRpc.Payload.GzipPayloadCompressor.Decompress(byte[]! bytes) -> byte[]!
+Polhem.JsonRpc.Payload.GzipPayloadCompressor.Decompress(byte[]! bytes, long maxDecompressedBytes) -> byte[]!
 Polhem.JsonRpc.Payload.GzipPayloadCompressor.GzipPayloadCompressor() -> void
 Polhem.JsonRpc.Payload.GzipPayloadCompressor.GzipPayloadCompressor(long maxDecompressedBytes) -> void
 Polhem.JsonRpc.Payload.GzipPayloadCompressor.MaxDecompressedBytes.get -> long
@@ -18,10 +21,13 @@ Polhem.JsonRpc.Payload.IPayloadCodec.Serialize(object! value, System.Type! type)
 Polhem.JsonRpc.Payload.IPayloadCompressor
 Polhem.JsonRpc.Payload.IPayloadCompressor.Compress(byte[]! bytes) -> byte[]!
 Polhem.JsonRpc.Payload.IPayloadCompressor.Decompress(byte[]! bytes) -> byte[]!
+Polhem.JsonRpc.Payload.IPayloadCompressor.Decompress(byte[]! bytes, long maxDecompressedBytes) -> byte[]!
 Polhem.JsonRpc.Payload.IPayloadCompressor.Name.get -> string!
 Polhem.JsonRpc.Payload.IPayloadEncryptor
 Polhem.JsonRpc.Payload.IPayloadEncryptor.Decrypt(byte[]! bytes, byte[]! key) -> byte[]!
+Polhem.JsonRpc.Payload.IPayloadEncryptor.Decrypt(byte[]! bytes, byte[]! key, System.ReadOnlySpan<byte> associatedData) -> byte[]!
 Polhem.JsonRpc.Payload.IPayloadEncryptor.Encrypt(byte[]! bytes, byte[]! key) -> byte[]!
+Polhem.JsonRpc.Payload.IPayloadEncryptor.Encrypt(byte[]! bytes, byte[]! key, System.ReadOnlySpan<byte> associatedData) -> byte[]!
 Polhem.JsonRpc.Payload.IPayloadEncryptor.Name.get -> string!
 Polhem.JsonRpc.Payload.IPayloadTypeResolver
 Polhem.JsonRpc.Payload.IPayloadTypeResolver.GetTypeName(System.Type! type) -> string!
@@ -43,8 +49,13 @@ Polhem.JsonRpc.Payload.NoPayloadCompressor.Decompress(byte[]! bytes) -> byte[]!
 Polhem.JsonRpc.Payload.NoPayloadCompressor.Name.get -> string!
 Polhem.JsonRpc.Payload.NoPayloadEncryptor
 Polhem.JsonRpc.Payload.NoPayloadEncryptor.Decrypt(byte[]! bytes, byte[]! key) -> byte[]!
+Polhem.JsonRpc.Payload.NoPayloadEncryptor.Decrypt(byte[]! bytes, byte[]! key, System.ReadOnlySpan<byte> associatedData) -> byte[]!
 Polhem.JsonRpc.Payload.NoPayloadEncryptor.Encrypt(byte[]! bytes, byte[]! key) -> byte[]!
+Polhem.JsonRpc.Payload.NoPayloadEncryptor.Encrypt(byte[]! bytes, byte[]! key, System.ReadOnlySpan<byte> associatedData) -> byte[]!
 Polhem.JsonRpc.Payload.NoPayloadEncryptor.Name.get -> string!
+Polhem.JsonRpc.Payload.PayloadDecompressionBudget
+Polhem.JsonRpc.Payload.PayloadDecompressionBudget.PayloadDecompressionBudget(long bytes) -> void
+Polhem.JsonRpc.Payload.PayloadDecompressionBudget.Remaining.get -> long
 Polhem.JsonRpc.Payload.PayloadEnvelope
 Polhem.JsonRpc.Payload.PayloadEnvelope.Body.get -> byte[]?
 Polhem.JsonRpc.Payload.PayloadEnvelope.Body.init -> void
@@ -83,6 +94,8 @@ Polhem.JsonRpc.Payload.PayloadOptions.FrameTimestampTolerance.get -> System.Time
 Polhem.JsonRpc.Payload.PayloadOptions.FrameTimestampTolerance.set -> void
 Polhem.JsonRpc.Payload.PayloadOptions.JsonCodec.get -> Polhem.JsonRpc.Payload.JsonPayloadCodec!
 Polhem.JsonRpc.Payload.PayloadOptions.JsonCodec.set -> void
+Polhem.JsonRpc.Payload.PayloadOptions.MaxDecompressedBytesPerMessage.get -> long
+Polhem.JsonRpc.Payload.PayloadOptions.MaxDecompressedBytesPerMessage.set -> void
 Polhem.JsonRpc.Payload.PayloadOptions.PayloadOptions() -> void
 Polhem.JsonRpc.Payload.PayloadOptions.RegisterCodec(Polhem.JsonRpc.Payload.IPayloadCodec! codec) -> void
 Polhem.JsonRpc.Payload.PayloadOptions.RequireFrame.get -> bool
@@ -90,17 +103,27 @@ Polhem.JsonRpc.Payload.PayloadOptions.RequireFrame.set -> void
 Polhem.JsonRpc.Payload.PayloadOptions.ResolveCodec(string? name) -> Polhem.JsonRpc.Payload.IPayloadCodec!
 Polhem.JsonRpc.Payload.PayloadOptions.SerializerOptions.get -> System.Text.Json.JsonSerializerOptions!
 Polhem.JsonRpc.Payload.PayloadOptions.SerializerOptions.set -> void
+Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.get -> System.TimeProvider!
+Polhem.JsonRpc.Payload.PayloadOptions.TimeProvider.set -> void
 Polhem.JsonRpc.Payload.PayloadOptions.TypeResolver.get -> Polhem.JsonRpc.Payload.IPayloadTypeResolver!
 Polhem.JsonRpc.Payload.PayloadOptions.TypeResolver.set -> void
 Polhem.JsonRpc.Payload.PayloadProcessor
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenRequest(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, Polhem.JsonRpc.Payload.PayloadDecompressionBudget! budget, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenRequest(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, Polhem.JsonRpc.Payload.PayloadDecompressionBudget! budget, string! method, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
 Polhem.JsonRpc.Payload.PayloadProcessor.OpenRequest(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenRequest(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, System.Type! type, byte[]? key, string! method, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
 Polhem.JsonRpc.Payload.PayloadProcessor.OpenResult(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, byte[]? key, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
+Polhem.JsonRpc.Payload.PayloadProcessor.OpenResult(Polhem.JsonRpc.Payload.PayloadEnvelope! envelope, byte[]? key, string! method, Polhem.JsonRpc.Payload.PayloadFormat requestFormat, out Polhem.JsonRpc.Payload.PayloadFrame? frame) -> object?
 Polhem.JsonRpc.Payload.PayloadProcessor.Options.get -> Polhem.JsonRpc.Payload.PayloadOptions!
 Polhem.JsonRpc.Payload.PayloadProcessor.PayloadProcessor(Polhem.JsonRpc.Payload.PayloadOptions! options) -> void
 Polhem.JsonRpc.Payload.PayloadProcessor.Seal(object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0) -> Polhem.JsonRpc.Payload.PayloadEnvelope!
+Polhem.JsonRpc.Payload.PayloadProcessor.SealResponse(string! method, object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null) -> Polhem.JsonRpc.Payload.PayloadEnvelope!
 Polhem.JsonRpc.Payload.PayloadProcessor.Unwrap(System.Text.Json.JsonElement? payload, byte[]? key = null) -> object?
 Polhem.JsonRpc.Payload.PayloadProcessor.Unwrap<T>(System.Text.Json.JsonElement? payload, byte[]? key = null) -> T?
+Polhem.JsonRpc.Payload.PayloadProcessor.UnwrapResult(string! method, Polhem.JsonRpc.Payload.PayloadFormat requestFormat, System.Text.Json.JsonElement? payload, byte[]? key = null) -> object?
+Polhem.JsonRpc.Payload.PayloadProcessor.UnwrapResult<T>(string! method, Polhem.JsonRpc.Payload.PayloadFormat requestFormat, System.Text.Json.JsonElement? payload, byte[]? key = null) -> T?
 Polhem.JsonRpc.Payload.PayloadProcessor.Wrap(object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0) -> System.Text.Json.JsonElement
+Polhem.JsonRpc.Payload.PayloadProcessor.WrapRequest(string! method, object? value, Polhem.JsonRpc.Payload.PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0) -> System.Text.Json.JsonElement
 Polhem.JsonRpc.Payload.PayloadTypeRegistry
 Polhem.JsonRpc.Payload.PayloadTypeRegistry.GetTypeName(System.Type! type) -> string!
 Polhem.JsonRpc.Payload.PayloadTypeRegistry.IsNameOf(string! typeName, System.Type! type) -> bool

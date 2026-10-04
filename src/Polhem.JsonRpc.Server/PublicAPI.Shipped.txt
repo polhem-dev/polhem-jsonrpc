@@ -24,6 +24,7 @@ Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchAsync(Polhem.JsonRpc.JsonRpcRequ
 Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchBatchAsync(System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcRequest!>! requests, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Polhem.JsonRpc.JsonRpcResponse!>!>!
 Polhem.JsonRpc.Server.JsonRpcDispatcher.DispatchMessageAsync(System.ReadOnlyMemory<byte> utf8Json, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Polhem.JsonRpc.Server.JsonRpcDispatchResult!>!
 Polhem.JsonRpc.Server.JsonRpcDispatcher.JsonRpcDispatcher(Polhem.JsonRpc.Server.JsonRpcServerOptions! options) -> void
+Polhem.JsonRpc.Server.JsonRpcDispatcher.JsonRpcDispatcher(Polhem.JsonRpc.Server.JsonRpcServerOptions! options, Polhem.JsonRpc.Server.IJsonRpcObjectFactory! objectFactory) -> void
 Polhem.JsonRpc.Server.JsonRpcFilterDelegate
 Polhem.JsonRpc.Server.JsonRpcMethod
 Polhem.JsonRpc.Server.JsonRpcMethod.Action.get -> string!
@@ -39,6 +40,7 @@ Polhem.JsonRpc.Server.JsonRpcRequestContext.CancellationToken.get -> System.Thre
 Polhem.JsonRpc.Server.JsonRpcRequestContext.GetResult() -> System.Text.Json.JsonElement?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Items.get -> System.Collections.Generic.IDictionary<string!, object?>!
 Polhem.JsonRpc.Server.JsonRpcRequestContext.JsonRpcRequestContext(Polhem.JsonRpc.JsonRpcRequest! request, Polhem.JsonRpc.Server.JsonRpcTransportInfo! transport, System.Threading.CancellationToken cancellationToken) -> void
+Polhem.JsonRpc.Server.JsonRpcRequestContext.MessageItems.get -> System.Collections.Generic.IDictionary<string!, object?>!
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Method.get -> Polhem.JsonRpc.Server.JsonRpcMethod?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Request.get -> Polhem.JsonRpc.JsonRpcRequest!
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Result.get -> System.Text.Json.JsonElement?
@@ -50,6 +52,8 @@ Polhem.JsonRpc.Server.JsonRpcRequestContext.ReturnValue.set -> void
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Services.get -> System.IServiceProvider?
 Polhem.JsonRpc.Server.JsonRpcRequestContext.Transport.get -> Polhem.JsonRpc.Server.JsonRpcTransportInfo!
 Polhem.JsonRpc.Server.JsonRpcServerOptions
+Polhem.JsonRpc.Server.JsonRpcServerOptions.AllowCodeCompiledAgainst10.get -> bool
+Polhem.JsonRpc.Server.JsonRpcServerOptions.AllowCodeCompiledAgainst10.set -> void
 Polhem.JsonRpc.Server.JsonRpcServerOptions.ExceptionMapper.get -> System.Func<System.Exception!, Polhem.JsonRpc.Server.JsonRpcRequestContext!, Polhem.JsonRpc.JsonRpcError?>?
 Polhem.JsonRpc.Server.JsonRpcServerOptions.ExceptionMapper.set -> void
 Polhem.JsonRpc.Server.JsonRpcServerOptions.Filters.get -> System.Collections.Generic.IList<Polhem.JsonRpc.Server.IJsonRpcFilter!>!
@@ -75,7 +79,7 @@ Polhem.JsonRpc.Server.JsonRpcTransportInfo.RemoteAddress.get -> string?
 Polhem.JsonRpc.Server.JsonRpcTransportInfo.Services.get -> System.IServiceProvider?
 Polhem.JsonRpc.Server.JsonRpcTransportKind
 Polhem.JsonRpc.Server.JsonRpcTransportKind.Custom = 2 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
-Polhem.JsonRpc.Server.JsonRpcTransportKind.Http = 1 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
-Polhem.JsonRpc.Server.JsonRpcTransportKind.InProcess = 0 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
+Polhem.JsonRpc.Server.JsonRpcTransportKind.Http = 0 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
+Polhem.JsonRpc.Server.JsonRpcTransportKind.InProcess = 1 -> Polhem.JsonRpc.Server.JsonRpcTransportKind
 static Polhem.JsonRpc.Server.JsonRpcMethod.IsResolvableAction(System.Reflection.MethodInfo! method) -> bool
 virtual Polhem.JsonRpc.Server.JsonRpcFilterDelegate.Invoke(Polhem.JsonRpc.Server.JsonRpcRequestContext! context) -> System.Threading.Tasks.ValueTask
