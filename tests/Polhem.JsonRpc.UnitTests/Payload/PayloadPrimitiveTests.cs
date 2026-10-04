@@ -77,6 +77,32 @@ public class PayloadPrimitiveTests
         Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, RandomNumberGenerator.GetBytes(64)));
     }
 
+    [Fact(DisplayName = "AES-CBC-HMAC: a change to the last byte of the HMAC fails authentication, so the whole tag is compared")]
+    public void AesCbcHmac_TamperedTagEnd_FailsAuthentication()
+    {
+        var encryptor = new AesCbcHmacPayloadEncryptor();
+        var key = RandomNumberGenerator.GetBytes(64);
+        var encrypted = encryptor.Encrypt(new byte[64], key);
+        encrypted[^1] ^= 0x01;
+
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, key));
+    }
+
+    // Were the data decrypted before the HMAC is checked, a change to the last block would fail on its padding, with a
+    // message of its own: a padding oracle. The HMAC failure is the only answer to any change.
+    [Fact(DisplayName = "AES-CBC-HMAC: a change to the last block is refused by the HMAC check, before any padding is read")]
+    public void AesCbcHmac_TamperedLastBlock_RefusedByHmacFirst()
+    {
+        var encryptor = new AesCbcHmacPayloadEncryptor();
+        var key = RandomNumberGenerator.GetBytes(64);
+        var encrypted = encryptor.Encrypt(new byte[64], key);
+        encrypted[^33] ^= 0x01;
+
+        var ex = Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, key));
+
+        Assert.Equal("HMAC validation failed.", ex.Message);
+    }
+
     // Without the HMAC, a change to the IV or to a block before the last one still decrypts with valid padding, so only
     // the HMAC can refuse it; a change to the last block would also be refused by the padding check.
     [Theory(DisplayName = "AES-CBC-HMAC: a change to the IV or to the first block of ciphertext fails authentication")]

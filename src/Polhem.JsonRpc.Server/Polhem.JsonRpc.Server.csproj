@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Polhem.JsonRpc.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Polhem.JsonRpc\Polhem.JsonRpc.csproj" />
   </ItemGroup>
 

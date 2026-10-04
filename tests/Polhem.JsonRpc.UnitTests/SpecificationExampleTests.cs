@@ -116,6 +116,10 @@ public class SpecificationExampleTests
     [InlineData("""{"jsonrpc": "2.0", "id": 1}""")]
     [InlineData("""{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": 5, "id": 1}""")]
     [InlineData("""{"jsonrpc": "2.0", "method": "Spec.Subtract", "params": null, "id": 1}""")]
+    [InlineData("""{"jsonrpc": 2.0, "method": "Spec.Subtract", "id": 1}""")]
+    [InlineData("""{"jsonrpc": "2.1", "method": "Spec.Subtract", "id": 1}""")]
+    [InlineData("""{"jsonrpc": "2.0", "method": 1, "id": 1}""")]
+    [InlineData("""{"jsonrpc": "2.0", "method": null, "id": 1}""")]
     public async Task Dispatch_InvalidRequestObject_ReturnsInvalidRequestWithItsId(string request)
     {
         using var answer = await DispatcherFixture.RunAsync(_dispatcher, request);

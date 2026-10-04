@@ -43,15 +43,33 @@ public sealed class JsonRpcDispatcher
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]
     public JsonRpcDispatcher(JsonRpcServerOptions options)
+        : this(options, options?.ObjectFactory!)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonRpcDispatcher"/> class with an object factory of its own, which
+    /// takes the place of <see cref="JsonRpcServerOptions.ObjectFactory"/>.
+    /// </summary>
+    /// <param name="options">The settings.</param>
+    /// <param name="objectFactory">The factory that creates the object for the ProgId of a method name.</param>
+    /// <remarks>
+    /// The options are not changed, so several dispatchers, one per service provider for instance, can share them with
+    /// a factory each.
+    /// </remarks>
+    [RequiresUnreferencedCode(ReflectionMessage)]
+    [RequiresDynamicCode(ReflectionMessage)]
+    public JsonRpcDispatcher(JsonRpcServerOptions options, IJsonRpcObjectFactory objectFactory)
     {
         ArgumentNullException.ThrowIfNull(options);
+        if (!options.AllowCodeCompiledAgainst10) { CompiledVersionGuard.ThrowIfStale(); }
         var serializerOptions = options.SerializerOptions ?? throw new ArgumentException("SerializerOptions is required.", nameof(options));
 
         // `GetTypeInfo` does not fall back to reflection the way `JsonSerializer.Serialize(value, options)` does.
         _serializerOptions = serializerOptions.TypeInfoResolver is null
             ? new JsonSerializerOptions(serializerOptions) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() }
             : serializerOptions;
-        _objectFactory = options.ObjectFactory
+        _objectFactory = objectFactory
             ?? throw new ArgumentException("ObjectFactory is required: it creates the object for the ProgId of a method name.", nameof(options));
         _policy = options.MethodPolicy ?? throw new ArgumentException("MethodPolicy is required.", nameof(options));
         _binder = options.ParameterBinder ?? new DefaultParameterBinder(_serializerOptions);

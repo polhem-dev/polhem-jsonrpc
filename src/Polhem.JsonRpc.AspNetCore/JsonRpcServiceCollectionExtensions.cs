@@ -56,11 +56,10 @@ public static class JsonRpcServiceCollectionExtensions
         }
         configureHttp?.Invoke(httpOptions);
 
+        // The factory is passed, not written back to the options: the options are shared by every provider built from
+        // these services, and each provider has its own factory.
         services.TryAddSingleton(provider =>
-        {
-            options.ObjectFactory ??= provider.GetRequiredService<IJsonRpcObjectFactory>();
-            return new JsonRpcDispatcher(options);
-        });
+            new JsonRpcDispatcher(options, options.ObjectFactory ?? provider.GetRequiredService<IJsonRpcObjectFactory>()));
         services.TryAddSingleton<JsonRpcHttpHandler>();
         return services;
     }

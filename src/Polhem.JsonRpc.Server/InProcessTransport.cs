@@ -5,6 +5,10 @@ namespace Polhem.JsonRpc.Server;
 /// </summary>
 /// <remarks>
 /// Every call it delivers is marked <see cref="JsonRpcTransportKind.InProcess"/>.
+/// <para>
+/// The request is not serialized, so the server's filters see the same <see cref="JsonRpcRequest"/> object the
+/// client's interceptors produced; a filter that changes it changes the caller's object.
+/// </para>
 /// </remarks>
 public sealed class InProcessTransport : IJsonRpcTransport
 {

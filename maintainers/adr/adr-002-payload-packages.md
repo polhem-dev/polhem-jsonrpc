@@ -87,6 +87,13 @@ Each of these is pinned by vectors that the Polhem implementation produced befor
 > instance, still passes them. Since then, two writer vectors take apart what this package writes with code of their
 > own and compare its JSON body with the body inside Polhem's vector; the compressed and encrypted bytes themselves
 > cannot be compared, because gzip output may vary and the IV is random.
+>
+> Corrected (2026-10-05): the vectors do not pin the order of the checks. That the HMAC is compared over all 32 bytes
+> before anything is decrypted is held by `PayloadPrimitiveTests.AesCbcHmac_TamperedTagEnd_FailsAuthentication` and
+> `PayloadPrimitiveTests.AesCbcHmac_TamperedLastBlock_RefusedByHmacFirst`. For other client implementations: the
+> server accepts a sequence number that is not negative, that it has not seen in the scope, and that is at most
+> 1,000,000 ahead of the highest it has seen there and fewer than 64 behind it (`ReplayWindow`); the first number of
+> a scope is accepted as it is. A client should count up from 1 and never reuse a number within a scope.
 
 ### 3. The client wraps and unwraps; there is no interceptor
 

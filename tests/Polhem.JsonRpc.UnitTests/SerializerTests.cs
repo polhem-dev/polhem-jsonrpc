@@ -5,6 +5,16 @@ namespace Polhem.JsonRpc.UnitTests;
 
 public class SerializerTests
 {
+    [Fact(DisplayName = "Serializer: an error's data is written after its code and message")]
+    public void SerializeResponse_ErrorWithData_WritesData()
+    {
+        var error = new JsonRpcError(-32602, "Invalid params", DispatcherFixture.Element("""{"field":"a"}"""));
+
+        var json = Encoding.UTF8.GetString(JsonRpcSerializer.SerializeResponse(JsonRpcResponse.Failure(1, error)));
+
+        Assert.Equal("""{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid params","data":{"field":"a"}},"id":1}""", json);
+    }
+
     [Fact(DisplayName = "Serializer: a notification is written without an id member")]
     public void SerializeRequest_Notification_OmitsId()
     {
