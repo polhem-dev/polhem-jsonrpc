@@ -53,21 +53,25 @@ public partial class PayloadServerTests
         Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, replayed, s_key)).Difference);
     }
 
-    [Fact(DisplayName = "Payload server: a body sent uncompressed is opened whatever the decompression limits say")]
+    [Fact(DisplayName = "Payload server: a body sent uncompressed is opened whatever the decompression limits say, the message's and the compressor's own")]
     public async Task Call_UncompressedBody_IgnoresDecompressionLimits()
     {
-        var (rpc, _) = CreateWithBudget(1);
+        // Both limits are far below the body's length.
+        var (rpc, _) = CreateWithBudget(1, new GzipPayloadCompressor(8));
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract, UncompressedEnvelope(sequence: 1));
 
         Assert.Equal(PayloadFormat.Encoded, PayloadEnvelope.Read(result).Format);
     }
 
-    [Fact(DisplayName = "Payload server: a body sent uncompressed takes its length from the budget, so a compressed call after it no longer fits")]
-    public async Task Batch_UncompressedBody_DrawsOnTheBudget()
+    [Theory(DisplayName = "Payload server: a body sent uncompressed takes exactly its length from the budget, so a compressed call of the same length after it fits only if the budget holds both")]
+    [InlineData(0, true)]
+    [InlineData(-1, false)]
+    public async Task Batch_UncompressedBody_DrawsItsLength(int spare, bool fits)
     {
+        // The compressed call decompresses to the same JSON, so the two together need twice the length.
         var length = Encoding.UTF8.GetByteCount(SubtractJson);
-        var (rpc, client) = CreateWithBudget((2 * length) - 1);
+        var (rpc, client) = CreateWithBudget((2 * length) + spare);
         var batch = rpc.CreateBatch();
         var uncompressed = batch.Add<JsonElement>(Subtract, UncompressedEnvelope(sequence: 1));
         var compressed = batch.Add<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 2));
@@ -75,8 +79,15 @@ public partial class PayloadServerTests
         await batch.SendAsync();
 
         await uncompressed;
-        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => compressed);
-        Assert.Equal(JsonRpcErrorCodes.InternalError, ex.Code);
+        if (fits)
+        {
+            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(await compressed)).Difference);
+        }
+        else
+        {
+            var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => compressed);
+            Assert.Equal(JsonRpcErrorCodes.InternalError, ex.Code);
+        }
     }
 
     [Fact(DisplayName = "Payload server: a plain call draws nothing from the budget, so a compressed call after it still fits")]
@@ -93,9 +104,10 @@ public partial class PayloadServerTests
         Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, await compressed)).Difference);
     }
 
-    private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithBudget(long budget)
+    private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithBudget(long budget, IPayloadCompressor? compressor = null)
     {
         var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), MaxDecompressedBytesPerMessage = budget };
+        if (compressor is not null) { payloadOptions.Compressor = compressor; }
         var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, new TestPolicy()));
         return (new JsonRpcConnector(new InProcessTransport(dispatcher)), new PayloadProcessor(payloadOptions));
     }
