@@ -9,6 +9,8 @@ public class PayloadProcessorTests
 {
     private static readonly byte[] s_key = RandomNumberGenerator.GetBytes(AesCbcHmacPayloadEncryptor.KeySize);
 
+    private const string Ping = "System.Ping";
+
     [Theory(DisplayName = "Processor: a value wrapped in each format unwraps to an equal value")]
     [InlineData(PayloadFormat.Encoded, false)]
     [InlineData(PayloadFormat.Encoded, true)]
@@ -18,8 +20,8 @@ public class PayloadProcessorTests
     {
         var processor = CreateProcessor(requireFrame);
 
-        var element = processor.Wrap(new VectorPing { ClientName = "a", TraceId = "b" }, format, key: s_key, sequence: 3);
-        var ping = Assert.IsType<VectorPing>(processor.Unwrap(element, s_key));
+        var element = processor.SealResponse(Ping, new VectorPing { ClientName = "a", TraceId = "b" }, format, key: s_key).ToElement();
+        var ping = Assert.IsType<VectorPing>(processor.UnwrapResult(Ping, element, s_key));
 
         Assert.Equal("a", ping.ClientName);
         Assert.Equal("b", ping.TraceId);
@@ -40,9 +42,9 @@ public class PayloadProcessorTests
     public void Open_RequireFrame_ReturnsWriterSequence()
     {
         var processor = CreateProcessor(requireFrame: true);
-        var envelope = processor.Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key, sequence: 99);
+        var envelope = PayloadEnvelope.Read(processor.WrapRequest(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key, sequence: 99));
 
-        processor.OpenRequest(envelope, typeof(VectorPing), s_key, out var frame);
+        processor.OpenRequest(envelope, typeof(VectorPing), s_key, Ping, out var frame);
 
         Assert.Equal(99, frame!.Sequence);
     }
@@ -90,9 +92,9 @@ public class PayloadProcessorTests
     {
         var processor = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
-        var element = processor.Wrap(new VectorPing { ClientName = "a" }, format, key: s_key, sequence: 1);
+        var element = processor.SealResponse(Ping, new VectorPing { ClientName = "a" }, format, key: s_key).ToElement();
 
-        Assert.Equal("a", processor.Unwrap<VectorPing>(element, s_key)!.ClientName);
+        Assert.Equal("a", processor.UnwrapResult<VectorPing>(Ping, element, s_key)!.ClientName);
     }
 
     [Fact(DisplayName = "Processor: a client that names the result type binds a plain envelope to it")]
@@ -137,19 +139,19 @@ public class PayloadProcessorTests
     public void Open_TamperedCiphertext_ThrowsCryptographicException()
     {
         var processor = CreateProcessor(false);
-        var envelope = processor.Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key);
+        var envelope = processor.SealResponse(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key);
         envelope.Body![^40] ^= 0x01;
 
-        Assert.Throws<CryptographicException>(() => processor.OpenRequest(envelope, typeof(VectorPing), s_key, out _));
+        Assert.Throws<CryptographicException>(() => processor.OpenResult(envelope, s_key, Ping, out _));
     }
 
     [Fact(DisplayName = "Processor: a reader that requires a frame refuses a body written without one")]
     public void Open_RequiredFrameMissing_ThrowsReplayRejected()
     {
-        var envelope = CreateProcessor(requireFrame: false).Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key);
+        var envelope = PayloadEnvelope.Read(CreateProcessor(requireFrame: false).WrapRequest(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key));
 
         Assert.Throws<ReplayRejectedException>(
-            () => CreateProcessor(requireFrame: true).OpenRequest(envelope, typeof(VectorPing), s_key, out _));
+            () => CreateProcessor(requireFrame: true).OpenRequest(envelope, typeof(VectorPing), s_key, Ping, out _));
     }
 
     [Fact(DisplayName = "Processor: an envelope names the codec it was written with, and the reader uses that codec")]
@@ -180,10 +182,10 @@ public class PayloadProcessorTests
         options.Encryptor = NoPayloadEncryptor.Instance;
 
         Assert.Throws<InvalidOperationException>(
-            () => new PayloadProcessor(options).Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key));
+            () => new PayloadProcessor(options).SealResponse(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key));
 
         options.AllowNoEncryption = true;
-        Assert.NotNull(new PayloadProcessor(options).Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key));
+        Assert.NotNull(new PayloadProcessor(options).SealResponse(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key));
     }
 
     [Fact(DisplayName = "Processor: the unencrypted encryptor is refused when opening, too, unless it is allowed explicitly")]
@@ -192,12 +194,12 @@ public class PayloadProcessorTests
         var options = CreateOptions(false);
         options.Encryptor = NoPayloadEncryptor.Instance;
         options.AllowNoEncryption = true;
-        var envelope = new PayloadProcessor(options).Seal(new VectorPing(), PayloadFormat.Encrypted, key: s_key);
+        var envelope = PayloadEnvelope.Read(new PayloadProcessor(options).WrapRequest(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key));
 
         options.AllowNoEncryption = false;
 
         Assert.Throws<InvalidOperationException>(
-            () => new PayloadProcessor(options).OpenRequest(envelope, typeof(VectorPing), s_key, out _));
+            () => new PayloadProcessor(options).OpenRequest(envelope, typeof(VectorPing), s_key, Ping, out _));
     }
 
     [Fact(DisplayName = "Processor: an encoded body written without compression opens, as a future writer may send a small one")]

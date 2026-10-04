@@ -156,7 +156,7 @@ public sealed class PayloadOptions
     /// <summary>
     /// Gets or sets how body types are named and which names are accepted. The default is an empty
     /// <see cref="PayloadTypeRegistry"/>: it accepts the name of a type the reader chose (a server's method parameter,
-    /// the type given to <see cref="PayloadProcessor.Unwrap{T}"/>), and resolves no name to a type until types are
+    /// the type given to <see cref="PayloadProcessor.UnwrapResult{T}"/>), and resolves no name to a type until types are
     /// registered with it.
     /// </summary>
     public IPayloadTypeResolver TypeResolver

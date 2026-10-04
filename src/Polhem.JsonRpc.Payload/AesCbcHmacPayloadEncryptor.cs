@@ -9,8 +9,8 @@ namespace Polhem.JsonRpc.Payload;
 /// <remarks>
 /// The key is 64 bytes: the AES key followed by the HMAC key. The output is laid out as the IV length (32-bit
 /// little-endian), a random 16-byte IV, the ciphertext length (32-bit little-endian), the ciphertext, and the HMAC of
-/// everything before it. This layout is part of the wire format that other clients implement; changing it is a
-/// breaking change of the protocol.
+/// everything before it followed by the associated data, which the output does not carry. This layout is part of the
+/// wire format that other clients implement; changing it is a breaking change of the protocol.
 /// </remarks>
 public sealed class AesCbcHmacPayloadEncryptor : IPayloadEncryptor
 {
@@ -30,7 +30,11 @@ public sealed class AesCbcHmacPayloadEncryptor : IPayloadEncryptor
 
     /// <inheritdoc/>
     /// <exception cref="CryptographicException">The key is not <see cref="KeySize"/> bytes.</exception>
-    public byte[] Encrypt(byte[] bytes, byte[] key)
+    public byte[] Encrypt(byte[] bytes, byte[] key) => Encrypt(bytes, key, []);
+
+    /// <inheritdoc/>
+    /// <exception cref="CryptographicException">The key is not <see cref="KeySize"/> bytes.</exception>
+    public byte[] Encrypt(byte[] bytes, byte[] key, ReadOnlySpan<byte> associatedData)
     {
         ArgumentNullException.ThrowIfNull(bytes);
         var (aesKey, hmacKey) = SplitKey(key);
@@ -47,7 +51,7 @@ public sealed class AesCbcHmacPayloadEncryptor : IPayloadEncryptor
         iv.CopyTo(result.AsSpan(LengthPrefixSize));
         BinaryPrimitives.WriteInt32LittleEndian(result.AsSpan(LengthPrefixSize + IvSize), cipherLength);
         aes.EncryptCbc(bytes, iv, result.AsSpan(headerLength, cipherLength), PaddingMode.PKCS7);
-        HMACSHA256.HashData(hmacKey, result.AsSpan(0, headerLength + cipherLength),
+        ComputeHmac(hmacKey, result.AsSpan(0, headerLength + cipherLength), associatedData,
             result.AsSpan(headerLength + cipherLength, HmacSize));
         return result;
     }
@@ -56,7 +60,14 @@ public sealed class AesCbcHmacPayloadEncryptor : IPayloadEncryptor
     /// <exception cref="CryptographicException">
     /// The key is not <see cref="KeySize"/> bytes, the data is malformed, or its HMAC does not match.
     /// </exception>
-    public byte[] Decrypt(byte[] bytes, byte[] key)
+    public byte[] Decrypt(byte[] bytes, byte[] key) => Decrypt(bytes, key, []);
+
+    /// <inheritdoc/>
+    /// <exception cref="CryptographicException">
+    /// The key is not <see cref="KeySize"/> bytes, the data is malformed, or its HMAC does not match the data and the
+    /// associated data.
+    /// </exception>
+    public byte[] Decrypt(byte[] bytes, byte[] key, ReadOnlySpan<byte> associatedData)
     {
         var (aesKey, hmacKey) = SplitKey(key);
         if (bytes == null || bytes.Length < MinimumSize)
@@ -73,7 +84,7 @@ public sealed class AesCbcHmacPayloadEncryptor : IPayloadEncryptor
 
         int headerLength = LengthPrefixSize + ivLength + LengthPrefixSize;
         Span<byte> computed = stackalloc byte[HmacSize];
-        HMACSHA256.HashData(hmacKey, bytes.AsSpan(0, headerLength + cipherLength), computed);
+        ComputeHmac(hmacKey, bytes.AsSpan(0, headerLength + cipherLength), associatedData, computed);
         if (!CryptographicOperations.FixedTimeEquals(bytes.AsSpan(headerLength + cipherLength, HmacSize), computed))
             throw new CryptographicException("HMAC validation failed.");
 
@@ -86,6 +97,14 @@ public sealed class AesCbcHmacPayloadEncryptor : IPayloadEncryptor
         aes.Key = aesKey;
         return aes.DecryptCbc(bytes.AsSpan(headerLength, cipherLength), bytes.AsSpan(LengthPrefixSize, IvSize),
             PaddingMode.PKCS7);
+    }
+
+    private static void ComputeHmac(byte[] hmacKey, ReadOnlySpan<byte> data, ReadOnlySpan<byte> associatedData, Span<byte> destination)
+    {
+        using var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, hmacKey);
+        hmac.AppendData(data);
+        hmac.AppendData(associatedData);
+        hmac.GetHashAndReset(destination);
     }
 
     private static (byte[] AesKey, byte[] HmacKey) SplitKey(byte[] key)

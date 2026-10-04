@@ -34,11 +34,18 @@ public interface IPayloadServerPolicy
     /// IMPORTANT: the scope must cover every holder of the call's key. The HMAC proves only that a holder of the key
     /// wrote the frame, so a captured call replayed under another scope that uses the same key is accepted there, where
     /// its sequence number has not been seen (<c>PayloadServerTests.Call_ReplayedUnderAnotherScopeSharingTheKey_IsAccepted</c>).
-    /// Give each session its own key and use the session as the scope. A scope shared by several holders of one key
-    /// would make them share one run of sequence numbers, because the scope remembers only a window below the highest
-    /// number it has seen, so where a key is shared, sequence numbers stop only callers without the key. Take it from the caller's session as an earlier filter or the object factory
-    /// authenticated it, and read it from the context, not from <see cref="GetKeyAsync"/>: it is asked about plain and
-    /// encoded calls, for which no key is asked. A scope read from an unauthenticated header lets the caller choose it.
+    /// Give each session its own key and use the session as the scope.
+    /// <para>
+    /// Where one key is shared by several sessions, this cannot be met. One scope for all of them makes their sequence
+    /// numbers one run, and <see cref="MemoryPayloadReplayStore"/> accepts a number only within a window below the
+    /// highest it has seen, so clients that count on their own refuse each other's calls. A scope per session leaves a
+    /// call captured in one session open to replay in another, by anybody who can present that other session.
+    /// </para>
+    /// <para>
+    /// Take the scope from the caller's session as an earlier filter or the object factory authenticated it, and read it
+    /// from the context, not from <see cref="GetKeyAsync"/>: it is asked about plain and encoded calls, for which no key
+    /// is asked. A scope read from an unauthenticated header lets the caller choose it.
+    /// </para>
     /// </remarks>
     /// <param name="context">The request context.</param>
     /// <returns>The scope, or <see langword="null"/> when sequence numbers are not checked for this caller.</returns>

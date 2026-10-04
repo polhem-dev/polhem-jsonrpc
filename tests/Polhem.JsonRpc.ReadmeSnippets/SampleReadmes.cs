@@ -57,9 +57,9 @@ namespace Polhem.JsonRpc.ReadmeSnippets.PayloadQuickStart
             var key = HMACSHA512.HashData(Convert.FromBase64String(base64Key), Encoding.UTF8.GetBytes(clientId));
             var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
-            var parameters = payload.Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
+            var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
             var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-            var added = payload.Unwrap<AddResponse>(result, key)!;
+            var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!;
             #endregion
         }
 

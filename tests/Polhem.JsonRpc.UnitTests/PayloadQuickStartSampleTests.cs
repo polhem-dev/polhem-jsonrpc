@@ -45,17 +45,17 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
         var (rpc, key) = Connect();
 
         var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add",
-            payload.Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1));
+            payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1));
 
         Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
-        Assert.Equal(3, payload.Unwrap<AddResponse>(result, key)!.Sum);
+        Assert.Equal(3, payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!.Sum);
     }
 
     [Fact(DisplayName = "PayloadQuickStart sample: sending the same call twice is refused with -32005")]
     public async Task CalculatorAdd_Replayed_IsRefused()
     {
         var (rpc, key) = Connect();
-        var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
+        var parameters = CreateProcessor().WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
         await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters));
@@ -67,7 +67,7 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
     public async Task CalculatorAdd_ReplayedUnderAnotherClientId_IsRefused()
     {
         var (rpc, key) = Connect();
-        var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
+        var parameters = CreateProcessor().WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
         await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
         var (other, _) = Connect();
 
@@ -82,7 +82,7 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
     public async Task CalculatorAdd_BelowEncrypted_IsRefused(PayloadFormat format)
     {
         var (rpc, _) = Connect();
-        var parameters = CreateProcessor().Wrap(new AddRequest { A = 1, B = 2 }, format, sequence: 1);
+        var parameters = CreateProcessor().WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, format, sequence: 1);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters));
 

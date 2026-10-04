@@ -28,7 +28,7 @@ public partial class PayloadServerTests
 
         try
         {
-            await rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), format, key: s_key, sequence: 1));
+            await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, key: s_key, sequence: 1));
         }
         catch (JsonRpcErrorException)
         {
@@ -43,14 +43,14 @@ public partial class PayloadServerTests
     {
         var policy = new TestPolicy { ReplayScope = "session-a", UniqueSequence = true };
         var (rpc, client) = CreateWithoutMapper(policy);
-        var captured = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+        var captured = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
         await rpc.InvokeAsync<JsonElement>(Subtract, captured);
         await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, captured));
 
         policy.ReplayScope = "session-b";
         var replayed = await rpc.InvokeAsync<JsonElement>(Subtract, captured);
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(replayed, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, replayed, s_key)).Difference);
     }
 
     [Fact(DisplayName = "Payload server: a body sent uncompressed is opened whatever the decompression limits say")]
@@ -70,7 +70,7 @@ public partial class PayloadServerTests
         var (rpc, client) = CreateWithBudget((2 * length) - 1);
         var batch = rpc.CreateBatch();
         var uncompressed = batch.Add<JsonElement>(Subtract, UncompressedEnvelope(sequence: 1));
-        var compressed = batch.Add<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 2));
+        var compressed = batch.Add<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 2));
 
         await batch.SendAsync();
 
@@ -84,13 +84,13 @@ public partial class PayloadServerTests
     {
         var (rpc, client) = CreateWithBudget(Encoding.UTF8.GetByteCount(SubtractJson));
         var batch = rpc.CreateBatch();
-        var plain = batch.Add<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Plain));
-        var compressed = batch.Add<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 2));
+        var plain = batch.Add<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Plain));
+        var compressed = batch.Add<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 2));
 
         await batch.SendAsync();
 
         await plain;
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(await compressed)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, await compressed)).Difference);
     }
 
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithBudget(long budget)

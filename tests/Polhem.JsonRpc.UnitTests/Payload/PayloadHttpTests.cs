@@ -52,10 +52,10 @@ public sealed class PayloadHttpTests : IAsyncLifetime
         var payload = new PayloadProcessor(_payloadOptions);
 
         var result = await rpc.InvokeAsync<JsonElement>("Spec.Subtract",
-            payload.Wrap(new SubtractRequest(9, 4), PayloadFormat.Encrypted, key: s_key, sequence: 1));
+            payload.WrapRequest("Spec.Subtract", new SubtractRequest(9, 4), PayloadFormat.Encrypted, key: s_key, sequence: 1));
 
         Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
-        Assert.Equal(5, Assert.IsType<SubtractResponse>(payload.Unwrap(result, s_key)).Difference);
+        Assert.Equal(5, Assert.IsType<SubtractResponse>(payload.UnwrapResult("Spec.Subtract", result, s_key)).Difference);
     }
 
     private sealed class SessionPolicy : IPayloadServerPolicy

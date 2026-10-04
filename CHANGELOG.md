@@ -9,6 +9,9 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ### Added
 
+- `PayloadProcessor.WrapRequest`, `SealResponse`, `UnwrapResult` and `UnwrapResult<T>`, and overloads of
+  `OpenRequest` and `OpenResult` that take the JSON-RPC method: they bind an encrypted payload to its call (see
+  Changed). `IPayloadEncryptor` gains `Encrypt` and `Decrypt` overloads that authenticate associated data.
 - `PayloadOptions.TimeProvider`: the clock frames are stamped with and their timestamps checked against. It defaults to
   the system clock, and `PayloadFilter` passes it to the in-memory replay store it creates.
 - `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`: refuses a batch larger than the limit from the length of
@@ -25,6 +28,17 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ### Changed
 
+- **Breaking (wire format):** the HMAC of an encrypted payload also covers the direction and the JSON-RPC method of the
+  call (ADR-003), so a captured encrypted call cannot be sent to another method, nor a result sent back as a request.
+  Both were possible before, with or without frames. The bytes keep their layout, but a payload written by 1.0, by the
+  Polhem framework before its matching release, or by polhem-connector-js before its matching release fails its HMAC
+  and is refused; there is no compatibility mode, because a reader that accepted both would be downgraded. The three
+  are released together. Like the renumbering of `JsonRpcTransportKind` below, this breaks compatibility in a minor
+  release, an exception to Semantic Versioning.
+- **Breaking (behavior):** `Wrap`, `Seal`, `Unwrap`, `Unwrap<T>`, and the `OpenRequest` and `OpenResult` overloads
+  that take no method refuse an encrypted payload with `InvalidOperationException`; plain and encoded payloads work as
+  before. An `IPayloadEncryptor` written against 1.0 throws `NotSupportedException` until it implements the overloads
+  with associated data.
 - `JsonRpcDispatcher` resolves the methods of an object type once, the first time the type is used, and asks the method
   policy about each of them then, once, rather than one method name at a time; the answers are kept for the
   dispatcher's life.

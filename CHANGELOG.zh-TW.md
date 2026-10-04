@@ -9,6 +9,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ### 新增
 
+- `PayloadProcessor.WrapRequest`、`SealResponse`、`UnwrapResult` 與 `UnwrapResult<T>`，以及 `OpenRequest`、`OpenResult`
+  帶 JSON-RPC method 的多載：把加密 payload 綁定到它的呼叫（見「變更」）。`IPayloadEncryptor` 新增驗證附加資料的
+  `Encrypt` 與 `Decrypt` 多載。
 - `PayloadOptions.TimeProvider`：寫入 frame 時間戳與檢查時間戳所用的時鐘，預設為系統時鐘；`PayloadFilter` 自行建立的記憶體
   replay store 也使用它。
 - `JsonRpcSerializer.ReadRequests(utf8Json, maxBatchSize)`：批次超過上限時，依解析後陣列的長度拒絕，不會從任何項目讀出請求。
@@ -21,6 +24,14 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ### 變更
 
+- **破壞性變更（wire 格式）：** 加密 payload 的 HMAC 另外涵蓋呼叫的方向與 JSON-RPC method（ADR-003），攔到的加密呼叫
+  不能改送給別的方法，結果也不能當成請求送回。這兩件事先前都做得到，不論有沒有 frame。位元組排列不變，但 1.0、
+  對應版本之前的 Polhem 框架或 polhem-connector-js 寫出的 payload，HMAC 都對不上而被拒；不提供相容模式，因為同時接受
+  新舊兩種的讀取端會被降級。三者同步發佈。與下方 `JsonRpcTransportKind` 重新編號相同，這是在 minor 版中破壞相容性，
+  屬於語意化版本的例外。
+- **破壞性變更（行為）：** 不帶 method 的 `Wrap`、`Seal`、`Unwrap`、`Unwrap<T>`，以及 `OpenRequest`、`OpenResult`
+  的同類多載，遇到加密 payload 會擲出 `InvalidOperationException`；plain 與 encoded payload 照舊。依 1.0 寫的
+  `IPayloadEncryptor` 在實作帶附加資料的多載之前，會擲出 `NotSupportedException`。
 - `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy
   （每個方法只問一次），而不再逐個方法名稱處理；答案在 dispatcher 存續期間保留。
 - **wire 可見：** policy 擲出例外的方法不可呼叫，每次都回 `-32601 Method not found`；該型別的其他方法不受影響。
