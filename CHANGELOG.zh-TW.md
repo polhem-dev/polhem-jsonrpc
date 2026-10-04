@@ -57,7 +57,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   升級這些套件、卻仍執行以 1.0 編譯之程式碼的應用程式，會把未經驗證的 HTTP 呼叫當成 in-process 放行。
   **所有 `Polhem.JsonRpc` 套件必須一起升級：** 1.0 的套件彼此接受任何更新的版本，只升級其中一個（例如
   `Polhem.JsonRpc.Payload.Server`）就可能在 `Polhem.JsonRpc.AspNetCore` 1.0 底下帶進 `Polhem.JsonRpc.Server` 1.1，
-  使每個 HTTP 呼叫都被標成 in-process。`JsonRpcDispatcher` 現在遇到這種情況會拒絕啟動（見下）。
+  使每個 HTTP 呼叫都被標成 in-process。`JsonRpcDispatcher` 的建構子現在遇到這種情況會擲出例外（見「新增」）。
 - **wire 可見：** 沒有 `params` 的請求一律回 `-32602 Invalid params`，不論是否使用 payload 套件。先前會綁定 `null`，方法通常隨之失敗，呼叫端得到 `-32603`。
 - **行為變更：** record 的 `Equals(T)` 不再被解析為 action，即使 method policy 允許所有方法。
 - **wire 格式（讀取端）：** `GzipPayloadCompressor` 遇到不以 gzip 標頭開頭的內容時，視為未壓縮照原樣讀取。這是「小資料不壓縮」的第一步：

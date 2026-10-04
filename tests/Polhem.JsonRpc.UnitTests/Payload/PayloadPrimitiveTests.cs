@@ -96,7 +96,9 @@ public class PayloadPrimitiveTests
         var encryptor = new AesCbcHmacPayloadEncryptor();
         var key = RandomNumberGenerator.GetBytes(64);
         var encrypted = encryptor.Encrypt(new byte[64], key);
-        encrypted[^33] ^= 0x01;
+        // The byte of the block before the last one at the place of the last padding byte: a change there always breaks
+        // the padding, so a decryption before the HMAC check would fail on it every time.
+        encrypted[^49] ^= 0x01;
 
         var ex = Assert.Throws<CryptographicException>(() => encryptor.Decrypt(encrypted, key));
 

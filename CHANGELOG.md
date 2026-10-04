@@ -70,7 +70,7 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   HTTP calls through as in-process ones. **Upgrade every `Polhem.JsonRpc` package together:** the 1.0 packages accept
   any later version of each other, so upgrading only one of them, `Polhem.JsonRpc.Payload.Server` for instance, can
   bring in `Polhem.JsonRpc.Server` 1.1 under `Polhem.JsonRpc.AspNetCore` 1.0, which then marks every HTTP call as in
-  process. `JsonRpcDispatcher` now refuses to start in that case (below).
+  process. The `JsonRpcDispatcher` constructor now throws in that case (see Added).
 - **Wire-visible:** A request without `params` is answered with `-32602 Invalid params`, with or without the payload packages. It used to
   bind `null`, so the method usually failed and the caller got `-32603`.
 - **Behavior change:** a record's `Equals(T)` is no longer resolvable as an action, even under a method policy that admits every method.

@@ -15,15 +15,19 @@ internal static class CompiledVersionGuard
     // The version that renumbered JsonRpcTransportKind (ADR-001, decision 4, amended for 1.1.0).
     private static readonly Version s_renumbered = new(1, 1);
 
-    /// <summary>Throws when a loaded assembly was compiled against a version before the renumbering.</summary>
-    /// <exception cref="InvalidOperationException">An assembly compiled against an older version is loaded.</exception>
+    /// <summary>Gets the names of the loaded assemblies compiled against a version before the renumbering.</summary>
+    /// <returns>The names, empty when there are none or the running version is itself before 1.1.</returns>
     [RequiresUnreferencedCode("Reads the references of the loaded assemblies, which trimming may remove.")]
-    public static void ThrowIfStale()
+    public static IReadOnlyList<string> FindStaleInProcess() => FindStale(
+        AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic)
+            .Select(assembly => (assembly.GetName(), assembly.GetReferencedAssemblies())),
+        typeof(CompiledVersionGuard).Assembly.GetName().Version);
+
+    /// <summary>Throws when any assembly is named.</summary>
+    /// <param name="stale">The names of the assemblies compiled against an older version.</param>
+    /// <exception cref="InvalidOperationException">An assembly is named.</exception>
+    public static void ThrowIfAny(IReadOnlyList<string> stale)
     {
-        var stale = FindStale(
-            AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic)
-                .Select(assembly => (assembly.GetName(), assembly.GetReferencedAssemblies())),
-            typeof(CompiledVersionGuard).Assembly.GetName().Version);
         if (stale.Count > 0)
         {
             throw new InvalidOperationException(
