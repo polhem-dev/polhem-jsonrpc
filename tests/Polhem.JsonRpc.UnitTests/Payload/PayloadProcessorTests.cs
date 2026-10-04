@@ -38,7 +38,7 @@ public class PayloadProcessorTests
         Assert.Equal("a", element.GetProperty("clientName").GetString());
     }
 
-    [Fact(DisplayName = "Processor: a plain null, the answer of every method that returns nothing, is written as format 0 with a null value and an empty type, as Polhem writes it")]
+    [Fact(DisplayName = "Processor: a plain null, the answer to a plain call of a method that returns nothing, is written as format 0 with a null value and an empty type, as Polhem writes it")]
     public void Wrap_PlainNull_WritesNullValue()
     {
         var element = CreateProcessor(false).Wrap(null, PayloadFormat.Plain);

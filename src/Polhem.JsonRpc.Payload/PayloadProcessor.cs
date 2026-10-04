@@ -72,7 +72,7 @@ public sealed class PayloadProcessor
     /// <param name="key">The key; required when <paramref name="format"/> is <see cref="PayloadFormat.Encrypted"/>.</param>
     /// <returns>The envelope.</returns>
     /// <exception cref="InvalidOperationException">
-    /// An encoded value is <see langword="null"/>, an encrypted one has no key, or the value could not be encoded.
+    /// An encrypted value has no key, or the value could not be encoded.
     /// </exception>
     public PayloadEnvelope SealResponse(string method, object? value, PayloadFormat format, string? codec = null, byte[]? key = null)
         => SealCore(value, format, PayloadBinding.Response(method), codec, key, sequence: 0);
@@ -89,7 +89,8 @@ public sealed class PayloadProcessor
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <returns>The value; a plain envelope's value is deserialized with <see cref="PayloadOptions.SerializerOptions"/>.</returns>
     /// <exception cref="InvalidOperationException">
-    /// The type name is missing or names another type, the key is missing, or the body could not be decoded.
+    /// The type name is not allowed or names another type, the key is missing, or the body could not be decoded, which
+    /// includes a body under an empty type name that is not empty.
     /// </exception>
     /// <exception cref="System.Security.Cryptography.CryptographicException">
     /// An encrypted body fails authentication, which includes a body bound to another method or direction.
@@ -135,7 +136,7 @@ public sealed class PayloadProcessor
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <returns>The value; a plain envelope's value is deserialized with <see cref="PayloadOptions.SerializerOptions"/>.</returns>
     /// <exception cref="InvalidOperationException">
-    /// The type name is missing or names another type, or the key is missing.
+    /// The type name names another type, the key is missing, or a body under an empty type name is not empty.
     /// </exception>
     /// <remarks>
     /// The caller chose the type, so nothing needs to be registered with <see cref="PayloadOptions.TypeResolver"/>.
@@ -210,8 +211,9 @@ public sealed class PayloadProcessor
         byte[] bytes;
         if (emptyResult)
         {
+            // Left uncompressed, so the body is exactly zero bytes before the frame and the encryption.
             typeName = string.Empty;
-            bytes = Compress([]);
+            bytes = [];
         }
         else
         {
@@ -246,7 +248,7 @@ public sealed class PayloadProcessor
     /// <returns>
     /// The value. A plain envelope returns its value as a <see cref="JsonElement"/>, or <see langword="null"/>.
     /// </returns>
-    /// <exception cref="InvalidOperationException">The type name is missing or not allowed, the key is missing, the body could not be decoded, or <see cref="NoPayloadEncryptor"/> is set without <see cref="PayloadOptions.AllowNoEncryption"/>.</exception>
+    /// <exception cref="InvalidOperationException">The type name is not allowed, the key is missing, the body could not be decoded (a body under an empty type name must be empty), or <see cref="NoPayloadEncryptor"/> is set without <see cref="PayloadOptions.AllowNoEncryption"/>.</exception>
     /// <exception cref="InvalidPayloadException">An encoded or encrypted envelope has no body.</exception>
     /// <exception cref="System.Security.Cryptography.CryptographicException">An encrypted body is malformed or fails authentication, or the key is not the size the encryptor needs.</exception>
     /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
@@ -420,7 +422,8 @@ public sealed class PayloadProcessor
         frame = _options.RequireFrame ? PayloadFrame.Extract(bytes, out bytes) : null;
 
         // The codec is read off the envelope, never passed in: the writer named it, and the reader honours what arrived.
-        var codec = _options.ResolveCodec(envelope.Codec);
+        // A result with no type has no body to decode, so its codec is not resolved.
+        var codec = type is null ? null : _options.ResolveCodec(envelope.Codec);
         try
         {
             byte[] plain;
@@ -444,7 +447,7 @@ public sealed class PayloadProcessor
                     ? null
                     : throw new InvalidDataException("A result that names no type carries a body.");
             }
-            return codec.Deserialize(plain, type);
+            return codec!.Deserialize(plain, type);
         }
         catch (Exception ex)
         {
@@ -459,19 +462,6 @@ public sealed class PayloadProcessor
         try
         {
             return _options.Compressor.Compress(codec.Serialize(value, type));
-        }
-        catch (Exception ex)
-        {
-            // Boundary: as in Decode, a failure of a pluggable codec or compressor is reported as one encoding error.
-            throw new InvalidOperationException("An error occurred during the data encoding process.", ex);
-        }
-    }
-
-    private byte[] Compress(byte[] bytes)
-    {
-        try
-        {
-            return _options.Compressor.Compress(bytes);
         }
         catch (Exception ex)
         {

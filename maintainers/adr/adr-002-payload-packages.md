@@ -60,7 +60,8 @@ Neither package is needed for plain JSON-RPC. The core packages do not reference
   ciphertext length (32-bit little-endian), the ciphertext, and the HMAC of everything before it. The HMAC is compared in
   constant time before anything is decrypted.
   Amended by [ADR-003](adr-003-bind-method-into-payload-hmac.md) for 1.1.0: the HMAC also covers the direction and the
-  JSON-RPC method of the call, which the payload does not carry.
+  JSON-RPC method of the call, which the payload does not carry; and a result answers in the format of its request, a
+  null result sealed with an empty `type` and an empty body (decision 6).
 - **Compression** is gzip, with a limit on the decompressed size, because a small compressed body can expand without
   bound.
 

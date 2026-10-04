@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using Polhem.JsonRpc.Payload;
 
@@ -60,4 +61,93 @@ public partial class PayloadServerTests
 
         Assert.Equal(JsonRpcErrorCodes.InternalError, ex.Code);
     }
+
+    public static TheoryData<PayloadFormat, bool, bool> NullResultSettings()
+    {
+        var data = new TheoryData<PayloadFormat, bool, bool>();
+        foreach (var format in new[] { PayloadFormat.Plain, PayloadFormat.Encoded, PayloadFormat.Encrypted })
+        {
+            foreach (var frames in new[] { false, true })
+            {
+                data.Add(format, frames, false);
+                data.Add(format, frames, true);
+            }
+        }
+        return data;
+    }
+
+    [Theory(DisplayName = "Payload client: a sealed null result opens to null in every format, with frames on or off and either compressor, even when it names a codec the reader lacks")]
+    [MemberData(nameof(NullResultSettings))]
+    public void UnwrapResult_SealedNull_OpensToNullEverywhere(PayloadFormat format, bool frames, bool gzip)
+    {
+        var processor = ResultProcessor(frames, gzip);
+        var sealedNull = processor.SealResponse(Subtract, null, format, codec: format == PayloadFormat.Plain ? null : "absent", key: s_key);
+        var element = sealedNull.ToElement();
+
+        Assert.Equal(format, sealedNull.Format);
+        Assert.Null(processor.UnwrapResult(Subtract, format, element, s_key));
+        Assert.Null(processor.UnwrapResult<SubtractResponse>(Subtract, format, element, s_key));
+        Assert.Null(processor.OpenResult(sealedNull, s_key, Subtract, format, out _));
+    }
+
+    [Fact(DisplayName = "Payload server: the body of a sealed null result is zero bytes, uncompressed, before the frame and the encryption")]
+    public void SealResponse_Null_WritesEmptyBody()
+    {
+        var body = ResultProcessor(frames: false, gzip: true).SealResponse(Subtract, null, PayloadFormat.Encoded).Body!;
+
+        Assert.Empty(body);
+    }
+
+    [Fact(DisplayName = "Payload client: a null result whose body is gzip of nothing also opens to null, as a writer may compress it")]
+    public void UnwrapResult_GzipOfNothing_OpensToNull()
+    {
+        var processor = ResultProcessor(frames: false, gzip: true);
+        var gzipOfNothing = Convert.FromBase64String("H4sIAAAAAAAAAwMAAAAAAAAAAAA=");
+        var result = new PayloadEnvelope { Format = PayloadFormat.Encoded, Body = gzipOfNothing, TypeName = "" }.ToElement();
+
+        Assert.Null(processor.UnwrapResult(Subtract, PayloadFormat.Encoded, result));
+    }
+
+    [Theory(DisplayName = "Payload client: an encrypted result with no type is opened only after its HMAC checks, so one written without the key is refused")]
+    [InlineData("empty body")]
+    [InlineData("random body")]
+    [InlineData("another key")]
+    [InlineData("another method")]
+    public void UnwrapResult_ForgedEncryptedNull_FailsAuthentication(string forgery)
+    {
+        var processor = ResultProcessor(frames: true, gzip: true);
+        byte[] body = forgery switch
+        {
+            "empty body" => [],
+            "random body" => RandomNumberGenerator.GetBytes(100),
+            "another key" => processor.SealResponse(Subtract, null, PayloadFormat.Encrypted, key: RandomNumberGenerator.GetBytes(64)).Body!,
+            _ => processor.SealResponse("Spec.Other", null, PayloadFormat.Encrypted, key: s_key).Body!,
+        };
+        var forged = new PayloadEnvelope { Format = PayloadFormat.Encrypted, Body = body, TypeName = "" }.ToElement();
+
+        Assert.Throws<CryptographicException>(() => processor.UnwrapResult(Subtract, PayloadFormat.Encrypted, forged, s_key));
+        Assert.Throws<CryptographicException>(() => processor.UnwrapResult<SubtractResponse>(Subtract, PayloadFormat.Encrypted, forged, s_key));
+    }
+
+    [Fact(DisplayName = "Payload client: a real encrypted result whose type is blanked, or a sealed null given a type, is refused")]
+    public void UnwrapResult_EncryptedTypeSwapped_IsRefused()
+    {
+        var processor = ResultProcessor(frames: true, gzip: true);
+        var real = processor.SealResponse(Subtract, new SubtractResponse(2), PayloadFormat.Encrypted, key: s_key);
+        var empty = processor.SealResponse(Subtract, null, PayloadFormat.Encrypted, key: s_key);
+        var blanked = new PayloadEnvelope { Format = real.Format, Body = real.Body, TypeName = "" }.ToElement();
+        var typed = new PayloadEnvelope { Format = empty.Format, Body = empty.Body, TypeName = Registry().GetTypeName(typeof(SubtractResponse)) }.ToElement();
+
+        Assert.Throws<InvalidOperationException>(() => processor.UnwrapResult(Subtract, PayloadFormat.Encrypted, blanked, s_key));
+        Assert.Throws<InvalidOperationException>(() => processor.UnwrapResult<SubtractResponse>(Subtract, PayloadFormat.Encrypted, blanked, s_key));
+        Assert.Throws<InvalidOperationException>(() => processor.UnwrapResult(Subtract, PayloadFormat.Encrypted, typed, s_key));
+        Assert.Throws<InvalidOperationException>(() => processor.UnwrapResult<SubtractResponse>(Subtract, PayloadFormat.Encrypted, typed, s_key));
+    }
+
+    private static PayloadProcessor ResultProcessor(bool frames, bool gzip) => new(new PayloadOptions
+    {
+        RequireFrame = frames,
+        TypeResolver = Registry(),
+        Compressor = gzip ? new GzipPayloadCompressor() : NoPayloadCompressor.Instance,
+    });
 }
