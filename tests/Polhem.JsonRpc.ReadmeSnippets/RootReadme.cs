@@ -43,7 +43,7 @@ namespace Polhem.JsonRpc.ReadmeSnippets.Root
 
             // Client: wrap the parameters and unwrap the result of each call.
             var parameters = payload.WrapRequest("Calculator.Add", request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-            var result = payload.UnwrapResult<AddResponse>("Calculator.Add", await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+            var result = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
             #endregion
         }
     }

@@ -59,7 +59,7 @@ namespace Polhem.JsonRpc.ReadmeSnippets.PayloadQuickStart
 
             var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
             var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-            var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!;
+            var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!;
             #endregion
         }
 

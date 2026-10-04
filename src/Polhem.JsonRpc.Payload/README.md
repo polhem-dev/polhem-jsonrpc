@@ -11,7 +11,7 @@ var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
 var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
 var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, sessionKey)!;
+var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, sessionKey)!;
 ```
 
 The format, the codec, the key and the sequence number are chosen per call. An encrypted payload is bound to the method

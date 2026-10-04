@@ -77,7 +77,7 @@ var key = new byte[AesCbcHmacPayloadEncryptor.KeySize];
 foreach (var format in new[] { PayloadFormat.Encoded, PayloadFormat.Encrypted })
 {
     var wrapped = processor.SealResponse("payload.echo", new PayloadArgs("smoke", 7), format, key: key).ToElement();
-    if (processor.UnwrapResult("payload.echo", wrapped, key) is not PayloadArgs { Name: "smoke", Count: 7 }) { failures.Add($"the {format} payload did not round-trip"); }
+    if (processor.UnwrapResult("payload.echo", format, wrapped, key) is not PayloadArgs { Name: "smoke", Count: 7 }) { failures.Add($"the {format} payload did not round-trip"); }
 }
 var plain = processor.Unwrap(processor.Wrap(new PayloadArgs("plain", 1), PayloadFormat.Plain));
 
@@ -97,7 +97,7 @@ var unregistered = new PayloadProcessor(new PayloadOptions { SerializerOptions =
 foreach (var format in new[] { PayloadFormat.Plain, PayloadFormat.Encrypted })
 {
     var wrapped = unregistered.SealResponse("payload.echo", new PayloadArgs("typed", 2), format, key: key).ToElement();
-    if (unregistered.UnwrapResult<PayloadArgs>("payload.echo", wrapped, key) is not { Name: "typed", Count: 2 }) { failures.Add($"the typed {format} payload did not round-trip"); }
+    if (unregistered.UnwrapResult<PayloadArgs>("payload.echo", format, wrapped, key) is not { Name: "typed", Count: 2 }) { failures.Add($"the typed {format} payload did not round-trip"); }
 }
 
 foreach (var failure in failures) { await Console.Error.WriteLineAsync($"FAIL: {failure}"); }

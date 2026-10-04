@@ -33,6 +33,9 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   對應版本之前的 Polhem 框架或 polhem-connector-js 寫出的 payload，HMAC 都對不上而被拒；不提供相容模式，因為同時接受
   新舊兩種的讀取端會被降級。三者同步發佈。與下方 `JsonRpcTransportKind` 重新編號相同，這是在 minor 版中破壞相容性，
   屬於語意化版本的例外。
+- **破壞性變更（wire 格式）：** 結果一律以請求的格式回應（ADR-003 決策 6）。回傳 null 的方法不再以 plain `null` 回應，
+  而是以請求的格式封裝，`type` 為空、本文為空。`UnwrapResult` 與 `OpenResult` 須傳入請求所用的格式，結果格式不同時以
+  `InvalidPayloadException` 拒絕，途中被換成 plain 的結果不會被接受。
 - **破壞性變更（行為）：** 不帶 method 的 `Wrap`、`Seal`、`Unwrap`、`Unwrap<T>`，以及 `OpenRequest`、`OpenResult`
   的同類多載，遇到加密 payload 會擲出 `InvalidOperationException`；plain 與 encoded payload 照舊。依 1.0 寫的
   `IPayloadEncryptor` 在實作帶附加資料的多載之前，會擲出 `NotSupportedException`。`AesCbcHmacPayloadEncryptor`

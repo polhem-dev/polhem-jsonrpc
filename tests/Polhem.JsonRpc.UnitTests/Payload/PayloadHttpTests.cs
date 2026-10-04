@@ -55,7 +55,7 @@ public sealed class PayloadHttpTests : IAsyncLifetime
             payload.WrapRequest("Spec.Subtract", new SubtractRequest(9, 4), PayloadFormat.Encrypted, key: s_key, sequence: 1));
 
         Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
-        Assert.Equal(5, Assert.IsType<SubtractResponse>(payload.UnwrapResult("Spec.Subtract", result, s_key)).Difference);
+        Assert.Equal(5, Assert.IsType<SubtractResponse>(payload.UnwrapResult("Spec.Subtract", PayloadFormat.Encrypted, result, s_key)).Difference);
     }
 
     private sealed class SessionPolicy : IPayloadServerPolicy

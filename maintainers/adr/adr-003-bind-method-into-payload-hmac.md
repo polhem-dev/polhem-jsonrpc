@@ -55,6 +55,17 @@ attacker cannot write an encrypted request, and rewriting `method` gives them on
      encryptor the body then fails to decode or authenticate.
    - `id`: a result can still be swapped with, or replayed as, another result of the same method on its way to the
      client. Binding the `id` would close that, at the cost of every client tracking it; it was left out.
+   - JSON-RPC `error` responses: they are not payloads and are not authenticated, so a man in the middle can still
+     answer any call with an error. Decision 6 concerns `result` only.
+
+6. **A result answers in the format of its request, and the client accepts nothing else.** Without this, a client
+   that sent an encrypted call took a plain or encoded result that anybody on the way could have written, and the
+   binding protected nothing. A null result, which the server used to answer as a plain `null`, is sealed in the
+   format of the request too: with an empty `type` and a body of zero bytes, written uncompressed before the frame and
+   the encryption, so it reads the same whatever the codec. A reader accepts a body that is empty once decrypted,
+   unframed and decompressed, so gzip of nothing is read as null too. Only a result may name no type; the parameters of a call always do.
+   `UnwrapResult` and `OpenResult` take the format the request was sent in and refuse a result in another one
+   (`PayloadServerTests.UnwrapResult_OtherFormat_IsRefused`, `PayloadServerTests.Call_NullResult_AnsweredInRequestFormat`).
 
 ## Consequences
 

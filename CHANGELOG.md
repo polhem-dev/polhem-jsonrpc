@@ -40,6 +40,10 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   and is refused; there is no compatibility mode, because a reader that accepted both would be downgraded. The three
   are released together. Like the renumbering of `JsonRpcTransportKind` below, this breaks compatibility in a minor
   release, an exception to Semantic Versioning.
+- **Breaking (wire format):** a result answers in the format of its request (ADR-003, decision 6). A method that
+  returns null is no longer answered with a plain `null`: the result is sealed in the request's format with an empty
+  `type` and an empty body. `UnwrapResult` and `OpenResult` take the format the request was sent in and refuse a result
+  in another one with `InvalidPayloadException`, so a result swapped on the way for a plain one is not taken.
 - **Breaking (behavior):** `Wrap`, `Seal`, `Unwrap`, `Unwrap<T>`, and the `OpenRequest` and `OpenResult` overloads
   that take no method refuse an encrypted payload with `InvalidOperationException`; plain and encoded payloads work as
   before. An `IPayloadEncryptor` written against 1.0 throws `NotSupportedException` until it implements the overloads

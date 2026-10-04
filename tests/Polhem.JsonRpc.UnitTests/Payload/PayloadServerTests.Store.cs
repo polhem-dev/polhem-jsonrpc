@@ -53,7 +53,7 @@ public partial class PayloadServerTests
         var result = await rpc.InvokeAsync<JsonElement>(Subtract,
             client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encrypted, result, s_key)).Difference);
     }
 
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithStore(IPayloadReplayStore store, TimeProvider clock)
