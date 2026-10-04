@@ -31,7 +31,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
   屬於語意化版本的例外。
 - **破壞性變更（行為）：** 不帶 method 的 `Wrap`、`Seal`、`Unwrap`、`Unwrap<T>`，以及 `OpenRequest`、`OpenResult`
   的同類多載，遇到加密 payload 會擲出 `InvalidOperationException`；plain 與 encoded payload 照舊。依 1.0 寫的
-  `IPayloadEncryptor` 在實作帶附加資料的多載之前，會擲出 `NotSupportedException`。
+  `IPayloadEncryptor` 在實作帶附加資料的多載之前，會擲出 `NotSupportedException`。`AesCbcHmacPayloadEncryptor`
+  兩個參數的 `Encrypt` 與 `Decrypt` 維持 1.0 的未綁定形式，供非 payload 的資料使用。
 - `JsonRpcDispatcher` 改為在某個物件型別第一次被使用時，一次解析該型別的所有方法，並在那時逐一詢問 method policy
   （每個方法只問一次），而不再逐個方法名稱處理；答案在 dispatcher 存續期間保留。
 - **wire 可見：** policy 擲出例外的方法不可呼叫，每次都回 `-32601 Method not found`；該型別的其他方法不受影響。

@@ -132,6 +132,23 @@ public class PayloadWireVectorTests
         Assert.Equal(PolhemBody, Encoding.UTF8.GetString(Gunzip(framed[17..])));
     }
 
+    // Fixed vectors for other implementations of ADR-003 (polhem-connector-js): the key is the bytes 0 to 63, the plaintext
+    // UTF-8 "Polhem ADR-003 binding vector", and the binding a direction byte followed by the method in UTF-8.
+    [Theory(DisplayName = "Wire vector: ciphertext bound to a direction and a method decrypts with that binding only")]
+    [InlineData(1, "EAAAAHYX5QeZX7jgLkq0NikmnpwgAAAAlY+Koj/+oH9tjwsGhMTJvpfpitn868rVNk1xXDCE6rttN7ChlpKWSuNVBWzvWb6tOEsV+p2NWiJMaEN5NLjfvw==")]
+    [InlineData(2, "EAAAAMMx+unW7jBIKA21I71abasgAAAA1wEXFaPoQxELAAFE/So1ZQRKNvzKJPspzQ9cb2SF8KIJvAM2Wt+jZpY0oUygUhM5JS6OpQbxsKD6IeqdHKA9Ew==")]
+    public void AesCbcHmacDecrypt_BoundVector_OpensWithItsBindingOnly(byte direction, string base64)
+    {
+        var encryptor = new AesCbcHmacPayloadEncryptor();
+        var ciphertext = Convert.FromBase64String(base64);
+        byte[] binding = [direction, .. Encoding.UTF8.GetBytes("Employee.GetList")];
+        byte[] otherDirection = [(byte)(3 - direction), .. Encoding.UTF8.GetBytes("Employee.GetList")];
+
+        Assert.Equal("Polhem ADR-003 binding vector", Encoding.UTF8.GetString(encryptor.Decrypt(ciphertext, s_key, binding)));
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(ciphertext, s_key, otherDirection));
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(ciphertext, s_key));
+    }
+
     // The body inside Polhem's encoded vector above, decompressed.
     private const string PolhemBody = """{"clientName":"vector","traceId":"t-1","parameters":[]}""";
 

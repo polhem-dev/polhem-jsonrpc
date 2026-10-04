@@ -26,8 +26,11 @@ attacker cannot write an encrypted request, and rewriting `method` gives them on
 1. **The HMAC also covers a binding.** It is computed over the IV length, the IV, the ciphertext length and the
    ciphertext, as before, followed by:
    - one byte for the direction: `0x01` for the parameters of a call, `0x02` for its result;
-   - the JSON-RPC `method` in UTF-8, exactly as the request names it. A result is bound to the method of the request
-     it answers.
+   - the JSON-RPC `method` in UTF-8: the string after JSON decoding, with no normalization, no length prefix and no
+     terminator. A result is bound to the method of the request it answers.
+
+   It applies to `format: 2` only; plain and encoded payloads have no HMAC. Fixed vectors for other implementations are
+   in `PayloadWireVectorTests.AesCbcHmacDecrypt_BoundVector_OpensWithItsBindingOnly`.
 
    The binding is not written to the payload; the reader supplies it from the call it is reading. The bytes on the
    wire keep the layout of ADR-002 (`PayloadWireVectorTests.Wrap_EncryptedFramed_WritesPolhemLayout` recomputes the
@@ -44,10 +47,14 @@ attacker cannot write an encrypted request, and rewriting `method` gives them on
 4. **The encryptor authenticates associated data.** `IPayloadEncryptor` gains `Encrypt` and `Decrypt` overloads that
    take it. Their default implementations throw, so an encryptor written against 1.0 refuses to run rather than leave
    the binding unchecked (`PayloadBindingTests.WrapRequest_EncryptorWithoutAssociatedData_Throws`).
-5. **What stays outside the HMAC:** the envelope's `format`, `type` and `codec`, and the request `id`. `type` is decided
-   by the server from the method, which is bound; a different `codec` or `format` makes the body fail to decode or
-   authenticate; binding the `id` would tie a result to one call, which nothing needs once the method and direction are
-   bound.
+5. **What stays outside the HMAC:** the envelope's `format`, `type` and `codec`, and the request `id`.
+   - `type`: the server decides the type from the method, which is bound. A client that opens a result without naming
+     the type (`UnwrapResult` without a type argument) still resolves it from `type`, among the types its
+     `PayloadTypeRegistry` allows; a client that cares names the type (`UnwrapResult<T>`).
+   - `codec` and `format`: a different value names another way to read the same bytes; with the built-in codec and
+     encryptor the body then fails to decode or authenticate.
+   - `id`: a result can still be swapped with, or replayed as, another result of the same method on its way to the
+     client. Binding the `id` would close that, at the cost of every client tracking it; it was left out.
 
 ## Consequences
 

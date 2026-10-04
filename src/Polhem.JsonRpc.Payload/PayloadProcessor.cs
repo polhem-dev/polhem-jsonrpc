@@ -38,8 +38,8 @@ public sealed class PayloadProcessor
     /// <param name="key">The key; required when <paramref name="format"/> is <see cref="PayloadFormat.Encrypted"/>.</param>
     /// <param name="sequence">The sequence number written to the frame, when frames are required.</param>
     /// <returns>The <c>params</c> element.</returns>
-    /// <exception cref="InvalidOperationException">The format is <see cref="PayloadFormat.Encrypted"/>, which needs a
-    /// <see cref="PayloadBinding"/>.</exception>
+    /// <exception cref="InvalidOperationException">The format is <see cref="PayloadFormat.Encrypted"/>: an encrypted
+    /// payload is bound to its method, so use <see cref="WrapRequest"/> (ADR-003).</exception>
     public JsonElement Wrap(object? value, PayloadFormat format, string? codec = null, byte[]? key = null, long sequence = 0)
         => SealCore(value, format, binding: null, codec, key, sequence).ToElement();
 
@@ -47,7 +47,8 @@ public sealed class PayloadProcessor
     /// Seals the parameters of a call to a method into an envelope, and writes it as a JSON element. An encrypted
     /// envelope is bound to the method and to the request direction (ADR-003).
     /// </summary>
-    /// <param name="method">The JSON-RPC method the parameters are sent to, exactly as the request names it.</param>
+    /// <param name="method">The JSON-RPC method the parameters are sent to, exactly as the request names it. It must not
+    /// be empty, whatever the format.</param>
     /// <param name="value">The value.</param>
     /// <param name="format">The format.</param>
     /// <param name="codec">The codec to name; empty or <see langword="null"/> for <see cref="PayloadOptions.DefaultCodec"/>.</param>

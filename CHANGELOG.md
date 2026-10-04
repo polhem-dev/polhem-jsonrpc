@@ -38,7 +38,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - **Breaking (behavior):** `Wrap`, `Seal`, `Unwrap`, `Unwrap<T>`, and the `OpenRequest` and `OpenResult` overloads
   that take no method refuse an encrypted payload with `InvalidOperationException`; plain and encoded payloads work as
   before. An `IPayloadEncryptor` written against 1.0 throws `NotSupportedException` until it implements the overloads
-  with associated data.
+  with associated data. The two-argument `Encrypt` and `Decrypt` of `AesCbcHmacPayloadEncryptor` stay as in 1.0,
+  unbound, for data that is not a payload.
 - `JsonRpcDispatcher` resolves the methods of an object type once, the first time the type is used, and asks the method
   policy about each of them then, once, rather than one method name at a time; the answers are kept for the
   dispatcher's life.
