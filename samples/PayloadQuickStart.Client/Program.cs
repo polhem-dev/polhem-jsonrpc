@@ -28,7 +28,7 @@ var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 // An encrypted call: the parameters are serialized, compressed, framed with sequence number 1 and encrypted.
 var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
 var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!;
+var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!;
 Console.WriteLine($"1 + 2 = {added.Sum} (sent as {PayloadEnvelope.ReadFormat(parameters)})");
 
 // Sending the same bytes again is a replay: the server has already seen sequence number 1 from this client.
@@ -43,6 +43,6 @@ catch (JsonRpcErrorException ex)
 
 // The next call takes the next number.
 var next = payload.WrapRequest("Calculator.Add", new AddRequest { A = 2, B = 3 }, PayloadFormat.Encrypted, key: key, sequence: 2);
-var sum = payload.UnwrapResult<AddResponse>("Calculator.Add", await rpc.InvokeAsync<JsonElement>("Calculator.Add", next), key)!;
+var sum = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, await rpc.InvokeAsync<JsonElement>("Calculator.Add", next), key)!;
 Console.WriteLine($"2 + 3 = {sum.Sum}");
 return 0;

@@ -66,7 +66,7 @@ public sealed class PayloadProcessor
     /// answers and to the response direction (ADR-003).
     /// </summary>
     /// <param name="method">The JSON-RPC method of the request the result answers.</param>
-    /// <param name="value">The value. It may be <see langword="null"/> only for a plain envelope.</param>
+    /// <param name="value">The value. It may be <see langword="null"/>: a null result is sealed in the format too, with no type and an empty body.</param>
     /// <param name="format">The format.</param>
     /// <param name="codec">The codec to name; empty or <see langword="null"/> for <see cref="PayloadOptions.DefaultCodec"/>.</param>
     /// <param name="key">The key; required when <paramref name="format"/> is <see cref="PayloadFormat.Encrypted"/>.</param>
@@ -84,6 +84,7 @@ public sealed class PayloadProcessor
     /// </summary>
     /// <typeparam name="T">The result type the caller expects.</typeparam>
     /// <param name="method">The JSON-RPC method the call was sent to.</param>
+    /// <param name="requestFormat">The format the request was sent in; the result must be in the same format.</param>
     /// <param name="payload">The <c>result</c> element.</param>
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <returns>The value; a plain envelope's value is deserialized with <see cref="PayloadOptions.SerializerOptions"/>.</returns>
@@ -93,8 +94,13 @@ public sealed class PayloadProcessor
     /// <exception cref="System.Security.Cryptography.CryptographicException">
     /// An encrypted body fails authentication, which includes a body bound to another method or direction.
     /// </exception>
-    public T? UnwrapResult<T>(string method, JsonElement? payload, byte[]? key = null)
-        => UnwrapCore<T>(payload, key, PayloadBinding.Response(method));
+    /// <exception cref="InvalidPayloadException">The result is in another format than the request.</exception>
+    public T? UnwrapResult<T>(string method, PayloadFormat requestFormat, JsonElement? payload, byte[]? key = null)
+    {
+        var envelope = PayloadEnvelope.Read(payload);
+        EnsureAnswersRequest(envelope, requestFormat);
+        return UnwrapCore<T>(envelope, key, PayloadBinding.Response(method));
+    }
 
     /// <summary>
     /// Reads the result of a call to a method and opens it into the type its <c>type</c> member names, which must be
@@ -102,6 +108,7 @@ public sealed class PayloadProcessor
     /// the response direction.
     /// </summary>
     /// <param name="method">The JSON-RPC method the call was sent to.</param>
+    /// <param name="requestFormat">The format the request was sent in; the result must be in the same format.</param>
     /// <param name="payload">The <c>result</c> element.</param>
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <returns>
@@ -110,8 +117,13 @@ public sealed class PayloadProcessor
     /// <exception cref="System.Security.Cryptography.CryptographicException">
     /// An encrypted body fails authentication, which includes a body bound to another method or direction.
     /// </exception>
-    public object? UnwrapResult(string method, JsonElement? payload, byte[]? key = null)
-        => OpenResultCore(PayloadEnvelope.Read(payload), key, PayloadBinding.Response(method), out _);
+    /// <exception cref="InvalidPayloadException">The result is in another format than the request.</exception>
+    public object? UnwrapResult(string method, PayloadFormat requestFormat, JsonElement? payload, byte[]? key = null)
+    {
+        var envelope = PayloadEnvelope.Read(payload);
+        EnsureAnswersRequest(envelope, requestFormat);
+        return OpenResultCore(envelope, key, PayloadBinding.Response(method), out _);
+    }
 
 
     /// <summary>
@@ -129,12 +141,12 @@ public sealed class PayloadProcessor
     /// The caller chose the type, so nothing needs to be registered with <see cref="PayloadOptions.TypeResolver"/>.
     /// </remarks>
     /// <exception cref="InvalidOperationException">The envelope is encrypted: an encrypted payload is bound to its method, so use the method that takes it (ADR-003).</exception>
-    public T? Unwrap<T>(JsonElement? payload, byte[]? key = null) => UnwrapCore<T>(payload, key, binding: null);
+    public T? Unwrap<T>(JsonElement? payload, byte[]? key = null) => UnwrapCore<T>(PayloadEnvelope.Read(payload), key, binding: null);
 
 
-    private T? UnwrapCore<T>(JsonElement? payload, byte[]? key, PayloadBinding? binding)
+    private T? UnwrapCore<T>(PayloadEnvelope envelope, byte[]? key, PayloadBinding? binding)
     {
-        var value = OpenAs(PayloadEnvelope.Read(payload), typeof(T), key, budget: null, binding, out _);
+        var value = OpenAs(envelope, typeof(T), key, budget: null, binding, out _, isResult: true);
         if (value is JsonElement element)
             value = element.Deserialize(_options.SerializerOptions.GetTypeInfo(typeof(T)));
         return value is null ? default : (T)value;
@@ -185,15 +197,28 @@ public sealed class PayloadProcessor
             return new PayloadEnvelope { Value = plain };
         }
 
-        if (value == null)
+        // A result answers in the format of its request, so a null result is sealed too: with no type and an empty body,
+        // which reads the same whatever the codec (ADR-003, decision 6). Parameters are never null.
+        bool emptyResult = value == null && binding?.Direction == PayloadDirection.Response;
+        if (value == null && !emptyResult)
             throw new InvalidOperationException("An encoded payload needs a value.");
         if (format == PayloadFormat.Encrypted && (key == null || key.Length == 0))
             throw new InvalidOperationException("An encrypted payload needs a key.");
         var associatedData = format == PayloadFormat.Encrypted ? AssociatedData(binding) : null;
 
-        var type = value.GetType();
-        var typeName = _options.TypeResolver.GetTypeName(type);
-        var bytes = Encode(value, type, _options.ResolveCodec(codec));
+        string typeName;
+        byte[] bytes;
+        if (emptyResult)
+        {
+            typeName = string.Empty;
+            bytes = Compress([]);
+        }
+        else
+        {
+            var type = value!.GetType();
+            typeName = _options.TypeResolver.GetTypeName(type);
+            bytes = Encode(value, type, _options.ResolveCodec(codec));
+        }
 
         if (_options.RequireFrame)
         {
@@ -237,6 +262,7 @@ public sealed class PayloadProcessor
     /// <param name="key">The key; required when the envelope is encrypted.</param>
     /// <param name="method">The JSON-RPC method the call was sent to; an encrypted result must be bound to it and to the
     /// response direction.</param>
+    /// <param name="requestFormat">The format the request was sent in; the result must be in the same format.</param>
     /// <param name="frame">The frame read from the body, or <see langword="null"/> when frames are not required.</param>
     /// <returns>
     /// The value. A plain envelope returns its value as a <see cref="JsonElement"/>, or <see langword="null"/>.
@@ -244,8 +270,13 @@ public sealed class PayloadProcessor
     /// <exception cref="System.Security.Cryptography.CryptographicException">
     /// An encrypted body fails authentication, which includes a body bound to another method or direction.
     /// </exception>
-    public object? OpenResult(PayloadEnvelope envelope, byte[]? key, string method, out PayloadFrame? frame)
-        => OpenResultCore(envelope, key, PayloadBinding.Response(method), out frame);
+    /// <exception cref="InvalidPayloadException">The result is in another format than the request.</exception>
+    public object? OpenResult(PayloadEnvelope envelope, byte[]? key, string method, PayloadFormat requestFormat, out PayloadFrame? frame)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        EnsureAnswersRequest(envelope, requestFormat);
+        return OpenResultCore(envelope, key, PayloadBinding.Response(method), out frame);
+    }
 
     private object? OpenResultCore(PayloadEnvelope envelope, byte[]? key, PayloadBinding? binding, out PayloadFrame? frame)
     {
@@ -255,7 +286,7 @@ public sealed class PayloadProcessor
             return envelope.Value;
 
         if (string.IsNullOrEmpty(envelope.TypeName))
-            throw new InvalidOperationException("The payload names no type to decode into.");
+            return Decode(envelope, key, type: null, budget: null, binding, out frame);
         if (!_options.TypeResolver.TryResolveType(envelope.TypeName, out var type))
             throw new InvalidOperationException("The payload type is not in the allowed types.");
         return Decode(envelope, key, type, budget: null, binding, out frame);
@@ -354,7 +385,7 @@ public sealed class PayloadProcessor
         return OpenAs(envelope, type, key, budget, PayloadBinding.Request(method), out frame);
     }
 
-    private object? OpenAs(PayloadEnvelope envelope, Type type, byte[]? key, PayloadDecompressionBudget? budget, PayloadBinding? binding, out PayloadFrame? frame)
+    private object? OpenAs(PayloadEnvelope envelope, Type type, byte[]? key, PayloadDecompressionBudget? budget, PayloadBinding? binding, out PayloadFrame? frame, bool isResult = false)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         ArgumentNullException.ThrowIfNull(type);
@@ -362,6 +393,9 @@ public sealed class PayloadProcessor
         if (envelope.Format == PayloadFormat.Plain)
             return envelope.Value;
 
+        // Only a result may carry no value; the parameters of a call always name their type.
+        if (string.IsNullOrEmpty(envelope.TypeName) && isResult)
+            return Decode(envelope, key, type: null, budget, binding, out frame);
         if (string.IsNullOrEmpty(envelope.TypeName))
             throw new InvalidOperationException("The payload names no type to decode into.");
         if (!_options.TypeResolver.IsNameOf(envelope.TypeName, type))
@@ -369,7 +403,8 @@ public sealed class PayloadProcessor
         return Decode(envelope, key, type, budget, binding, out frame);
     }
 
-    private object? Decode(PayloadEnvelope envelope, byte[]? key, Type type, PayloadDecompressionBudget? budget, PayloadBinding? binding, out PayloadFrame? frame)
+    // A null type reads a result that carries no value: its body must be empty once decompressed.
+    private object? Decode(PayloadEnvelope envelope, byte[]? key, Type? type, PayloadDecompressionBudget? budget, PayloadBinding? binding, out PayloadFrame? frame)
     {
         var bytes = envelope.Body ?? throw new InvalidPayloadException("An encoded payload envelope has no body.");
 
@@ -403,6 +438,12 @@ public sealed class PayloadProcessor
                 throw;
             }
             budget?.Spend(plain.Length);
+            if (type is null)
+            {
+                return plain.Length == 0
+                    ? null
+                    : throw new InvalidDataException("A result that names no type carries a body.");
+            }
             return codec.Deserialize(plain, type);
         }
         catch (Exception ex)
@@ -424,6 +465,27 @@ public sealed class PayloadProcessor
             // Boundary: as in Decode, a failure of a pluggable codec or compressor is reported as one encoding error.
             throw new InvalidOperationException("An error occurred during the data encoding process.", ex);
         }
+    }
+
+    private byte[] Compress(byte[] bytes)
+    {
+        try
+        {
+            return _options.Compressor.Compress(bytes);
+        }
+        catch (Exception ex)
+        {
+            // Boundary: as in Decode, a failure of a pluggable codec or compressor is reported as one encoding error.
+            throw new InvalidOperationException("An error occurred during the data encoding process.", ex);
+        }
+    }
+
+    // A server answers in the format of the request, a null result included (ADR-003, decision 6). Without this check a
+    // client that sent an encrypted call would take a plain or encoded result that anybody on the way could have written.
+    private static void EnsureAnswersRequest(PayloadEnvelope envelope, PayloadFormat requestFormat)
+    {
+        if (envelope.Format != requestFormat)
+            throw new InvalidPayloadException("The result is not in the format of the request.");
     }
 
     // The binding is required wherever there is an HMAC to put it under: an encrypted payload that is not bound to its

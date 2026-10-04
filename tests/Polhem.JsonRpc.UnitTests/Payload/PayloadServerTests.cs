@@ -30,7 +30,7 @@ public partial class PayloadServerTests
             client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, key: s_key, sequence: 1));
 
         Assert.Equal(format, PayloadEnvelope.ReadFormat(result));
-        var response = client.UnwrapResult(Subtract, result, s_key);
+        var response = client.UnwrapResult(Subtract, format, result, s_key);
         var difference = format == PayloadFormat.Plain
             ? ((JsonElement)response!).GetProperty("difference").GetInt32()
             : Assert.IsType<SubtractResponse>(response).Difference;
@@ -69,7 +69,7 @@ public partial class PayloadServerTests
         await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
         var again = await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, again, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encrypted, again, s_key)).Difference);
     }
 
     [Fact(DisplayName = "Payload server: a frame whose timestamp is outside the tolerance is rejected")]
@@ -111,7 +111,7 @@ public partial class PayloadServerTests
         if (accepted)
         {
             var result = await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
-            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result, s_key)).Difference);
+            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encrypted, result, s_key)).Difference);
         }
         else
         {
@@ -302,7 +302,7 @@ public partial class PayloadServerTests
         var result = await rpc.InvokeAsync<JsonElement>(Subtract,
             client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encrypted, result, s_key)).Difference);
     }
 
     [Theory(DisplayName = "Payload server: without a mapper of the host's, every payload rejection other than an InvalidPayloadException answers the same -32603")]
@@ -415,7 +415,7 @@ public partial class PayloadServerTests
         var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded));
 
         Assert.Equal(5, Assert.IsType<SubtractRequest>(seen!.Value).Minuend);
-        Assert.Equal(42, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result)).Difference);
+        Assert.Equal(42, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encoded, result)).Difference);
     }
 
     private static PayloadTypeRegistry Registry() => new PayloadTypeRegistry()

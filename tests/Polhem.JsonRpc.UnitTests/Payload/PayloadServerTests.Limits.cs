@@ -30,7 +30,7 @@ public partial class PayloadServerTests
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1));
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encoded, result)).Difference);
     }
 
     [Fact(DisplayName = "Payload server: the calls of a batch share one decompression budget, and calls sent one at a time each get their own")]
@@ -77,7 +77,7 @@ public partial class PayloadServerTests
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, sequence: 1));
 
-        var difference = client.UnwrapResult(Subtract, result) switch
+        var difference = client.UnwrapResult(Subtract, format, result) switch
         {
             JsonElement plain => plain.GetProperty("difference").GetInt32(),
             var value => Assert.IsType<SubtractResponse>(value).Difference,

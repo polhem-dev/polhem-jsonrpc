@@ -48,7 +48,7 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
             payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1));
 
         Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
-        Assert.Equal(3, payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!.Sum);
+        Assert.Equal(3, payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!.Sum);
     }
 
     [Fact(DisplayName = "PayloadQuickStart sample: sending the same call twice is refused with -32005")]

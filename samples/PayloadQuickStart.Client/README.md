@@ -17,7 +17,7 @@ var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
 var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
 var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!;
+var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!;
 ```
 
 - The key is derived from the demo key and the client id the client sends in `X-Client-Id`, exactly as the server

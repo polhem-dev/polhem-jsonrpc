@@ -32,7 +32,7 @@ public class PayloadBindingTests
         var request = processor.WrapRequest(GetData, new VectorPing(), PayloadFormat.Encrypted, key: s_key, sequence: 1);
 
         Assert.Throws<CryptographicException>(() => processor.OpenRequest(response, typeof(VectorPing), s_key, GetData, out _));
-        Assert.Throws<CryptographicException>(() => processor.UnwrapResult<VectorPing>(GetData, request, s_key));
+        Assert.Throws<CryptographicException>(() => processor.UnwrapResult<VectorPing>(GetData, PayloadFormat.Encrypted, request, s_key));
     }
 
     [Fact(DisplayName = "Binding: a result opens only for the method of the request it answers")]
@@ -41,8 +41,8 @@ public class PayloadBindingTests
         var processor = CreateProcessor();
         var result = processor.SealResponse(GetData, new VectorPing { ClientName = "a" }, PayloadFormat.Encrypted, key: s_key).ToElement();
 
-        Assert.Equal("a", processor.UnwrapResult<VectorPing>(GetData, result, s_key)!.ClientName);
-        Assert.Throws<CryptographicException>(() => processor.UnwrapResult<VectorPing>(Delete, result, s_key));
+        Assert.Equal("a", processor.UnwrapResult<VectorPing>(GetData, PayloadFormat.Encrypted, result, s_key)!.ClientName);
+        Assert.Throws<CryptographicException>(() => processor.UnwrapResult<VectorPing>(Delete, PayloadFormat.Encrypted, result, s_key));
     }
 
     [Fact(DisplayName = "Binding: the methods that take no method name refuse an encrypted payload, in both directions")]

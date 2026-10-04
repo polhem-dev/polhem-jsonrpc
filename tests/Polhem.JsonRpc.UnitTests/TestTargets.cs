@@ -7,6 +7,10 @@ public sealed record SubtractRequest(int Minuend, int Subtrahend);
 
 public sealed record SubtractResponse(int Difference);
 
+public sealed record NothingRequest(string Text);
+
+public sealed record NothingResponse;
+
 public sealed record UpdateRequest(string Text);
 
 public sealed record UpdateResponse;
@@ -67,6 +71,9 @@ public sealed class SpecTarget
     public static ConcurrentBag<string> Updates { get; } = [];
 
     public SubtractResponse Subtract(SubtractRequest request) => new(request.Minuend - request.Subtrahend);
+
+    // Answers null, as a method with nothing to return does.
+    public NothingResponse? Nothing(NothingRequest request) => null;
 
     public UpdateResponse Update(UpdateRequest request)
     {

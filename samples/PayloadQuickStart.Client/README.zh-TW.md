@@ -17,7 +17,7 @@ var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
 var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
 var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, key)!;
+var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!;
 ```
 
 - 金鑰由示範金鑰與用戶端放在 `X-Client-Id` 的 client id 推導而來，推導方式與伺服器完全相同，因此呼叫無法換一個 client id 重送。

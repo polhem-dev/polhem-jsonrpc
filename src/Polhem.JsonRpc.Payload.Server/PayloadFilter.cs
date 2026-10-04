@@ -95,9 +95,9 @@ public sealed class PayloadFilter : IJsonRpcFilter
 
         await next(context).ConfigureAwait(false);
 
-        // A method that returns nothing answers with a plain null: there is no body to encode or protect.
-        var format = context.ReturnValue == null ? PayloadFormat.Plain : envelope.Format;
-        context.Result = _processor.SealResponse(method, context.ReturnValue, format, envelope.Codec, key).ToElement();
+        // The result answers in the format of the request, a null one included, so a client that sent an encrypted call
+        // accepts nothing less (ADR-003, decision 6).
+        context.Result = _processor.SealResponse(method, context.ReturnValue, envelope.Format, envelope.Codec, key).ToElement();
     }
 
     private void ValidateTimestamp(PayloadFrame frame)

@@ -50,7 +50,7 @@ public partial class PayloadServerTests
         policy.ReplayScope = "session-b";
         var replayed = await rpc.InvokeAsync<JsonElement>(Subtract, captured);
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, replayed, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encrypted, replayed, s_key)).Difference);
     }
 
     [Fact(DisplayName = "Payload server: a body sent uncompressed is opened whatever the decompression limits say, the message's and the compressor's own")]
@@ -81,7 +81,7 @@ public partial class PayloadServerTests
         await uncompressed;
         if (fits)
         {
-            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, await compressed)).Difference);
+            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encoded, await compressed)).Difference);
         }
         else
         {
@@ -101,7 +101,7 @@ public partial class PayloadServerTests
         await batch.SendAsync();
 
         await plain;
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, await compressed)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encoded, await compressed)).Difference);
     }
 
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithBudget(long budget, IPayloadCompressor? compressor = null)

@@ -21,7 +21,7 @@ public class PayloadProcessorTests
         var processor = CreateProcessor(requireFrame);
 
         var element = processor.SealResponse(Ping, new VectorPing { ClientName = "a", TraceId = "b" }, format, key: s_key).ToElement();
-        var ping = Assert.IsType<VectorPing>(processor.UnwrapResult(Ping, element, s_key));
+        var ping = Assert.IsType<VectorPing>(processor.UnwrapResult(Ping, format, element, s_key));
 
         Assert.Equal("a", ping.ClientName);
         Assert.Equal("b", ping.TraceId);
@@ -102,7 +102,7 @@ public class PayloadProcessorTests
 
         var element = processor.SealResponse(Ping, new VectorPing { ClientName = "a" }, format, key: s_key).ToElement();
 
-        Assert.Equal("a", processor.UnwrapResult<VectorPing>(Ping, element, s_key)!.ClientName);
+        Assert.Equal("a", processor.UnwrapResult<VectorPing>(Ping, format, element, s_key)!.ClientName);
     }
 
     [Fact(DisplayName = "Processor: a client that names the result type binds a plain envelope to it")]
@@ -150,7 +150,7 @@ public class PayloadProcessorTests
         var envelope = processor.SealResponse(Ping, new VectorPing(), PayloadFormat.Encrypted, key: s_key);
         envelope.Body![^40] ^= 0x01;
 
-        Assert.Throws<CryptographicException>(() => processor.OpenResult(envelope, s_key, Ping, out _));
+        Assert.Throws<CryptographicException>(() => processor.OpenResult(envelope, s_key, Ping, PayloadFormat.Encrypted, out _));
     }
 
     [Fact(DisplayName = "Processor: a reader that requires a frame refuses a body written without one")]
