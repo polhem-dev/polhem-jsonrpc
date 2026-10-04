@@ -42,8 +42,8 @@ namespace Polhem.JsonRpc.ReadmeSnippets.Root
             builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
 
             // Client: wrap the parameters and unwrap the result of each call.
-            var parameters = payload.Wrap(request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-            var result = payload.Unwrap<AddResponse>(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+            var parameters = payload.WrapRequest("Calculator.Add", request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
+            var result = payload.UnwrapResult<AddResponse>("Calculator.Add", await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
             #endregion
         }
     }

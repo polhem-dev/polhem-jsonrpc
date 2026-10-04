@@ -78,7 +78,8 @@ public sealed class PayloadFilter : IJsonRpcFilter
             budget = new PayloadDecompressionBudget(_maxDecompressedBytesPerMessage);
             context.MessageItems[BudgetItem] = budget;
         }
-        var value = _processor.OpenRequest(envelope, _policy.GetPayloadType(context), key, budget, out var frame);
+        var method = context.Request.Method;
+        var value = _processor.OpenRequest(envelope, _policy.GetPayloadType(context), key, budget, method, out var frame);
         if (frame != null)
         {
             ValidateTimestamp(frame);
@@ -96,7 +97,7 @@ public sealed class PayloadFilter : IJsonRpcFilter
 
         // A method that returns nothing answers with a plain null: there is no body to encode or protect.
         var format = context.ReturnValue == null ? PayloadFormat.Plain : envelope.Format;
-        context.Result = _processor.Seal(context.ReturnValue, format, envelope.Codec, key).ToElement();
+        context.Result = _processor.SealResponse(method, context.ReturnValue, format, envelope.Codec, key).ToElement();
     }
 
     private void ValidateTimestamp(PayloadFrame frame)

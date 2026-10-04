@@ -22,4 +22,12 @@ public sealed class NoPayloadEncryptor : IPayloadEncryptor
 
     /// <inheritdoc/>
     public byte[] Decrypt(byte[] bytes, byte[] key) => bytes ?? throw new ArgumentNullException(nameof(bytes));
+
+    /// <inheritdoc/>
+    /// <remarks>Nothing is authenticated, so the associated data is ignored.</remarks>
+    public byte[] Encrypt(byte[] bytes, byte[] key, ReadOnlySpan<byte> associatedData) => Encrypt(bytes, key);
+
+    /// <inheritdoc/>
+    /// <remarks>Nothing is authenticated, so the associated data is ignored.</remarks>
+    public byte[] Decrypt(byte[] bytes, byte[] key, ReadOnlySpan<byte> associatedData) => Decrypt(bytes, key);
 }

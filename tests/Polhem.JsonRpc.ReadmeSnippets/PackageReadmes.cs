@@ -83,9 +83,9 @@ namespace Polhem.JsonRpc.ReadmeSnippets.Payload
             #region readme: src/Polhem.JsonRpc.Payload/README.md#1
             var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
-            var parameters = payload.Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
+            var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
             var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-            var added = payload.Unwrap<AddResponse>(result, sessionKey)!;
+            var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, sessionKey)!;
             #endregion
         }
     }

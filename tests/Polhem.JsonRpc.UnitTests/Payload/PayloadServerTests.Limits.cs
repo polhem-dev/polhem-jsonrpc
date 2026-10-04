@@ -15,7 +15,7 @@ public partial class PayloadServerTests
     {
         var policy = new TestPolicy { ReplayScope = "session-1", UniqueSequence = true };
         var (rpc, client) = CreateWithoutMapper(policy);
-        var parameters = client.Wrap(new SubtractRequest(5, 3), format, sequence: 1);
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, sequence: 1);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
 
@@ -28,9 +28,9 @@ public partial class PayloadServerTests
     {
         var (rpc, client) = CreateWithoutMapper(new TestPolicy { ReplayScope = "session-1", UniqueSequence = false });
 
-        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1));
+        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1));
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result)).Difference);
     }
 
     [Fact(DisplayName = "Payload server: the calls of a batch share one decompression budget, and calls sent one at a time each get their own")]
@@ -41,7 +41,7 @@ public partial class PayloadServerTests
         var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
         var client = new PayloadProcessor(payloadOptions);
         // Each body decompresses to about 700 KB, so one fits the budget and two do not.
-        JsonElement Large(int sequence) => client.Wrap(new UpdateRequest(new string('a', 700 * 1024)), PayloadFormat.Encoded, sequence: sequence);
+        JsonElement Large(int sequence) => client.WrapRequest("Spec.Update", new UpdateRequest(new string('a', 700 * 1024)), PayloadFormat.Encoded, sequence: sequence);
 
         await rpc.InvokeAsync<JsonElement>("Spec.Update", Large(1));
         await rpc.InvokeAsync<JsonElement>("Spec.Update", Large(2));
@@ -75,9 +75,9 @@ public partial class PayloadServerTests
 
         var client = new PayloadProcessor(payloadOptions);
 
-        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), format, sequence: 1));
+        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, sequence: 1));
 
-        var difference = client.Unwrap(result) switch
+        var difference = client.UnwrapResult(Subtract, result) switch
         {
             JsonElement plain => plain.GetProperty("difference").GetInt32(),
             var value => Assert.IsType<SubtractResponse>(value).Difference,
@@ -98,7 +98,7 @@ public partial class PayloadServerTests
         var client = new PayloadProcessor(payloadOptions);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() =>
-            rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), format, sequence: 1)));
+            rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, sequence: 1)));
 
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
         Assert.Equal(0, policy.KeyRequests);
@@ -113,9 +113,9 @@ public partial class PayloadServerTests
         var client = new PayloadProcessor(payloadOptions);
         var batch = rpc.CreateBatch();
         var tooLarge = batch.Add<JsonElement>("Spec.Update",
-            client.Wrap(new UpdateRequest(new string('a', 1536 * 1024)), PayloadFormat.Encoded, sequence: 1));
+            client.WrapRequest("Spec.Update", new UpdateRequest(new string('a', 1536 * 1024)), PayloadFormat.Encoded, sequence: 1));
         var small = batch.Add<JsonElement>("Spec.Update",
-            client.Wrap(new UpdateRequest("small"), PayloadFormat.Encoded, sequence: 2));
+            client.WrapRequest("Spec.Update", new UpdateRequest("small"), PayloadFormat.Encoded, sequence: 2));
 
         await batch.SendAsync();
 
@@ -140,9 +140,9 @@ public partial class PayloadServerTests
         var client = new PayloadProcessor(payloadOptions);
         var batch = rpc.CreateBatch();
         var failing = batch.Add<JsonElement>("Spec.Update",
-            client.Wrap(new UpdateRequest("first"), PayloadFormat.Encoded, sequence: 1));
+            client.WrapRequest("Spec.Update", new UpdateRequest("first"), PayloadFormat.Encoded, sequence: 1));
         var next = batch.Add<JsonElement>("Spec.Update",
-            client.Wrap(new UpdateRequest("second"), PayloadFormat.Encoded, sequence: 2));
+            client.WrapRequest("Spec.Update", new UpdateRequest("second"), PayloadFormat.Encoded, sequence: 2));
 
         await batch.SendAsync();
 

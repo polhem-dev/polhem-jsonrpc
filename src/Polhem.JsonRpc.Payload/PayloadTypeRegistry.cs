@@ -14,7 +14,7 @@ namespace Polhem.JsonRpc.Payload;
 /// registered never resolves, and the registry never loads a type by name. <see cref="IsNameOf"/> needs no
 /// registration, because there the reader has already chosen the type, a server from the parameter of the method it
 /// resolved; the name is only compared with that type's name. So a server and a client that reads results with
-/// <see cref="PayloadProcessor.Unwrap{T}"/> register nothing.
+/// <see cref="PayloadProcessor.UnwrapResult{T}"/> register nothing.
 /// </para>
 /// </remarks>
 public sealed class PayloadTypeRegistry : IPayloadTypeResolver

@@ -27,10 +27,10 @@ public partial class PayloadServerTests
         var (rpc, client) = Create(new TestPolicy());
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), format, key: s_key, sequence: 1));
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, key: s_key, sequence: 1));
 
         Assert.Equal(format, PayloadEnvelope.ReadFormat(result));
-        var response = client.Unwrap(result, s_key);
+        var response = client.UnwrapResult(Subtract, result, s_key);
         var difference = format == PayloadFormat.Plain
             ? ((JsonElement)response!).GetProperty("difference").GetInt32()
             : Assert.IsType<SubtractResponse>(response).Difference;
@@ -43,7 +43,7 @@ public partial class PayloadServerTests
         var (rpc, client) = Create(new TestPolicy());
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, codec: "json"));
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, codec: "json"));
 
         Assert.Equal("json", result.GetProperty("codec").GetString());
     }
@@ -52,7 +52,7 @@ public partial class PayloadServerTests
     public async Task Call_RepeatedSequence_IsRejected()
     {
         var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true });
-        var parameters = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 10);
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 10);
 
         await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
 
@@ -64,12 +64,12 @@ public partial class PayloadServerTests
     public async Task Call_RepeatedSequenceNotRequired_IsAccepted()
     {
         var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = false });
-        var parameters = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 10);
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 10);
 
         await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
         var again = await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(again, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, again, s_key)).Difference);
     }
 
     [Fact(DisplayName = "Payload server: a frame whose timestamp is outside the tolerance is rejected")]
@@ -81,7 +81,7 @@ public partial class PayloadServerTests
         var envelope = new PayloadEnvelope
         {
             Format = PayloadFormat.Encrypted,
-            Body = new AesCbcHmacPayloadEncryptor().Encrypt(new PayloadFrame(stale, 1).Prepend(body), s_key),
+            Body = new AesCbcHmacPayloadEncryptor().Encrypt(new PayloadFrame(stale, 1).Prepend(body), s_key, BoundTo(Subtract)),
             TypeName = Registry().GetTypeName(typeof(SubtractRequest)),
         };
 
@@ -106,12 +106,12 @@ public partial class PayloadServerTests
             TypeResolver = Registry(),
             TimeProvider = new FixedClock(serverNow.AddSeconds(clientClockOffsetSeconds)),
         });
-        var parameters = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
 
         if (accepted)
         {
             var result = await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
-            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result, s_key)).Difference);
+            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result, s_key)).Difference);
         }
         else
         {
@@ -131,7 +131,7 @@ public partial class PayloadServerTests
         var envelope = new PayloadEnvelope
         {
             Format = PayloadFormat.Encrypted,
-            Body = new AesCbcHmacPayloadEncryptor().Encrypt(new PayloadFrame(timestamp, 1).Prepend(body), s_key),
+            Body = new AesCbcHmacPayloadEncryptor().Encrypt(new PayloadFrame(timestamp, 1).Prepend(body), s_key, BoundTo(Subtract)),
             TypeName = Registry().GetTypeName(typeof(SubtractRequest)),
         };
 
@@ -150,7 +150,7 @@ public partial class PayloadServerTests
         var dispatcher = DispatcherFixture.Create(options => options.UsePayload(payloadOptions, policy));
         var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
         var parameters = new PayloadProcessor(payloadOptions)
-            .Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+            .WrapRequest(method, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
 
         if (expectedDecryptions == 0)
         {
@@ -206,7 +206,7 @@ public partial class PayloadServerTests
     {
         var policy = new TestPolicy { MinimumFormat = PayloadFormat.Encrypted };
         var (rpc, client) = CreateWithoutMapper(policy);
-        var parameters = client.Wrap(new SubtractRequest(5, 3), format, key: s_key, sequence: 1);
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), format, key: s_key, sequence: 1);
 
         if (accepted)
         {
@@ -236,9 +236,9 @@ public partial class PayloadServerTests
     public async Task Call_SecurityFailuresWithoutHostMapper_AreIndistinguishable()
     {
         var (rpc, client) = CreateWithoutMapper(new TestPolicy { ReplayScope = "s", UniqueSequence = true });
-        var forged = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted,
+        var forged = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted,
             key: RandomNumberGenerator.GetBytes(AesCbcHmacPayloadEncryptor.KeySize), sequence: 1);
-        var genuine = client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 2);
+        var genuine = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 2);
         await rpc.InvokeAsync<JsonElement>(Subtract, genuine);
 
         var mac = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, forged));
@@ -287,7 +287,7 @@ public partial class PayloadServerTests
         var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1)));
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1)));
 
         Assert.Equal(ReplayRejected, ex.Code);
     }
@@ -297,12 +297,12 @@ public partial class PayloadServerTests
     {
         var (rpc, client) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true });
         await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1_000_000)));
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded, sequence: 1_000_000)));
 
         var result = await rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1));
 
-        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(result, s_key)).Difference);
+        Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result, s_key)).Difference);
     }
 
     [Theory(DisplayName = "Payload server: without a mapper of the host's, every payload rejection other than an InvalidPayloadException answers the same -32603")]
@@ -316,7 +316,7 @@ public partial class PayloadServerTests
         var (rpc, client) = CreateWithoutMapper(new TestPolicy { Key = rejection == "no key" ? null : s_key });
         var parameters = rejection switch
         {
-            "foreign type" => client.Wrap(new UpperRequest("a"), PayloadFormat.Encoded, sequence: 1),
+            "foreign type" => client.WrapRequest(Subtract, new UpperRequest("a"), PayloadFormat.Encoded, sequence: 1),
             // A valid frame first, so the call gets past the frame to the codec.
             "unknown codec" => new PayloadEnvelope
             {
@@ -327,7 +327,7 @@ public partial class PayloadServerTests
             }.ToElement(),
             "frame of another version" => FramedEnvelope(PayloadFrameVersion2(), PayloadFormat.Encrypted),
             "stale timestamp" => FramedEnvelope(new PayloadFrame(DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeMilliseconds(), 1).Prepend(SubtractBody()), PayloadFormat.Encrypted),
-            _ => client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1),
+            _ => client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1),
         };
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
@@ -346,7 +346,7 @@ public partial class PayloadServerTests
             options.UsePayload(payloadOptions, new TestPolicy());
         });
         var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
-        var parameters = new PayloadProcessor(payloadOptions).Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+        var parameters = new PayloadProcessor(payloadOptions).WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
 
@@ -364,10 +364,13 @@ public partial class PayloadServerTests
         return framed;
     }
 
+    // The associated data of the parameters of a call to a method (ADR-003): 0x01, then the method in UTF-8.
+    private static byte[] BoundTo(string method) => [0x01, .. Encoding.UTF8.GetBytes(method)];
+
     private static JsonElement FramedEnvelope(byte[] framed, PayloadFormat format) => new PayloadEnvelope
     {
         Format = format,
-        Body = new AesCbcHmacPayloadEncryptor().Encrypt(framed, s_key),
+        Body = new AesCbcHmacPayloadEncryptor().Encrypt(framed, s_key, BoundTo(Subtract)),
         TypeName = Registry().GetTypeName(typeof(SubtractRequest)),
     }.ToElement();
 
@@ -377,7 +380,7 @@ public partial class PayloadServerTests
         var (rpc, client) = Create(new TestPolicy { Key = null });
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1)));
+            client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1)));
         Assert.Equal(Refused, ex.Code);
     }
 
@@ -387,7 +390,7 @@ public partial class PayloadServerTests
         var (rpc, client) = Create(new TestPolicy());
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract,
-            client.Wrap(new UpperRequest("a"), PayloadFormat.Encoded, sequence: 1)));
+            client.WrapRequest(Subtract, new UpperRequest("a"), PayloadFormat.Encoded, sequence: 1)));
         Assert.Equal(Refused, ex.Code);
     }
 
@@ -409,10 +412,10 @@ public partial class PayloadServerTests
         var client = new PayloadProcessor(payloadOptions);
         var rpc = new JsonRpcConnector(new InProcessTransport(dispatcher));
 
-        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.Wrap(new SubtractRequest(5, 3), PayloadFormat.Encoded));
+        var result = await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encoded));
 
         Assert.Equal(5, Assert.IsType<SubtractRequest>(seen!.Value).Minuend);
-        Assert.Equal(42, Assert.IsType<SubtractResponse>(client.Unwrap(result)).Difference);
+        Assert.Equal(42, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, result)).Difference);
     }
 
     private static PayloadTypeRegistry Registry() => new PayloadTypeRegistry()
@@ -460,6 +463,14 @@ public partial class PayloadServerTests
         {
             Decryptions++;
             return _inner.Decrypt(bytes, key);
+        }
+
+        public byte[] Encrypt(byte[] bytes, byte[] key, ReadOnlySpan<byte> associatedData) => _inner.Encrypt(bytes, key, associatedData);
+
+        public byte[] Decrypt(byte[] bytes, byte[] key, ReadOnlySpan<byte> associatedData)
+        {
+            Decryptions++;
+            return _inner.Decrypt(bytes, key, associatedData);
         }
     }
 

@@ -140,8 +140,8 @@ HTTPS 保護的是連線。若參數與結果還需要端對端保護，或呼�
 builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
 
 // 用戶端：每次呼叫包裝參數、還原結果。
-var parameters = payload.Wrap(request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-var result = payload.Unwrap<AddResponse>(await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+var parameters = payload.WrapRequest("Calculator.Add", request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
+var result = payload.UnwrapResult<AddResponse>("Calculator.Add", await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
 ```
 
 兩端使用相同的 `PayloadOptions` 設定；金鑰如何協商由應用程式決定。[PayloadQuickStart](samples/PayloadQuickStart.Server/README.zh-TW.md)

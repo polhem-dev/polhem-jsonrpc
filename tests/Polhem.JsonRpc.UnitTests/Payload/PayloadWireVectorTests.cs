@@ -11,7 +11,9 @@ namespace Polhem.JsonRpc.UnitTests.Payload;
 /// The wire format is the one the Polhem framework wrote before the payload code moved into this package
 /// (maintainers/adr/adr-002-payload-packages.md, decision 2). Every vector here was produced by the Polhem
 /// implementation (polhem-dev/polhem at 57607b6) and is never regenerated from this package: a vector that has to
-/// change means the wire changed.
+/// change means the wire changed. ADR-003 changed it once: the HMAC of an encrypted payload also covers the method and
+/// the direction, so Polhem's encrypted vector no longer authenticates, and the writer's HMAC is checked against that
+/// rule without this package's code.
 /// </summary>
 public class PayloadWireVectorTests
 {
@@ -69,17 +71,19 @@ public class PayloadWireVectorTests
         Assert.Equal("t-1", ping.TraceId);
     }
 
-    [Fact(DisplayName = "Wire vector: an encrypted, framed envelope written by Polhem opens with its frame")]
-    public void Open_PolhemEncryptedFramedEnvelope_ReturnsValueAndFrame()
+    [Fact(DisplayName = "Wire vector: an encrypted envelope written by Polhem before ADR-003 keeps its layout, but its HMAC binds no method, so it is refused")]
+    public void Open_PolhemEncryptedFramedEnvelope_RefusedWithoutBinding()
     {
         const string json = """{"format":2,"value":"EAAAAP+MfBW24ORVEBRAil6/IOFgAAAAsjNkN/1BqmCCUJfqODQU/QfeBevI++phd9Qx7vGAurn2Mv05Asg3S32frwAvaVKYXr6mJHmE+IrqNK+ns3UfUyZRGyaOuoFgc9KOe8J+GwGsIz4l4M3IgwQkWhNskSvlMFwQ1PCSA3cnPK9PtKWBj+gqgj6iX0MflH1l1hJwXVc=","type":"Polhem.Api.Core.Messages.System.PingRequest, Polhem.Api.Core","codec":"json"}""";
         var envelope = PayloadEnvelope.Read(Parse(json));
 
-        var ping = Assert.IsType<VectorPing>(CreateProcessor(requireFrame: true).OpenRequest(envelope, typeof(VectorPing), s_key, out var frame));
+        var framed = new AesCbcHmacPayloadEncryptor().Decrypt(envelope.Body!, s_key);
+        var frame = PayloadFrame.Extract(framed, out _);
 
-        Assert.Equal("vector", ping.ClientName);
-        Assert.Equal(1_700_000_000_123, frame!.TimestampMs);
+        Assert.Equal(1_700_000_000_123, frame.TimestampMs);
         Assert.Equal(7, frame.Sequence);
+        Assert.Throws<CryptographicException>(() =>
+            CreateProcessor(requireFrame: true).OpenRequest(envelope, typeof(VectorPing), s_key, "System.Ping", out _));
     }
 
     [Fact(DisplayName = "Wire vector: a plain envelope is written exactly as Polhem wrote it")]
@@ -104,19 +108,21 @@ public class PayloadWireVectorTests
         Assert.Equal(PolhemBody, Encoding.UTF8.GetString(Gunzip(element.GetProperty("value").GetBytesFromBase64())));
     }
 
-    [Fact(DisplayName = "Wire vector: an encrypted, framed body is laid out as Polhem lays it out, read without this package's code")]
+    [Fact(DisplayName = "Wire vector: an encrypted, framed body is laid out as Polhem lays it out, with an HMAC over the direction and the method after the ciphertext, read without this package's code")]
     public void Wrap_EncryptedFramed_WritesPolhemLayout()
     {
         var element = CreateWriter(requireFrame: true, clock: new FixedClock(DateTimeOffset.FromUnixTimeMilliseconds(1_700_000_000_123)))
-            .Wrap(new WriterPing { ClientName = "vector", TraceId = "t-1" }, PayloadFormat.Encrypted, codec: "json", key: s_key, sequence: 7);
+            .WrapRequest("System.Ping", new WriterPing { ClientName = "vector", TraceId = "t-1" }, PayloadFormat.Encrypted, codec: "json", key: s_key, sequence: 7);
         var data = element.GetProperty("value").GetBytesFromBase64();
 
-        // IV length and IV, cipher length and ciphertext, then the HMAC of everything before it.
+        // IV length and IV, cipher length and ciphertext, then the HMAC of everything before it followed by the binding:
+        // 0x01 for a request, then the method in UTF-8 (ADR-003).
         Assert.Equal(16, BinaryPrimitives.ReadInt32LittleEndian(data));
         var iv = data[4..20];
         var cipherLength = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(20));
         Assert.Equal(data.Length, 24 + cipherLength + 32);
-        Assert.Equal(HMACSHA256.HashData(s_key[32..], data[..(24 + cipherLength)]), data[(24 + cipherLength)..]);
+        byte[] binding = [0x01, .. Encoding.UTF8.GetBytes("System.Ping")];
+        Assert.Equal(HMACSHA256.HashData(s_key[32..], (byte[])[.. data[..(24 + cipherLength)], .. binding]), data[(24 + cipherLength)..]);
 
         using var aes = Aes.Create();
         aes.Key = s_key[..32];
@@ -124,6 +130,23 @@ public class PayloadWireVectorTests
 
         Assert.Equal("010000018BCFE5687B0000000000000007", Convert.ToHexString(framed[..17]));
         Assert.Equal(PolhemBody, Encoding.UTF8.GetString(Gunzip(framed[17..])));
+    }
+
+    // Fixed vectors for other implementations of ADR-003 (polhem-connector-js): the key is the bytes 0 to 63, the plaintext
+    // UTF-8 "Polhem ADR-003 binding vector", and the binding a direction byte followed by the method in UTF-8.
+    [Theory(DisplayName = "Wire vector: ciphertext bound to a direction and a method decrypts with that binding only")]
+    [InlineData(1, "EAAAAHYX5QeZX7jgLkq0NikmnpwgAAAAlY+Koj/+oH9tjwsGhMTJvpfpitn868rVNk1xXDCE6rttN7ChlpKWSuNVBWzvWb6tOEsV+p2NWiJMaEN5NLjfvw==")]
+    [InlineData(2, "EAAAAMMx+unW7jBIKA21I71abasgAAAA1wEXFaPoQxELAAFE/So1ZQRKNvzKJPspzQ9cb2SF8KIJvAM2Wt+jZpY0oUygUhM5JS6OpQbxsKD6IeqdHKA9Ew==")]
+    public void AesCbcHmacDecrypt_BoundVector_OpensWithItsBindingOnly(byte direction, string base64)
+    {
+        var encryptor = new AesCbcHmacPayloadEncryptor();
+        var ciphertext = Convert.FromBase64String(base64);
+        byte[] binding = [direction, .. Encoding.UTF8.GetBytes("Employee.GetList")];
+        byte[] otherDirection = [(byte)(3 - direction), .. Encoding.UTF8.GetBytes("Employee.GetList")];
+
+        Assert.Equal("Polhem ADR-003 binding vector", Encoding.UTF8.GetString(encryptor.Decrypt(ciphertext, s_key, binding)));
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(ciphertext, s_key, otherDirection));
+        Assert.Throws<CryptographicException>(() => encryptor.Decrypt(ciphertext, s_key));
     }
 
     // The body inside Polhem's encoded vector above, decompressed.

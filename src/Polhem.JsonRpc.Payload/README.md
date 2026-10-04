@@ -9,13 +9,15 @@ It supports trimming and Native AOT, so it runs on iOS, Android and WebAssembly.
 ```csharp
 var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
 
-var parameters = payload.Wrap(new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
+var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
 var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-var added = payload.Unwrap<AddResponse>(result, sessionKey)!;
+var added = payload.UnwrapResult<AddResponse>("Calculator.Add", result, sessionKey)!;
 ```
 
-The format, the codec, the key and the sequence number are chosen per call. `Unwrap<T>` decodes into the type the
-caller expects and only checks the envelope's `type` against it; `Unwrap` without a type argument resolves the type from
+The format, the codec, the key and the sequence number are chosen per call. An encrypted payload is bound to the method
+and the direction under its HMAC, so it cannot be sent to another method or sent back as a request.
+`UnwrapResult<T>` decodes into the type the caller expects and only checks the envelope's `type` against it;
+`UnwrapResult` without a type argument resolves the type from
 that name and accepts only the types registered with `PayloadOptions.TypeResolver`. Under Native AOT, give `PayloadOptions.SerializerOptions` and the JSON codec options
 whose `TypeInfoResolver` is a source-generated `JsonSerializerContext`.
 
