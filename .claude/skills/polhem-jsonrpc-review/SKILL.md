@@ -321,9 +321,8 @@ Follow the plan convention of `.claude/CLAUDE.md`: a file in `local/plans/`, a s
 ### Lessons of this repository's own rounds
 
 - **A fix PR is reviewed adversarially before it merges.** In three rounds running, the previous round's fixes brought
-  in a P1 that nobody had looked at from an attacker's side or from how the Polhem framework calls the code. The rule
-  that stopped it is in the maintainer's agent rules: one agent reads only the PR's diff, as an attacker and as a
-  downstream user, before auto-merge is enabled.
+  in a P1 that nobody had looked at from an attacker's side or from how the Polhem framework calls the code. What stopped
+  it: before auto-merge is enabled, one agent reads only the PR's diff, as an attacker and as a downstream user.
 - **Mutate the code a claim is about, not only the code a test names.** A sentence in an XML doc, the CHANGELOG or an
   ADR that says "always", "only", "once" or "before" is a claim; break the code it describes and see whether a test
   fails. Most findings of the later rounds were such claims with nothing behind them.
@@ -355,7 +354,7 @@ The guard mechanisms believed to exist today: `JSONRPC9001` and `DependencyGateT
 the ADR-003 binding vectors; `SpecificationExampleTests`; `TestConventionTests`; `ReadmeSnippetTests` with the compiled
 `tests/Polhem.JsonRpc.ReadmeSnippets`; CA2007; the required checks `build`, `docs` and `aot` (the `aot` job runs
 `tests/Polhem.JsonRpc.AotSmoke` published with Native AOT), with `.github/scripts/detect-docs-only.sh` skipping steps
-inside each job; `./check-md-links.sh` in the `docs` job; and, in `nuget-publish.yml`, the checks that the tag matches
+inside each job of `build-ci.yml`; `./check-md-links.sh` in the `docs` job; and, in `nuget-publish.yml`, the checks that the tag matches
 the version, that the public API is shipped, that new package IDs are confirmed, and the AOT smoke test again. Read the
 list from the code at review time rather than trusting this one.
 

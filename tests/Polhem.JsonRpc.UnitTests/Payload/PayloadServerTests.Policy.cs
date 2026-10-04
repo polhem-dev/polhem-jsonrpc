@@ -81,7 +81,7 @@ public partial class PayloadServerTests
         await uncompressed;
         if (fits)
         {
-            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.Unwrap(await compressed)).Difference);
+            Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, await compressed)).Difference);
         }
         else
         {
