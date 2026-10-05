@@ -12,7 +12,7 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `PayloadEnvelope.Read` 與 `PayloadEnvelope.ReadFormat` 會拒絕 `format`、`value`、`type` 或 `codec` 出現超過一次的信封
   （擲 `InvalidPayloadException`，`UsePayload` 以 `-32602` 回應）。在此之前兩者都取最後一個值，但那只是 System.Text.Json
   的讀法剛好如此；像 Polhem 框架那樣依 `ReadFormat` 判斷的存取 filter，否則可能看到與實際開啟時不同的格式。
-  這個格式的寫出端都不會重複成員。
+  本套件與 polhem-connector-js 寫出的信封都不會重複成員。
 
 ### 變更
 

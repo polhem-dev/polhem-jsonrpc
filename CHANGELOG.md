@@ -13,7 +13,7 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
   `codec` appears more than once (`InvalidPayloadException`, answered `-32602` by `UsePayload`). Both took the last
   value until now, but only because of how System.Text.Json reads them; an access filter that decides by
   `ReadFormat`, as the Polhem framework's does, could otherwise be shown another format than the one the payload is
-  opened in. No writer of the format repeats a member.
+  opened in. Neither this package nor polhem-connector-js writes a member twice.
 
 ### Changed
 

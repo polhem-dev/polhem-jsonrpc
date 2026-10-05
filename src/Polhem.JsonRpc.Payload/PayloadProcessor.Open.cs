@@ -93,6 +93,7 @@ public sealed partial class PayloadProcessor
     /// <exception cref="InvalidPayloadException">The element is not an envelope, or an encoded envelope has no body.</exception>
     /// <exception cref="ReplayRejectedException">Frames are required and the body's frame is missing or of another version.</exception>
     /// <exception cref="NotSupportedException">The envelope names a codec that is not registered.</exception>
+    /// <exception cref="JsonException">A plain value cannot be read as <typeparamref name="T"/>.</exception>
     /// <remarks>
     /// The caller chose the type, so nothing needs to be registered with <see cref="PayloadOptions.TypeResolver"/>.
     /// </remarks>

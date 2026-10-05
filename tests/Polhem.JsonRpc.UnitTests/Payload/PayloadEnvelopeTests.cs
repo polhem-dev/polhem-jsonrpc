@@ -9,6 +9,7 @@ public class PayloadEnvelopeTests
     [InlineData("""{"format":2,"value":"!"}""", PayloadFormat.Encrypted)]
     [InlineData("""{"value":1}""", PayloadFormat.Plain)]
     [InlineData("[1,2]", PayloadFormat.Plain)]
+    [InlineData("""{"format":1,"extra":1,"extra":2}""", PayloadFormat.Encoded)]
     public void ReadFormat_EnvelopeOrOther_ReturnsFormat(string json, PayloadFormat expected)
     {
         Assert.Equal(expected, PayloadEnvelope.ReadFormat(Parse(json)));
