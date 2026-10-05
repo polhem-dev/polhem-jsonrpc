@@ -333,6 +333,14 @@ Follow the plan convention of `.claude/CLAUDE.md`: a file in `local/plans/`, a s
   it did not cover made the replay protection bypassable (ADR-003). List the fields and paths outside each protection.
 - **Read a release as a dependency graph.** Open version ranges let one package of the family upgrade alone; a binary
   break then reaches code nobody rebuilt (ADR-001, decision 4, amended).
+- **Mutate every new test against its name, and every sentence of a new user document.** Round eight did both for
+  the first time. Each fix PR of rounds seven and eight had a test that passed with the code it named broken: a check
+  reached only through an internal constructor, a wire value pinned through the package's own enum, a binding tested
+  in one direction.
+- **A test that loads an assembly into a collectible context holds the context strongly until it calls `Unload`.**
+  Held only by a `WeakReference`, the context can be collected between loading and checking, and the assembly then
+  stays visible to every later test of the run. The first version of `CompiledVersionGuardProcessTests` failed 2 runs
+  in 15 this way.
 - **Stop full rounds when the agents agree they add nothing.** After that, a fix PR with its adversarial review and a
   rerun of the round's mutation scripts before a release are enough; run a full round again when the dispatcher, a
   transport, the payload filter or the wire format changes.
@@ -355,7 +363,25 @@ the ADR-003 binding vectors; `SpecificationExampleTests`; `TestConventionTests`;
 `tests/Polhem.JsonRpc.ReadmeSnippets`; CA2007; the required checks `build`, `docs` and `aot` (the `aot` job runs
 `tests/Polhem.JsonRpc.AotSmoke` published with Native AOT), with `.github/scripts/detect-docs-only.sh` skipping steps
 inside each job of `build-ci.yml`; `./check-md-links.sh` in the `docs` job; and, in `nuget-publish.yml`, the checks that the tag matches
-the version, that the public API is shipped, that new package IDs are confirmed, and the AOT smoke test again. Read the
-list from the code at review time rather than trusting this one.
+the version, that the public API is shipped, that new package IDs are confirmed, and the AOT smoke test again.
+
+Added in round eight, each confirmed by a mutant of the code it guards:
+
+- `CompiledVersionGuardProcessTests`: writes an assembly that references `Polhem.JsonRpc.Server` 1.0 in memory, loads it
+  into a collectible `AssemblyLoadContext` in a collection with parallelization disabled, and checks both public
+  `JsonRpcDispatcher` constructors. It pins the real scan, which the internal constructor's tests cannot see.
+  `CompiledVersionGuardTests.FindStale_ReferenceBefore11_IsNamed` names stale assemblies whatever their own name, and
+  `FindStaleIn_ReferencesNotSupported_ThrowsInvalidOperation` pins the fail-closed path under Native AOT.
+- `PayloadWireVectorTests.WrapRequestAndSealResponse_Encrypted_HmacCoversDirectionAndUtf8Method`: the direction bytes
+  `0x01` and `0x02` and the UTF-8 method, recomputed without the package's enum, for a method that is not ASCII too.
+  polhem-connector-js holds the matching writer check and three envelopes sealed by this package
+  (`test/payload-binding-wire.test.ts`).
+- `PayloadBindingTests.OpenRequest_EncryptorWithoutAssociatedData_Throws`: the `Decrypt` half of ADR-003 decision 4.
+- `PayloadServerTests.Call_FrameAheadReplayedAfterScopeIdle_IsRejected`: the built-in replay store keeps a scope for
+  twice the timestamp tolerance.
+- `PayloadEnvelopeTests.Read_RepeatedMember_Throws`: `Read` and `ReadFormat` refuse a repeated envelope member, so a
+  filter that decides by the format sees the format the payload is opened in.
+
+Read the list from the code at review time rather than trusting this one.
 
 Compute every quantity from the code at review time; never compare with a number carried over from an earlier round.
