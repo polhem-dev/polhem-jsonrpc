@@ -11,13 +11,14 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ### Security
 
-- `JsonRpcServerOptions.AllowCodeCompiledAgainst10` no longer covers the Polhem.JsonRpc packages themselves: the
-  `JsonRpcDispatcher` constructor throws while one of them compiled against `Polhem.JsonRpc.Server` 1.0 is loaded,
-  whatever the option is set to. `Polhem.JsonRpc.AspNetCore` 1.0 sets the transport kind of every HTTP call to the
-  value 1.1 reads as in-process, so with the option set a host that had upgraded every package but that one treated
-  every HTTP call as in-process, which an application that trusts in-process calls lets past its access checks. The
-  1.1.0 exception message advised setting the option for code that "never reads the transport kind", which that
-  package does not. The option still covers application code that neither reads nor sets the kind.
+- `JsonRpcServerOptions.AllowCodeCompiledAgainst10` has no effect and is marked obsolete: the `JsonRpcDispatcher`
+  constructor throws while any assembly compiled against `Polhem.JsonRpc.Server` 1.0 is loaded, whatever the option
+  says. In 1.1.0 the option let such code run, and the exception message advised setting it for code that "never reads
+  the transport kind". Code compiled against 1.0 that reads or sets the kind takes HTTP and in-process calls for each
+  other: `Polhem.JsonRpc.AspNetCore` 1.0 marks every HTTP call as in-process, and the Polhem framework 1.2.0 takes every
+  HTTP call for an in-process one. Either lets a call past access checks an application skips for in-process calls.
+  A host that set the option upgrades `Polhem.JsonRpc.Server` to 1.1.1 and recompiles, or upgrades, what the exception
+  names.
 
 ## [1.1.0] - 2026-10-05
 

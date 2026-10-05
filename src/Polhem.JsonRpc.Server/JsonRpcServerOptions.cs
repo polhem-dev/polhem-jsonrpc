@@ -67,23 +67,19 @@ public sealed class JsonRpcServerOptions
     public int MaxBatchSize { get; set; } = 100;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the dispatcher starts while application code compiled against
-    /// <c>Polhem.JsonRpc.Server</c> 1.0 is loaded. The default is <see langword="false"/>: the constructor of
-    /// <see cref="JsonRpcDispatcher"/> throws <see cref="InvalidOperationException"/> naming that code.
+    /// Has no effect since 1.1.1: the constructor of <see cref="JsonRpcDispatcher"/> throws
+    /// <see cref="InvalidOperationException"/> while code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded,
+    /// whatever this is set to.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// 1.1 renumbered <see cref="JsonRpcTransportKind"/>, and the value is compiled into the code that uses it. Code
-    /// compiled against 1.0 that reads the kind takes every HTTP call for an in-process one, and code that sets it marks
-    /// an HTTP call as in-process. Set this only when the code named in the exception neither reads nor sets the
-    /// transport kind. The check sees the assemblies loaded when the dispatcher is created.
-    /// </para>
-    /// <para>
-    /// IMPORTANT: this never covers the Polhem.JsonRpc packages themselves. <c>Polhem.JsonRpc.AspNetCore</c> 1.0,
-    /// brought in by upgrading only another package, sets the kind of every HTTP call to the value 1.1 reads as
-    /// in-process, so the dispatcher refuses to start beside it whatever this is set to
-    /// (<c>CompiledVersionGuardTests.Dispatcher_StalePackageAllowed_Throws</c>).
-    /// </para>
+    /// 1.1 renumbered <see cref="JsonRpcTransportKind"/>, and the value is compiled into the code that uses it, so code
+    /// compiled against 1.0 that reads or sets the kind takes HTTP calls and in-process calls for each other. In 1.1.0
+    /// this let such code run; it let <c>Polhem.JsonRpc.AspNetCore</c> 1.0 mark every HTTP call as in-process, and the
+    /// Polhem framework 1.2.0 take every HTTP call for an in-process one, both of which bypass an application's access
+    /// checks for in-process calls. Nothing can tell from outside whether code reads or sets the kind, so the check
+    /// no longer has an exception (<c>CompiledVersionGuardTests.Dispatcher_StaleAssemblyEvenIfAllowed_Throws</c>). The
+    /// check sees the assemblies loaded when the dispatcher is created.
     /// </remarks>
+    [Obsolete("Has no effect since 1.1.1: recompile code built against Polhem.JsonRpc.Server 1.0.")]
     public bool AllowCodeCompiledAgainst10 { get; set; }
 }

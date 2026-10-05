@@ -113,13 +113,14 @@ requests as in-process; the HTTP handler marks every request as HTTP. The identi
 > Amended (2026-10-05): the 1.0 packages accept any later version of each other, so `Polhem.JsonRpc.AspNetCore` 1.0 can
 > run on `Polhem.JsonRpc.Server` 1.1 without the Polhem framework taking part. The `JsonRpcDispatcher` constructor
 > therefore throws while an assembly compiled against `Polhem.JsonRpc.Server` 1.0 is loaded, unless
-> `JsonRpcServerOptions.AllowCodeCompiledAgainst10` is set (`CompiledVersionGuardTests.Dispatcher_StaleAssembly_Throws`,
-> `CompiledVersionGuardTests.Dispatcher_StaleAssemblyAllowed_Starts`). The check sees the assemblies loaded when the
-> dispatcher is created; an assembly a host loads later, on the first call, is not seen.
+> `JsonRpcServerOptions.AllowCodeCompiledAgainst10` is set (`CompiledVersionGuardTests.Dispatcher_StaleAssembly_Throws`).
+> The check sees the assemblies loaded when the dispatcher is created; an assembly a host loads later, on the first
+> call, is not seen.
 >
-> Amended for 1.1.1 (2026-10-05): the option covers application code only. `Polhem.JsonRpc.AspNetCore` 1.0 does not
-> read the kind but sets it, to the value 1.1 reads as in-process, so a stale Polhem.JsonRpc package is refused whatever
-> the option says (`CompiledVersionGuardTests.Dispatcher_StalePackageAllowed_Throws`).
+> Amended for 1.1.1 (2026-10-05): the option has no effect and is obsolete. `Polhem.JsonRpc.AspNetCore` 1.0 does not
+> read the kind but sets it, to the value 1.1 reads as in-process, and the Polhem framework 1.2.0 reads it with the old
+> numbers; nothing can tell from outside whether code reads or sets the kind. Any assembly compiled against
+> `Polhem.JsonRpc.Server` 1.0 is refused (`CompiledVersionGuardTests.Dispatcher_StaleAssemblyEvenIfAllowed_Throws`).
 
 ### 5. Compression and encryption are not part of the packages
 

@@ -44,26 +44,21 @@ public class CompiledVersionGuardTests
         Assert.Contains("Polhem.JsonRpc.AspNetCore 1.0.0.0", ex.Message, StringComparison.Ordinal);
     }
 
-    [Fact(DisplayName = "Version guard: AllowCodeCompiledAgainst10 lets the dispatcher start beside stale application code")]
-    public void Dispatcher_StaleAssemblyAllowed_Starts()
-    {
-        var options = new JsonRpcServerOptions { AllowCodeCompiledAgainst10 = true };
-
-        Assert.NotNull(new JsonRpcDispatcher(options, new TestObjectFactory(), () => ["MyApp.Api 1.0.0.0"]));
-    }
-
-    [Theory(DisplayName = "Version guard: AllowCodeCompiledAgainst10 does not cover a stale Polhem.JsonRpc package")]
+    [Theory(DisplayName = "Version guard: AllowCodeCompiledAgainst10 no longer lets the dispatcher start beside stale code")]
     [InlineData("Polhem.JsonRpc.AspNetCore 1.0.0.0")]
-    [InlineData("Polhem.JsonRpc.Payload.Server 1.0.0.0")]
-    public void Dispatcher_StalePackageAllowed_Throws(string package)
+    [InlineData("Polhem.Api.Core 1.2.0.0")]
+    [InlineData("MyApp.Api 1.0.0.0")]
+    public void Dispatcher_StaleAssemblyEvenIfAllowed_Throws(string assembly)
     {
+        // The obsolete option is set on purpose: the test pins that it no longer has an effect.
+#pragma warning disable CS0618
         var options = new JsonRpcServerOptions { AllowCodeCompiledAgainst10 = true };
+#pragma warning restore CS0618
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => new JsonRpcDispatcher(options, new TestObjectFactory(), () => ["MyApp.Api 1.0.0.0", package]));
+            () => new JsonRpcDispatcher(options, new TestObjectFactory(), () => [assembly]));
 
-        Assert.Contains(package, ex.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain("MyApp.Api", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(assembly, ex.Message, StringComparison.Ordinal);
     }
 
     [Fact(DisplayName = "Version guard: the public constructor starts in a process where no stale assembly is loaded")]
