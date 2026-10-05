@@ -58,8 +58,11 @@ public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadF
   (`HMACSHA512(demoKey, clientId)`): each client id has a key of its own, and a call replayed under another client id
   fails its HMAC. This holds only because the sample requires encrypted calls; a plain or encoded call has no HMAC, and
   its caller could change or drop the header.
-- Deriving keys from one demo key keeps the sample short. A real application gives each session its own key, agreed at
-  sign-in, and uses the session as the replay scope. How keys are agreed is outside the payload packages.
+- Deriving keys from one demo key keeps the sample short, but the client holds the demo key too. Anyone with the
+  client can derive the key of any client id and call as that client: the keys of their own stop a replay under
+  another client id, not impersonation. A real application never gives the root key to a client. The server keeps it,
+  generates or derives each session's key after sign-in, sends the client only that key, and uses the session as the
+  replay scope. How keys are agreed is outside the payload packages.
 - `MemoryPayloadReplayStore` remembers sequence numbers in the process. Several server instances need a shared
   `IPayloadReplayStore`.
 

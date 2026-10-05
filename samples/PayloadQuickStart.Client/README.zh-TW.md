@@ -20,6 +20,8 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest 
 ```
 
 - 金鑰由示範金鑰與用戶端放在 `X-Client-Id` 的 client id 推導而來，推導方式與伺服器完全相同，因此呼叫無法換一個 client id 重送。
+  用戶端持有示範金鑰是範例的簡化：有了它就能推導出任何 client id 的金鑰。實際的用戶端只會從伺服器拿到自己 session 的金鑰，
+  見 [PayloadQuickStart.Server](../PayloadQuickStart.Server/README.zh-TW.md) 的說明。
 - `PayloadConnector`（套件 `Polhem.JsonRpc.Payload.Client`）的呼叫方式與 `JsonRpcConnector` 相同。每次呼叫時它把參數序列化、
   壓縮、加上 frame 並加密，對結果則反向處理。
 - 方法名稱與方向都在 HMAC 的涵蓋範圍內，所以加密的請求不能改送給別的方法，結果也不能當成請求送回去。
