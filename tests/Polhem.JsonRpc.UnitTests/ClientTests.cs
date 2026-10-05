@@ -19,6 +19,23 @@ public class ClientTests
         Assert.Equal(7, result!.Difference);
     }
 
+    [Fact(DisplayName = "Client: a client built before the server's request gained a member still calls it, and the member binds its default")]
+    public async Task InvokeAsync_OlderClientClasses_BindsMissingMemberAsDefault()
+    {
+        var result = await InProcess().InvokeAsync<SubtractResponse>("Spec.Subtract", new OlderSubtractRequest(10));
+
+        Assert.Equal(10, result!.Difference);
+    }
+
+    [Fact(DisplayName = "Client: a client whose classes have members the server's lack still calls it, and the missing result member reads as its default")]
+    public async Task InvokeAsync_NewerClientClasses_IgnoresExtraMembers()
+    {
+        var result = await InProcess().InvokeAsync<NewerSubtractResponse>("Spec.Subtract", new NewerSubtractRequest(10, 3, "kg"));
+
+        Assert.Equal(7, result!.Difference);
+        Assert.Null(result.Unit);
+    }
+
     [Fact(DisplayName = "Client: an error response is thrown as JsonRpcErrorException")]
     public async Task InvokeAsync_ErrorResponse_ThrowsJsonRpcErrorException()
     {
@@ -388,6 +405,13 @@ public class ClientTests
             return base.SendAsync(request, cancellationToken);
         }
     }
+
+    // The request and response of `Spec.Subtract` as a client compiled against an older or a newer contract sees them.
+    private sealed record OlderSubtractRequest(int Minuend);
+
+    private sealed record NewerSubtractRequest(int Minuend, int Subtrahend, string? Unit);
+
+    private sealed record NewerSubtractResponse(int Difference, string? Unit);
 
     private sealed class StubHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {

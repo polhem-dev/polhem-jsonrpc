@@ -86,6 +86,17 @@ onto it without a second mechanism. It follows the executor step by step:
 > - Step 6: an absent `params` is answered with `-32602 Invalid params` as well. It used to bind `null`, which a
 >   method then failed on with `-32603` (`DispatcherTests.DispatchMessageAsync_NoParams_ReturnsInvalidParams`).
 
+> Amended (2026-10-05), the reason for the fixed shape: the `ProgId.Action` name, a single parameter object and a
+> result object are kept deliberately, not only because Polhem resolves methods this way. They let a contract evolve
+> without breaking the clients already deployed. A member added to a request or a response class reaches a client
+> built before it as nothing: a request without the member binds the member's default, and a result member the client
+> does not know is skipped when read (`ClientTests.InvokeAsync_OlderClientClasses_BindsMissingMemberAsDefault`,
+> `ClientTests.InvokeAsync_NewerClientClasses_IgnoresExtraMembers`). Positional parameters cannot do this: adding,
+> removing or reordering one breaks every caller. The behavior comes from the default System.Text.Json settings; an
+> application that sets `JsonUnmappedMemberHandling.Disallow` or `RespectRequiredConstructorParameters` gives it up.
+> The cost is that the server cannot implement a protocol whose method names or parameters are fixed by someone else,
+> such as the Language Server Protocol or an Ethereum node's API; that is not what these packages are for.
+
 ### 3. A method is callable when its types follow the naming convention
 
 Every public one-parameter method of an object would otherwise be reachable from the network, including one added
