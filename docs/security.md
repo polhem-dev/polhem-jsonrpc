@@ -85,7 +85,7 @@ scope. Without either, nothing is checked and a repeated call runs again (ADR-00
 
 | Protection | Where |
 |------------|-------|
-| The dispatcher refuses to start when an assembly loaded at that moment was compiled against `Polhem.JsonRpc.Server` 1.0, whose transport kinds have other values. An assembly loaded later is not seen. | `JsonRpcServerOptions.AllowCodeCompiledAgainst10`, ADR-001 decision 4 |
+| The dispatcher refuses to start when an assembly loaded at that moment was compiled against `Polhem.JsonRpc.Server` 1.0, whose transport kinds have other values. An assembly loaded later is not seen. `AllowCodeCompiledAgainst10` admits application code that neither reads nor sets the transport kind, never a Polhem.JsonRpc package. | `JsonRpcServerOptions.AllowCodeCompiledAgainst10`, ADR-001 decision 4 |
 | The packages depend on nothing but .NET, and ASP.NET Core for the endpoint. The repository's build fails on a package reference that would reach consumers. | ADR-001 decision 1 |
 
 ## What the application is responsible for

@@ -116,6 +116,10 @@ requests as in-process; the HTTP handler marks every request as HTTP. The identi
 > `JsonRpcServerOptions.AllowCodeCompiledAgainst10` is set (`CompiledVersionGuardTests.Dispatcher_StaleAssembly_Throws`,
 > `CompiledVersionGuardTests.Dispatcher_StaleAssemblyAllowed_Starts`). The check sees the assemblies loaded when the
 > dispatcher is created; an assembly a host loads later, on the first call, is not seen.
+>
+> Amended for 1.1.1 (2026-10-05): the option covers application code only. `Polhem.JsonRpc.AspNetCore` 1.0 does not
+> read the kind but sets it, to the value 1.1 reads as in-process, so a stale Polhem.JsonRpc package is refused whatever
+> the option says (`CompiledVersionGuardTests.Dispatcher_StalePackageAllowed_Throws`).
 
 ### 5. Compression and encryption are not part of the packages
 

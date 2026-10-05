@@ -42,8 +42,8 @@ public sealed class JsonRpcDispatcher
     /// <param name="options">The settings. <see cref="JsonRpcServerOptions.ObjectFactory"/> is required.</param>
     /// <exception cref="ArgumentException">A required setting is missing.</exception>
     /// <exception cref="InvalidOperationException">
-    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, and
-    /// <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is not set.
+    /// A Polhem.JsonRpc package compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, or other code compiled
+    /// against it is loaded and <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is not set.
     /// </exception>
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]
@@ -64,8 +64,8 @@ public sealed class JsonRpcDispatcher
     /// </remarks>
     /// <exception cref="ArgumentException">A required setting is missing.</exception>
     /// <exception cref="InvalidOperationException">
-    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, and
-    /// <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is not set.
+    /// A Polhem.JsonRpc package compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, or other code compiled
+    /// against it is loaded and <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is not set.
     /// </exception>
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]
@@ -83,7 +83,7 @@ public sealed class JsonRpcDispatcher
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(objectFactory);
         ArgumentNullException.ThrowIfNull(findStale);
-        if (!options.AllowCodeCompiledAgainst10) { CompiledVersionGuard.ThrowIfAny(findStale()); }
+        CompiledVersionGuard.ThrowIfAny(findStale(), options.AllowCodeCompiledAgainst10);
         var serializerOptions = options.SerializerOptions ?? throw new ArgumentException("SerializerOptions is required.", nameof(options));
 
         // `GetTypeInfo` does not fall back to reflection the way `JsonSerializer.Serialize(value, options)` does.

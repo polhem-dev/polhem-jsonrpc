@@ -67,15 +67,23 @@ public sealed class JsonRpcServerOptions
     public int MaxBatchSize { get; set; } = 100;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the dispatcher starts while code compiled against
+    /// Gets or sets a value indicating whether the dispatcher starts while application code compiled against
     /// <c>Polhem.JsonRpc.Server</c> 1.0 is loaded. The default is <see langword="false"/>: the constructor of
     /// <see cref="JsonRpcDispatcher"/> throws <see cref="InvalidOperationException"/> naming that code.
     /// </summary>
     /// <remarks>
-    /// 1.1 renumbered <see cref="JsonRpcTransportKind"/>, and code compiled against 1.0, such as
-    /// <c>Polhem.JsonRpc.AspNetCore</c> 1.0 brought in by upgrading only another package, takes every HTTP call for an
-    /// in-process one. Set this only when the code named in the exception never reads the transport kind. The check
-    /// sees the assemblies loaded when the dispatcher is created.
+    /// <para>
+    /// 1.1 renumbered <see cref="JsonRpcTransportKind"/>, and the value is compiled into the code that uses it. Code
+    /// compiled against 1.0 that reads the kind takes every HTTP call for an in-process one, and code that sets it marks
+    /// an HTTP call as in-process. Set this only when the code named in the exception neither reads nor sets the
+    /// transport kind. The check sees the assemblies loaded when the dispatcher is created.
+    /// </para>
+    /// <para>
+    /// IMPORTANT: this never covers the Polhem.JsonRpc packages themselves. <c>Polhem.JsonRpc.AspNetCore</c> 1.0,
+    /// brought in by upgrading only another package, sets the kind of every HTTP call to the value 1.1 reads as
+    /// in-process, so the dispatcher refuses to start beside it whatever this is set to
+    /// (<c>CompiledVersionGuardTests.Dispatcher_StalePackageAllowed_Throws</c>).
+    /// </para>
     /// </remarks>
     public bool AllowCodeCompiledAgainst10 { get; set; }
 }

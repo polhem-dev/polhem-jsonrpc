@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- The single source of the package version. Only the projects under src/ are packed, so the version lives here
          and nowhere else; the release workflow checks that the tag names it. -->
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
 
     <!-- Package metadata -->
     <Authors>Polhem contributors</Authors>

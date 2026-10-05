@@ -11,6 +11,7 @@ namespace Polhem.JsonRpc.Server;
 internal static class CompiledVersionGuard
 {
     private const string ServerAssembly = "Polhem.JsonRpc.Server";
+    private const string PackagePrefix = "Polhem.JsonRpc.";
 
     // The version that renumbered JsonRpcTransportKind (ADR-001, decision 4, amended for 1.1.0).
     private static readonly Version s_renumbered = new(1, 1);
@@ -23,19 +24,28 @@ internal static class CompiledVersionGuard
             .Select(assembly => (assembly.GetName(), assembly.GetReferencedAssemblies())),
         typeof(CompiledVersionGuard).Assembly.GetName().Version);
 
-    /// <summary>Throws when any assembly is named.</summary>
+    /// <summary>Throws when any assembly is named that the opt-out does not cover.</summary>
     /// <param name="stale">The names of the assemblies compiled against an older version.</param>
-    /// <exception cref="InvalidOperationException">An assembly is named.</exception>
-    public static void ThrowIfAny(IReadOnlyList<string> stale)
+    /// <param name="allowOthers">
+    /// Whether <see cref="JsonRpcServerOptions.AllowCodeCompiledAgainst10"/> is set. It covers the application's code but
+    /// never the packages' own assemblies: <c>Polhem.JsonRpc.AspNetCore</c> 1.0 sets the kind of every HTTP call to the
+    /// value that 1.1 reads as in-process.
+    /// </param>
+    /// <exception cref="InvalidOperationException">An assembly the opt-out does not cover is named.</exception>
+    public static void ThrowIfAny(IReadOnlyList<string> stale, bool allowOthers)
     {
-        if (stale.Count > 0)
+        var refused = allowOthers ? [.. stale.Where(IsPackageAssembly)] : stale;
+        if (refused.Count > 0)
         {
             throw new InvalidOperationException(
                 $"These assemblies were compiled against {ServerAssembly} 1.0, whose JsonRpcTransportKind numbers differ: " +
-                $"{string.Join(", ", stale)}. Upgrade every Polhem.JsonRpc package, and the code built on them, together; " +
-                "set JsonRpcServerOptions.AllowCodeCompiledAgainst10 only for code that never reads the transport kind.");
+                $"{string.Join(", ", refused)}. Upgrade every Polhem.JsonRpc package, and the code built on them, together. " +
+                "JsonRpcServerOptions.AllowCodeCompiledAgainst10 covers only application code that neither reads nor sets " +
+                "the transport kind; it never covers the Polhem.JsonRpc packages themselves.");
         }
     }
+
+    private static bool IsPackageAssembly(string name) => name.StartsWith(PackagePrefix, StringComparison.Ordinal);
 
     /// <summary>Gets the names of the assemblies that reference the server assembly at a version before 1.1.</summary>
     /// <param name="assemblies">Each assembly with the assemblies it references.</param>
