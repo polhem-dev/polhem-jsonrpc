@@ -42,7 +42,8 @@ public sealed class JsonRpcDispatcher
     /// <param name="options">The settings. <see cref="JsonRpcServerOptions.ObjectFactory"/> is required.</param>
     /// <exception cref="ArgumentException">A required setting is missing.</exception>
     /// <exception cref="InvalidOperationException">
-    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded.
+    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, or the runtime cannot list the references of
+    /// the loaded assemblies to check for such code, as under Native AOT.
     /// </exception>
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]
@@ -63,7 +64,8 @@ public sealed class JsonRpcDispatcher
     /// </remarks>
     /// <exception cref="ArgumentException">A required setting is missing.</exception>
     /// <exception cref="InvalidOperationException">
-    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded.
+    /// Code compiled against <c>Polhem.JsonRpc.Server</c> 1.0 is loaded, or the runtime cannot list the references of
+    /// the loaded assemblies to check for such code, as under Native AOT.
     /// </exception>
     [RequiresUnreferencedCode(ReflectionMessage)]
     [RequiresDynamicCode(ReflectionMessage)]

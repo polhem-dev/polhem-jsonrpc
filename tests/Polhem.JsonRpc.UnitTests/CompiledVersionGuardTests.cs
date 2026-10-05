@@ -39,6 +39,16 @@ public class CompiledVersionGuardTests
         Assert.Empty(CompiledVersionGuard.FindStaleInProcess());
     }
 
+    [Fact(DisplayName = "Version guard: a runtime that cannot list an assembly's references, as Native AOT, makes the check fail closed with a clear message")]
+    public void FindStaleIn_ReferencesNotSupported_ThrowsInvalidOperation()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => CompiledVersionGuard.FindStaleIn([new ReferencesUnavailableAssembly()], s_running));
+
+        Assert.Contains("Native AOT", ex.Message, StringComparison.Ordinal);
+        Assert.IsType<PlatformNotSupportedException>(ex.InnerException);
+    }
+
     [Fact(DisplayName = "Version guard: the dispatcher refuses to start while a stale assembly is loaded, naming it")]
     public void Dispatcher_StaleAssembly_Throws()
     {
@@ -68,4 +78,12 @@ public class CompiledVersionGuardTests
     private static (AssemblyName, AssemblyName[]) Entry(string name, string version, params (string Name, string Version)[] references) =>
         (new AssemblyName(name) { Version = new Version(version) },
          [.. references.Select(reference => new AssemblyName(reference.Name) { Version = new Version(reference.Version) })]);
+
+    // What Native AOT does when an assembly's references are asked for.
+    private sealed class ReferencesUnavailableAssembly : Assembly
+    {
+        public override AssemblyName GetName() => new("Aot.App") { Version = new Version(1, 0, 0, 0) };
+
+        public override AssemblyName[] GetReferencedAssemblies() => throw new PlatformNotSupportedException();
+    }
 }

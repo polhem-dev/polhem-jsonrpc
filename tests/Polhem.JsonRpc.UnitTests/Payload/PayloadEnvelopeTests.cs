@@ -9,6 +9,7 @@ public class PayloadEnvelopeTests
     [InlineData("""{"format":2,"value":"!"}""", PayloadFormat.Encrypted)]
     [InlineData("""{"value":1}""", PayloadFormat.Plain)]
     [InlineData("[1,2]", PayloadFormat.Plain)]
+    [InlineData("""{"format":1,"extra":1,"extra":2}""", PayloadFormat.Encoded)]
     public void ReadFormat_EnvelopeOrOther_ReturnsFormat(string json, PayloadFormat expected)
     {
         Assert.Equal(expected, PayloadEnvelope.ReadFormat(Parse(json)));
@@ -40,6 +41,20 @@ public class PayloadEnvelopeTests
     public void Read_Malformed_Throws(string json)
     {
         Assert.Throws<InvalidPayloadException>(() => PayloadEnvelope.Read(Parse(json)));
+    }
+
+    // The escaped row is the same name once decoded, which is how every JSON reader compares member names.
+    [Theory(DisplayName = "Envelope: a member of the envelope that appears twice is refused, by Read and by ReadFormat alike")]
+    [InlineData("""{"format":2,"format":0,"value":{"a":1}}""")]
+    [InlineData("""{"format":0,"format":2,"value":"AAAA","type":"t"}""")]
+    [InlineData("""{"format":0,"form\u0061t":2,"value":{"a":1}}""")]
+    [InlineData("""{"format":0,"value":{"a":1},"value":{"a":2}}""")]
+    [InlineData("""{"format":1,"value":"AAAA","type":"a","type":"b"}""")]
+    [InlineData("""{"format":1,"value":"AAAA","type":"a","codec":"json","codec":"other"}""")]
+    public void Read_RepeatedMember_Throws(string json)
+    {
+        Assert.Throws<InvalidPayloadException>(() => PayloadEnvelope.Read(Parse(json)));
+        Assert.Throws<InvalidPayloadException>(() => PayloadEnvelope.ReadFormat(Parse(json)));
     }
 
     [Fact(DisplayName = "Envelope: members the envelope does not define are ignored")]

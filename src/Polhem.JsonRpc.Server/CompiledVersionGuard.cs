@@ -17,11 +17,36 @@ internal static class CompiledVersionGuard
 
     /// <summary>Gets the names of the loaded assemblies compiled against a version before the renumbering.</summary>
     /// <returns>The names, empty when there are none or the running version is itself before 1.1.</returns>
+    /// <exception cref="InvalidOperationException">The runtime cannot list the references of an assembly, as under Native AOT.</exception>
     [RequiresUnreferencedCode("Reads the references of the loaded assemblies, which trimming may remove.")]
-    public static IReadOnlyList<string> FindStaleInProcess() => FindStale(
-        AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic)
-            .Select(assembly => (assembly.GetName(), assembly.GetReferencedAssemblies())),
-        typeof(CompiledVersionGuard).Assembly.GetName().Version);
+    public static IReadOnlyList<string> FindStaleInProcess() => FindStaleIn(
+        AppDomain.CurrentDomain.GetAssemblies(), typeof(CompiledVersionGuard).Assembly.GetName().Version);
+
+    /// <summary>Gets the names of the given assemblies compiled against a version before the renumbering.</summary>
+    /// <param name="loaded">The loaded assemblies.</param>
+    /// <param name="running">The version of the server assembly that runs.</param>
+    /// <returns>The names, empty when there are none or the running version is itself before 1.1.</returns>
+    /// <exception cref="InvalidOperationException">The runtime cannot list the references of an assembly, as under Native AOT.</exception>
+    [RequiresUnreferencedCode("Reads the references of the loaded assemblies, which trimming may remove.")]
+    internal static IReadOnlyList<string> FindStaleIn(IEnumerable<Assembly> loaded, Version? running)
+    {
+        try
+        {
+            return FindStale(
+                loaded.Where(assembly => !assembly.IsDynamic)
+                    .Select(assembly => (assembly.GetName(), assembly.GetReferencedAssemblies())),
+                running);
+        }
+        catch (PlatformNotSupportedException ex)
+        {
+            // Native AOT keeps no assembly references to list. Code compiled against 1.0 can still be linked in, so the
+            // check fails closed instead of passing everything it cannot see.
+            throw new InvalidOperationException(
+                $"The dispatcher cannot check which assemblies were compiled against {ServerAssembly} 1.0, because this " +
+                $"runtime cannot list the references of an assembly. {ServerAssembly} resolves methods by reflection and " +
+                "does not support Native AOT.", ex);
+        }
+    }
 
     /// <summary>Throws when any assembly is named.</summary>
     /// <param name="stale">The names of the assemblies compiled against an older version.</param>

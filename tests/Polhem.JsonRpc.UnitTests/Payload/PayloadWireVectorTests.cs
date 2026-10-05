@@ -9,11 +9,12 @@ namespace Polhem.JsonRpc.UnitTests.Payload;
 
 /// <summary>
 /// The wire format is the one the Polhem framework wrote before the payload code moved into this package
-/// (maintainers/adr/adr-002-payload-packages.md, decision 2). Every vector here was produced by the Polhem
-/// implementation (polhem-dev/polhem at 57607b6) and is never regenerated from this package: a vector that has to
-/// change means the wire changed. ADR-003 changed it once: the HMAC of an encrypted payload also covers the method and
-/// the direction, so Polhem's encrypted vector no longer authenticates, and the writer's HMAC is checked against that
-/// rule without this package's code.
+/// (maintainers/adr/adr-002-payload-packages.md, decision 2). The vectors of that format were produced by the Polhem
+/// implementation (polhem-dev/polhem at 57607b6). ADR-003 changed the format once: the HMAC of an encrypted payload
+/// also covers the method and the direction, so Polhem's encrypted vector no longer authenticates, and the writer's
+/// HMAC is checked against that rule without this package's code. The two vectors bound to a method were produced by
+/// this package for 1.1.0, checked with an HMAC computed apart from it, and decrypted by polhem-connector-js. No vector
+/// is regenerated from this package: a vector that has to change means the wire changed.
 /// </summary>
 public class PayloadWireVectorTests
 {

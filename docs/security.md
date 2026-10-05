@@ -48,6 +48,7 @@ The optional payload packages carry `params` and `result` in an envelope that ca
 | The HMAC covers the method name and the direction (request or response). A captured call cannot be sent to another method, and a response cannot be sent back as a request. | ADR-003 decisions 1 and 2 |
 | A result comes back in the format of its request, `null` results included. A client that reads results with `UnwrapResult` or `UnwrapResult<T>` (or `OpenResult` given the request's format) refuses a result in another format, so an encrypted call cannot be answered with a plain result. The older `Unwrap` methods do not check this. | ADR-003 decision 6 |
 | A method can require a lowest format, and lower ones are refused before a key is asked for. | `IPayloadServerPolicy.GetMinimumFormat` |
+| An envelope in which `format`, `value`, `type` or `codec` appears twice is refused (`-32602` unless the application's `ExceptionMapper` maps it), so code that reads the format before the payload is opened sees the format it is opened in. | `PayloadEnvelope.Read`, `PayloadEnvelope.ReadFormat` |
 | `NoPayloadEncryptor`, which does not encrypt, is refused unless allowed for development. | `PayloadOptions.AllowNoEncryption` |
 
 ## Replayed calls
@@ -77,7 +78,7 @@ scope. Without either, nothing is checked and a repeated call runs again (ADR-00
 | Protection | Where |
 |------------|-------|
 | An unexpected exception is answered with `-32603 Internal error`, without its message, type or stack trace. Only `JsonRpcErrorException`, or an `ExceptionMapper` the application sets, chooses what the caller sees. | `JsonRpcDispatcher`, `JsonRpcServerOptions.ExceptionMapper` |
-| Payload failures other than a malformed or too-low envelope (a failed HMAC, a replayed frame, a foreign type name, a missing key) all answer the same `-32603`, so the caller cannot tell which check failed. | `JsonRpcServerOptions.UsePayload` |
+| Payload failures other than a malformed or too-low envelope (a failed HMAC, a replayed frame, a foreign type name, a missing key) all answer the same `-32603`, so the caller cannot tell which check failed, unless the application's `ExceptionMapper` maps them to errors of its own. | `JsonRpcServerOptions.UsePayload` |
 | The exception's message is sent in `data` only when `IncludeExceptionDetails` is set. It can reveal which check failed, so it is for development only. | `JsonRpcServerOptions.IncludeExceptionDetails` |
 | A call the client aborted is cancelled, not reported as an internal error. | `JsonRpcDispatcher`, `JsonRpcHttpHandler` |
 
@@ -114,7 +115,8 @@ scope. Without either, nothing is checked and a repeated call runs again (ADR-00
 - **Error responses are not authenticated.** A JSON-RPC error carries no payload, so an attacker on the network can
   replace a result with an error. It cannot forge the result of an encrypted call (ADR-003 decisions 5 and 6).
 - **The `format`, `type` and `codec` members and the request `id` are outside the HMAC** (ADR-003 decision 5).
-  Changing `format` or `codec` makes the body fail to decode or authenticate. A client that opens a result without
+  With the built-in codecs and encryptor, changing `format` or `codec` makes the body fail to decode or authenticate;
+  a sealed null result has no body to decode, so its `codec` is never resolved. A client that opens a result without
   naming its type resolves it from `type`, among the types its `PayloadTypeRegistry` allows; name the type with
   `UnwrapResult<T>` to rule that out.
 - **A result can be swapped with, or replayed as, another result of the same method** on its way to the client,

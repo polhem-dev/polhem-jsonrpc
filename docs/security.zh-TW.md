@@ -47,6 +47,7 @@ Polhem.JsonRpc 套件如何防範惡意的呼叫端與不可信任的網路、�
 | HMAC 涵蓋 method 名稱與方向（請求或回應）。截獲的呼叫無法改送到別的方法，回應也無法當成請求送回。 | ADR-003 決策 1、2 |
 | 結果以請求的格式回應，`null` 結果也一樣。以 `UnwrapResult` 或 `UnwrapResult<T>`（或傳入請求格式的 `OpenResult`）讀取結果的用戶端，會拒絕其他格式的結果，所以加密的呼叫無法被回以 plain 結果。舊的 `Unwrap` 方法不做這項檢查。 | ADR-003 決策 6 |
 | 方法可以要求最低格式，較低的格式在索取金鑰之前就被拒絕。 | `IPayloadServerPolicy.GetMinimumFormat` |
+| 信封中 `format`、`value`、`type` 或 `codec` 出現兩次時一律拒絕（`-32602`，應用程式的 `ExceptionMapper` 另行對應時除外），所以在開啟 payload 之前讀取格式的程式碼，看到的就是實際開啟時的格式。 | `PayloadEnvelope.Read`、`PayloadEnvelope.ReadFormat` |
 | 不加密的 `NoPayloadEncryptor` 會被拒絕，除非為了開發而允許。 | `PayloadOptions.AllowNoEncryption` |
 
 ## 重放的呼叫
@@ -76,7 +77,7 @@ Polhem.JsonRpc 套件如何防範惡意的呼叫端與不可信任的網路、�
 | 防護 | 位置 |
 |------|------|
 | 非預期的例外以 `-32603 Internal error` 回應，不帶訊息、型別或 stack trace。只有 `JsonRpcErrorException`，或應用程式設定的 `ExceptionMapper`，能決定呼叫端看到什麼。 | `JsonRpcDispatcher`、`JsonRpcServerOptions.ExceptionMapper` |
-| 除了信封格式錯誤或格式過低之外，其他 payload 失敗（HMAC 不符、重放的 frame、不認得的型別名稱、缺少金鑰）都回同一個 `-32603`，呼叫端分不出是哪一項檢查失敗。 | `JsonRpcServerOptions.UsePayload` |
+| 除了信封格式錯誤或格式過低之外，其他 payload 失敗（HMAC 不符、重放的 frame、不認得的型別名稱、缺少金鑰）都回同一個 `-32603`，呼叫端分不出是哪一項檢查失敗；應用程式的 `ExceptionMapper` 把它們對應成自己的錯誤時除外。 | `JsonRpcServerOptions.UsePayload` |
 | 只有設定 `IncludeExceptionDetails` 時，例外訊息才會放進 `data`。它可能透露是哪一項檢查失敗，所以只用於開發環境。 | `JsonRpcServerOptions.IncludeExceptionDetails` |
 | 用戶端中斷的呼叫會被取消，不會回報成內部錯誤。 | `JsonRpcDispatcher`、`JsonRpcHttpHandler` |
 
@@ -107,7 +108,8 @@ Polhem.JsonRpc 套件如何防範惡意的呼叫端與不可信任的網路、�
 - **錯誤回應沒有驗證。** JSON-RPC 的 error 不帶 payload，所以網路上的攻擊者可以把結果換成錯誤，
   但無法偽造加密呼叫的結果（ADR-003 決策 5、6）。
 - **`format`、`type`、`codec` 成員與請求的 `id` 不在 HMAC 範圍內**（ADR-003 決策 5）。
-  更改 `format` 或 `codec` 會讓 body 解碼或驗證失敗。用戶端開啟結果時若沒有指定型別，會依 `type` 從
+  使用內建的 codec 與加密器時，更改 `format` 或 `codec` 會讓 body 解碼或驗證失敗；封裝的 null 結果沒有 body 可解碼，
+  所以它的 `codec` 不會被解析。用戶端開啟結果時若沒有指定型別，會依 `type` 從
   `PayloadTypeRegistry` 允許的型別中解析；要排除這種情況，請以 `UnwrapResult<T>` 指定型別。
 - **結果在回程中可能被換成、或重放成同一個方法的另一個結果**，因為 `id` 沒有綁定。綁定它會讓每個用戶端都得追蹤 `id`，所以沒有這麼做。
 - **重放檢查在解密與解壓之後執行。** 每次重放會讓伺服器付出金鑰查詢、解密與解壓原本 body 的成本，但方法不會執行。
