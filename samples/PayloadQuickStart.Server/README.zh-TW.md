@@ -50,7 +50,9 @@ public PayloadFormat GetMinimumFormat(JsonRpcRequestContext context) => PayloadF
   `X-Client-Id` header 本身沒有經過驗證，所以金鑰由它推導（`HMACSHA512(demoKey, clientId)`）：每個 client id 各有一把金鑰，
   換一個 client id 重送的呼叫，HMAC 驗證會失敗。這只在範例要求加密呼叫時成立；plain 與 encoded 呼叫沒有 HMAC，
   呼叫端可以改掉或拿掉這個 header。
-- 從同一把示範金鑰推導是為了讓範例簡短。實際的應用程式會在登入時為每個 session 協商一把金鑰，並以 session 作為防重放範圍。
+- 從同一把示範金鑰推導是為了讓範例簡短，但用戶端也持有這把示範金鑰。拿到用戶端的人都能推導出任何 client id 的金鑰，
+  冒充那個用戶端呼叫：各自的金鑰擋得住換 client id 重送，擋不住冒充。實際的應用程式絕不把根金鑰交給用戶端。
+  根金鑰只留在伺服器，登入後再為每個 session 產生或推導一把金鑰，只把這把金鑰交給用戶端，並以 session 作為防重放範圍。
   金鑰如何協商不在 payload 套件的範圍內。
 - `MemoryPayloadReplayStore` 把序號記在行程記憶體裡。多個伺服器執行個體需要共用的 `IPayloadReplayStore`。
 

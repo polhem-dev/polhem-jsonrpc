@@ -21,7 +21,9 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest 
 ```
 
 - The key is derived from the demo key and the client id the client sends in `X-Client-Id`, exactly as the server
-  derives it, so a call cannot be replayed under another client id.
+  derives it, so a call cannot be replayed under another client id. The client holding the demo key is a shortcut of
+  the sample: with it, any client id's key can be derived. A real client receives only its own session's key from the
+  server; see the notes of [PayloadQuickStart.Server](../PayloadQuickStart.Server/README.md).
 - `PayloadConnector` (package `Polhem.JsonRpc.Payload.Client`) is called like `JsonRpcConnector`. For each call it
   serializes, compresses, frames and encrypts the parameters, and reverses it for the result.
 - The method name and the direction are covered by the HMAC, so an encrypted request cannot be sent to another method,
