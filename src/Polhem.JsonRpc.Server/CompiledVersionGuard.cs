@@ -32,8 +32,8 @@ internal static class CompiledVersionGuard
         {
             throw new InvalidOperationException(
                 $"These assemblies were compiled against {ServerAssembly} 1.0, whose JsonRpcTransportKind numbers differ: " +
-                $"{string.Join(", ", stale)}. Upgrade every Polhem.JsonRpc package, and recompile the code built on them, " +
-                "together.");
+                $"{string.Join(", ", stale)}. Upgrade every Polhem.JsonRpc package together, and " +
+                "recompile or upgrade what is named.");
         }
     }
 

@@ -76,10 +76,10 @@ public sealed class JsonRpcServerOptions
     /// compiled against 1.0 that reads or sets the kind takes HTTP calls and in-process calls for each other. In 1.1.0
     /// this let such code run; it let <c>Polhem.JsonRpc.AspNetCore</c> 1.0 mark every HTTP call as in-process, and the
     /// Polhem framework 1.2.0 take every HTTP call for an in-process one, both of which bypass an application's access
-    /// checks for in-process calls. Nothing can tell from outside whether code reads or sets the kind, so the check
-    /// no longer has an exception (<c>CompiledVersionGuardTests.Dispatcher_StaleAssemblyEvenIfAllowed_Throws</c>). The
+    /// checks for in-process calls. Whether code reads or sets the kind cannot be told reliably from outside, so the
+    /// check no longer has an exception (<c>CompiledVersionGuardTests.Dispatcher_StaleAssemblyEvenIfAllowed_Throws</c>). The
     /// check sees the assemblies loaded when the dispatcher is created.
     /// </remarks>
-    [Obsolete("Has no effect since 1.1.1: recompile code built against Polhem.JsonRpc.Server 1.0.")]
+    [Obsolete("Has no effect since 1.1.1: recompile or upgrade what was built against Polhem.JsonRpc.Server 1.0.")]
     public bool AllowCodeCompiledAgainst10 { get; set; }
 }
