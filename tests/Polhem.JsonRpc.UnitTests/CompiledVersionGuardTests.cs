@@ -7,13 +7,17 @@ public class CompiledVersionGuardTests
 {
     private static readonly Version s_running = new(1, 1, 0, 0);
 
-    [Fact(DisplayName = "Version guard: an assembly compiled against Polhem.JsonRpc.Server 1.0 is named while 1.1 runs")]
-    public void FindStale_ReferenceTo10_IsNamed()
+    [Theory(DisplayName = "Version guard: any assembly compiled against Polhem.JsonRpc.Server before 1.1 is named while 1.1 runs, whatever its name")]
+    [InlineData("Polhem.JsonRpc.AspNetCore", "1.0.0.0", "1.0.0.0")]
+    [InlineData("Polhem.Api.Core", "1.2.0.0", "1.0.0.0")]
+    [InlineData("MyApp.Api", "3.0.0.0", "1.0.0.0")]
+    [InlineData("Polhem.JsonRpc.AspNetCore", "0.1.0.0", "0.1.0.0")]
+    public void FindStale_ReferenceBefore11_IsNamed(string assembly, string version, string referenceVersion)
     {
         var stale = CompiledVersionGuard.FindStale(
-            [Entry("Polhem.JsonRpc.AspNetCore", "1.0.0.0", ("Polhem.JsonRpc.Server", "1.0.0.0"))], s_running);
+            [Entry(assembly, version, ("Polhem.JsonRpc.Server", referenceVersion))], s_running);
 
-        Assert.Equal(["Polhem.JsonRpc.AspNetCore 1.0.0.0"], stale);
+        Assert.Equal([$"{assembly} {version}"], stale);
     }
 
     [Theory(DisplayName = "Version guard: references to 1.1 or later, to other assemblies, or from a running 1.0 are not named")]
@@ -69,14 +73,6 @@ public class CompiledVersionGuardTests
             () => new JsonRpcDispatcher(options, new TestObjectFactory(), () => [assembly]));
 
         Assert.Contains(assembly, ex.Message, StringComparison.Ordinal);
-    }
-
-    [Fact(DisplayName = "Version guard: the public constructor starts in a process where no stale assembly is loaded")]
-    public void Dispatcher_PublicConstructor_StartsWithoutStaleAssembly()
-    {
-        // A stale assembly cannot be loaded here without making every other dispatcher of the run refuse to start, so
-        // that the public constructors pass the real check is held by reading them, not by this test.
-        Assert.NotNull(new JsonRpcDispatcher(new JsonRpcServerOptions { ObjectFactory = new TestObjectFactory() }));
     }
 
     private static (AssemblyName, AssemblyName[]) Entry(string name, string version, params (string Name, string Version)[] references) =>

@@ -133,6 +133,27 @@ public class PayloadWireVectorTests
         Assert.Equal(PolhemBody, Encoding.UTF8.GetString(Gunzip(framed[17..])));
     }
 
+    // The enum behind the direction byte is not used here: its values are the wire format other implementations read.
+    // The second method name is not ASCII, so an encoding other than UTF-8 gives other bytes.
+    [Theory(DisplayName = "Wire vector: the HMAC of encrypted parameters covers 0x01 and of an encrypted result 0x02, then the method in UTF-8")]
+    [InlineData(1, "System.Ping")]
+    [InlineData(2, "System.Ping")]
+    [InlineData(1, "Système.Ping")]
+    [InlineData(2, "Système.Ping")]
+    public void WrapRequestAndSealResponse_Encrypted_HmacCoversDirectionAndUtf8Method(byte direction, string method)
+    {
+        var writer = CreateWriter(requireFrame: true, clock: new FixedClock(DateTimeOffset.FromUnixTimeMilliseconds(1_700_000_000_123)));
+        var value = new WriterPing { ClientName = "vector", TraceId = "t-1" };
+        var element = direction == 1
+            ? writer.WrapRequest(method, value, PayloadFormat.Encrypted, codec: "json", key: s_key, sequence: 7)
+            : writer.SealResponse(method, value, PayloadFormat.Encrypted, codec: "json", key: s_key).ToElement();
+        var data = element.GetProperty("value").GetBytesFromBase64();
+
+        var cipherLength = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(20));
+        byte[] binding = [direction, .. Encoding.UTF8.GetBytes(method)];
+        Assert.Equal(HMACSHA256.HashData(s_key[32..], (byte[])[.. data[..(24 + cipherLength)], .. binding]), data[(24 + cipherLength)..]);
+    }
+
     // Fixed vectors for other implementations of ADR-003 (polhem-connector-js): the key is the bytes 0 to 63, the plaintext
     // UTF-8 "Polhem ADR-003 binding vector", and the binding a direction byte followed by the method in UTF-8.
     [Theory(DisplayName = "Wire vector: ciphertext bound to a direction and a method decrypts with that binding only")]
