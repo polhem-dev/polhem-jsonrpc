@@ -55,6 +55,24 @@ public partial class DispatcherTests
         Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
     }
 
+    [Theory(DisplayName = "A ProgId or action with a character outside letters, digits, underscores and the ProgId's hyphens is answered with -32601 before the object factory is asked")]
+    [InlineData("Sp ec.Subtract")]
+    [InlineData("Spec/x.Subtract")]
+    [InlineData("Spé.Subtract")]
+    [InlineData("Spec.Sub tract")]
+    [InlineData("Spec.Subträct")]
+    [InlineData("Spec.Sub-tract")]
+    public async Task DispatchAsync_DisallowedCharacter_FactoryNotAsked(string method)
+    {
+        var factory = new RecordingFactory();
+        var dispatcher = new JsonRpcDispatcher(new JsonRpcServerOptions { MethodPolicy = new AllowAllPolicy() }, factory);
+
+        var response = await CallAsync(dispatcher, method, """{"minuend": 1, "subtrahend": 1}""");
+
+        Assert.Equal(JsonRpcErrorCodes.MethodNotFound, response.Error!.Code);
+        Assert.Empty(factory.Asked);
+    }
+
     [Theory(DisplayName = "A record's Equals is not an action, even under a policy that admits every method")]
     [InlineData("Record.Equals")]
     [InlineData("DerivedRecord.Equals")]

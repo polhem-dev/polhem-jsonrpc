@@ -19,6 +19,34 @@ public partial class DispatcherTests
         Assert.Throws<ArgumentException>(() => new JsonRpcDispatcher(new JsonRpcServerOptions()));
     }
 
+    [Fact(DisplayName = "The object factory passed to the constructor takes the place of the one the options name")]
+    public async Task Constructor_FactoryPassedAndInOptions_UsesPassed()
+    {
+        var inOptions = new RecordingFactory();
+        var dispatcher = new JsonRpcDispatcher(new JsonRpcServerOptions { ObjectFactory = inOptions }, new TestObjectFactory());
+
+        var response = await CallAsync(dispatcher, "Spec.Subtract", """{"minuend": 5, "subtrahend": 3}""");
+
+        Assert.Equal(2, response.Result!.Value.GetProperty("difference").GetInt32());
+        Assert.Empty(inOptions.Asked);
+    }
+
+    // Records the ProgIds it is asked for and creates what TestObjectFactory creates.
+    private sealed class RecordingFactory : IJsonRpcObjectFactory
+    {
+        private readonly TestObjectFactory _inner = new();
+
+        public List<string> Asked { get; } = [];
+
+        public object? CreateObject(string progId, JsonRpcRequestContext context)
+        {
+            Asked.Add(progId);
+            return _inner.CreateObject(progId, context);
+        }
+
+        public ValueTask ReleaseObjectAsync(object instance, JsonRpcRequestContext context) => _inner.ReleaseObjectAsync(instance, context);
+    }
+
     private sealed class AllowAllPolicy : IJsonRpcMethodPolicy
     {
         public bool IsCallable(MethodInfo method) => true;

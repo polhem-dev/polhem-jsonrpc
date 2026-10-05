@@ -224,7 +224,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     public async Task AddJsonRpcServer_TwoProviders_EachUsesItsOwnFactory()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IJsonRpcObjectFactory, TestObjectFactory>();
+        services.AddSingleton<IJsonRpcObjectFactory, ProviderOwnedFactory>();
         services.AddJsonRpcServer();
         var first = services.BuildServiceProvider();
         await using var second = services.BuildServiceProvider();
@@ -238,6 +238,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
         Assert.NotSame(firstDispatcher, secondDispatcher);
         Assert.Null(second.GetRequiredService<JsonRpcServerOptions>().ObjectFactory);
         Assert.Equal(2, result.GetProperty("difference").GetInt32());
+        Assert.Equal(["Spec"], ((ProviderOwnedFactory)second.GetRequiredService<IJsonRpcObjectFactory>()).Asked);
     }
 
     [Fact(DisplayName = "HTTP: AddJsonRpcServer applies configureHttp to HTTP options a framework registered first")]
@@ -290,5 +291,26 @@ public sealed class HttpHandlerTests : IAsyncLifetime
             lock (kinds) { kinds.Add(context.Transport.Kind); }
             return next(context);
         }
+    }
+
+    // A factory each provider creates and disposes. It records what it is asked and refuses once disposed, so a
+    // dispatcher that kept another provider's factory is seen.
+    private sealed class ProviderOwnedFactory : IJsonRpcObjectFactory, IDisposable
+    {
+        private readonly TestObjectFactory _inner = new();
+        private bool _disposed;
+
+        public List<string> Asked { get; } = [];
+
+        public object? CreateObject(string progId, JsonRpcRequestContext context)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            Asked.Add(progId);
+            return _inner.CreateObject(progId, context);
+        }
+
+        public ValueTask ReleaseObjectAsync(object instance, JsonRpcRequestContext context) => _inner.ReleaseObjectAsync(instance, context);
+
+        public void Dispose() => _disposed = true;
     }
 }

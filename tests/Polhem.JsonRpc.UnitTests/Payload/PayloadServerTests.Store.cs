@@ -56,6 +56,30 @@ public partial class PayloadServerTests
         Assert.Equal(2, Assert.IsType<SubtractResponse>(client.UnwrapResult(Subtract, PayloadFormat.Encrypted, result, s_key)).Difference);
     }
 
+    [Fact(DisplayName = "Payload server: the built-in replay store remembers a scope for twice the timestamp tolerance, so a frame stamped ahead of the server is not accepted again once the scope is idle")]
+    public async Task Call_FrameAheadReplayedAfterScopeIdle_IsRejected()
+    {
+        var serverClock = new ManualClock(DateTimeOffset.UtcNow);
+        var (rpc, _) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true }, serverClock);
+        var tolerance = new PayloadOptions().FrameTimestampTolerance;
+        var client = new PayloadProcessor(new PayloadOptions
+        {
+            RequireFrame = true,
+            TypeResolver = Registry(),
+            TimeProvider = new FixedClock(serverClock.GetUtcNow() + tolerance),
+        });
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+
+        await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
+        serverClock.Advance(tolerance * 2);
+
+        // The frame is still within the tolerance on the server's side, so only the store can refuse it; a new sequence
+        // number with the same timestamp is accepted, which shows the refusal is the store's and not the timestamp's.
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
+        Assert.Equal(ReplayRejected, ex.Code);
+        await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 2));
+    }
+
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithStore(IPayloadReplayStore store, TimeProvider clock)
     {
         var payloadOptions = new PayloadOptions { RequireFrame = true, TypeResolver = Registry(), TimeProvider = clock };
@@ -75,6 +99,25 @@ public partial class PayloadServerTests
         {
             Asked.Add((scope, sequence, cancellationToken.CanBeCanceled));
             return _inner.TryAcceptAsync(scope, sequence, cancellationToken);
+        }
+    }
+
+    // A clock the test moves, for both the time of day and the timestamps the store measures idle time with.
+    private sealed class ManualClock(DateTimeOffset start) : TimeProvider
+    {
+        private DateTimeOffset _now = start;
+        private long _timestamp;
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public override long GetTimestamp() => _timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public void Advance(TimeSpan by)
+        {
+            _now += by;
+            _timestamp += by.Ticks;
         }
     }
 }
