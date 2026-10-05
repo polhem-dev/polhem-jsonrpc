@@ -1,17 +1,1 @@
 #nullable enable
-Polhem.JsonRpc.Payload.Client.PayloadConnector
-Polhem.JsonRpc.Payload.Client.PayloadConnector.InvokeAsync(string! method, object? parameters, Polhem.JsonRpc.Payload.PayloadFormat format, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-Polhem.JsonRpc.Payload.Client.PayloadConnector.InvokeAsync(string! method, object? parameters, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-Polhem.JsonRpc.Payload.Client.PayloadConnector.InvokeAsync<TResult>(string! method, object? parameters, Polhem.JsonRpc.Payload.PayloadFormat format, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TResult?>!
-Polhem.JsonRpc.Payload.Client.PayloadConnector.InvokeAsync<TResult>(string! method, object? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult?>!
-Polhem.JsonRpc.Payload.Client.PayloadConnector.PayloadConnector(Polhem.JsonRpc.Client.JsonRpcConnector! connector, Polhem.JsonRpc.Payload.PayloadProcessor! processor, Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions? options = null) -> void
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.Codec.get -> string?
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.Codec.set -> void
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.Format.get -> Polhem.JsonRpc.Payload.PayloadFormat
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.Format.set -> void
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.KeyProvider.get -> System.Func<byte[]?>?
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.KeyProvider.set -> void
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.PayloadConnectorOptions() -> void
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.SequenceGenerator.get -> System.Func<long>?
-Polhem.JsonRpc.Payload.Client.PayloadConnectorOptions.SequenceGenerator.set -> void

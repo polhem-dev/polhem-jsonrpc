@@ -7,6 +7,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-05
+
 ### Added
 
 - A new package, `Polhem.JsonRpc.Payload.Client`, with `PayloadConnector`: it seals the parameters of each call into
@@ -211,7 +213,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `Polhem.JsonRpc.Client`: `JsonRpcConnector` with calls, notifications and batches, `HttpTransport` and
   interceptors. It supports trimming and Native AOT.
 
-[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...v1.0.0
