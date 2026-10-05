@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Polhem.JsonRpc;
 using Polhem.JsonRpc.Client;
 using Polhem.JsonRpc.Payload;
+using Polhem.JsonRpc.Payload.Client;
 using QuickStart.Contracts;
 
 var base64Key = Environment.GetEnvironmentVariable("PayloadDemoKey");
@@ -20,29 +20,26 @@ var key = HMACSHA512.HashData(Convert.FromBase64String(base64Key), Encoding.UTF8
 
 using var http = new HttpClient { BaseAddress = new Uri(args.FirstOrDefault() ?? "http://localhost:5081/api") };
 http.DefaultRequestHeaders.Add("X-Client-Id", clientId);
-var rpc = new JsonRpcConnector(new HttpTransport(http));
+var connector = new JsonRpcConnector(new HttpTransport(http));
 
 // The same options as the server: frames on.
 var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
+var rpc = new PayloadConnector(connector, payload, new PayloadConnectorOptions { KeyProvider = () => key });
 
-// An encrypted call: the parameters are serialized, compressed, framed with sequence number 1 and encrypted.
-var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
-var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!;
-Console.WriteLine($"1 + 2 = {added.Sum} (sent as {PayloadEnvelope.ReadFormat(parameters)})");
+// Each call is serialized, compressed, framed with the next sequence number and encrypted, and its result opened.
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
+Console.WriteLine($"1 + 2 = {added!.Sum}");
+var sum = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 2, B = 3 });
+Console.WriteLine($"2 + 3 = {sum!.Sum}");
 
-// Sending the same bytes again is a replay: the server has already seen sequence number 1 from this client.
+// A connector that numbers its calls from 1 again, under the same client id, sends a number the server has seen.
+var restarted = new PayloadConnector(connector, payload, new PayloadConnectorOptions { KeyProvider = () => key });
 try
 {
-    await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
+    await restarted.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
 }
 catch (JsonRpcErrorException ex)
 {
-    Console.WriteLine($"Replayed call refused: {ex.Code} {ex.Message}");
+    Console.WriteLine($"Repeated sequence number refused: {ex.Code} {ex.Message}");
 }
-
-// The next call takes the next number.
-var next = payload.WrapRequest("Calculator.Add", new AddRequest { A = 2, B = 3 }, PayloadFormat.Encrypted, key: key, sequence: 2);
-var sum = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, await rpc.InvokeAsync<JsonElement>("Calculator.Add", next), key)!;
-Console.WriteLine($"2 + 3 = {sum.Sum}");
 return 0;

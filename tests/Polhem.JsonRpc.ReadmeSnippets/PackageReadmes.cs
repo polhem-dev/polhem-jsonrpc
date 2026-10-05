@@ -108,3 +108,20 @@ namespace Polhem.JsonRpc.ReadmeSnippets.PayloadServer
         }
     }
 }
+
+namespace Polhem.JsonRpc.ReadmeSnippets.PayloadClient
+{
+    public static class Snippets
+    {
+        public static async Task Call(JsonRpcConnector connector, byte[] sessionKey)
+        {
+            #region readme: src/Polhem.JsonRpc.Payload.Client/README.md#1
+            var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
+            var rpc = new PayloadConnector(connector, payload, new PayloadConnectorOptions { KeyProvider = () => sessionKey });
+
+            var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
+            var plain = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 3, B = 4 }, PayloadFormat.Plain, CancellationToken.None);
+            #endregion
+        }
+    }
+}

@@ -7,6 +7,14 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+
+- A new package, `Polhem.JsonRpc.Payload.Client`, with `PayloadConnector`: it seals the parameters of each call into
+  the payload envelope and opens its result, so an encrypted call is written like a plain one,
+  `rpc.InvokeAsync<AddResponse>("Calculator.Add", request)`. `PayloadConnectorOptions` sets the default format
+  (encrypted), the codec, a function that returns the key, and optionally one that returns the sequence numbers; an
+  overload takes the format of a single call. An encrypted call without a key fails before it is sent. See ADR-004.
+
 ### Security
 
 - `PayloadEnvelope.Read` and `PayloadEnvelope.ReadFormat` refuse an envelope in which `format`, `value`, `type` or

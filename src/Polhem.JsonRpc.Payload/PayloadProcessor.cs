@@ -9,7 +9,7 @@ namespace Polhem.JsonRpc.Payload;
 /// <remarks>
 /// A client wraps its parameters with <see cref="WrapRequest"/> before calling <c>JsonRpcConnector.InvokeAsync</c> and
 /// unwraps the result with <see cref="UnwrapResult{T}"/>, or with <see cref="UnwrapResult"/> when it does not know the
-/// result type. Everything that differs per call (the format, the codec, the key and the sequence number) is passed in;
+/// result type. <c>PayloadConnector</c>, in <c>Polhem.JsonRpc.Payload.Client</c>, does both for every call. Everything that differs per call (the format, the codec, the key and the sequence number) is passed in;
 /// the processor keeps no per-call state and can be shared.
 /// <para>
 /// An encrypted payload is bound to its call: <see cref="WrapRequest"/>, <see cref="SealResponse"/>,

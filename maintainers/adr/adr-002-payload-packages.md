@@ -114,6 +114,9 @@ reference the payload package.
 
 A ready-made connector that does both can be added later on top of the same API without changing the core.
 
+> Amended (2026-10-05): [ADR-004](adr-004-payload-client-package.md) adds that connector, `PayloadConnector`, in a
+> third package, `Polhem.JsonRpc.Payload.Client`. The wrap and unwrap API stays, and the core is unchanged.
+
 ### 4. The server does it in a filter, and the application supplies the policy
 
 The payload filter runs after the method policy and any access filter the application places before it (ADR-001

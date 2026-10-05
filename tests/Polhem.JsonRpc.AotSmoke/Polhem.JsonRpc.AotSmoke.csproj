@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Native AOT smoke test for Polhem.JsonRpc, Polhem.JsonRpc.Client and Polhem.JsonRpc.Payload, the packages that promise
-    AOT support (maintainers/adr/adr-001-package-split-and-design.md, decision 7, and adr-002, decision 1). The AOT analyzers run on every build of this
+    Native AOT smoke test for Polhem.JsonRpc, Polhem.JsonRpc.Client, Polhem.JsonRpc.Payload and Polhem.JsonRpc.Payload.Client,
+    the packages that promise AOT support (maintainers/adr/adr-001-package-split-and-design.md, decision 7, adr-002, decision 1,
+    and adr-004). The AOT analyzers run on every build of this
     project; the "aot" job of .github/workflows/build-ci.yml publishes it with Native AOT and runs it.
   -->
   <PropertyGroup>
@@ -14,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.Client\Polhem.JsonRpc.Client.csproj" />
     <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload\Polhem.JsonRpc.Payload.csproj" />
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload.Client\Polhem.JsonRpc.Payload.Client.csproj" />
   </ItemGroup>
 
 </Project>

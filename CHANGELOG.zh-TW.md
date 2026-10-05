@@ -7,6 +7,13 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+### 新增
+
+- 新套件 `Polhem.JsonRpc.Payload.Client`，提供 `PayloadConnector`：每次呼叫自動把參數封裝進 payload 外殼並開啟結果，
+  加密呼叫的寫法與一般呼叫相同：`rpc.InvokeAsync<AddResponse>("Calculator.Add", request)`。`PayloadConnectorOptions`
+  設定預設格式（加密）、codec、取得金鑰的函式，以及可選的序號產生函式；另有多載可指定單次呼叫的格式。沒有金鑰的加密呼叫
+  在送出前就會失敗。見 ADR-004。
+
 ### 安全性
 
 - `PayloadEnvelope.Read` 與 `PayloadEnvelope.ReadFormat` 會拒絕 `format`、`value`、`type` 或 `codec` 出現超過一次的信封

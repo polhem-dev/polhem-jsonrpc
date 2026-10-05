@@ -6,8 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\QuickStart.Contracts\QuickStart.Contracts.csproj" />
-    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Client\Polhem.JsonRpc.Client.csproj" />
-    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload\Polhem.JsonRpc.Payload.csproj" />
+    <ProjectReference Include="..\..\src\Polhem.JsonRpc.Payload.Client\Polhem.JsonRpc.Payload.Client.csproj" />
   </ItemGroup>
 
 </Project>

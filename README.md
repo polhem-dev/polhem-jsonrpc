@@ -24,11 +24,12 @@ are in the [CHANGELOG](CHANGELOG.md).
 | `Polhem.JsonRpc.AspNetCore` | The ASP.NET Core endpoint (`MapJsonRpc`) and the HTTP request handler | `Polhem.JsonRpc.Server`, ASP.NET Core |
 | `Polhem.JsonRpc.Client` | `JsonRpcConnector` with an HTTP transport, batches, notifications and request interceptors | `Polhem.JsonRpc` |
 | `Polhem.JsonRpc.Payload` | Optional: the payload envelope around `params` and `result`, with codecs, gzip, AES-CBC-HMAC encryption and a replay-protection frame | `Polhem.JsonRpc` |
+| `Polhem.JsonRpc.Payload.Client` | Optional: `PayloadConnector`, which seals the parameters of each call and opens its result | `Polhem.JsonRpc.Payload`, `Polhem.JsonRpc.Client` |
 | `Polhem.JsonRpc.Payload.Server` | Optional: the server filter that opens the envelope and checks the frame | `Polhem.JsonRpc.Payload`, `Polhem.JsonRpc.Server` |
 
 A server application references `Polhem.JsonRpc.AspNetCore` (or `Polhem.JsonRpc.Server` for a host that is not
 ASP.NET Core). A client application references `Polhem.JsonRpc.Client` only. An application that encrypts its payloads
-adds `Polhem.JsonRpc.Payload` on both ends and `Polhem.JsonRpc.Payload.Server` on the server.
+adds `Polhem.JsonRpc.Payload.Client` on the client and `Polhem.JsonRpc.Payload.Server` on the server.
 
 The packages do not depend on the [Polhem framework](https://github.com/polhem-dev/polhem). Polhem uses them for its
 API, with the payload packages for its encryption and compression and its own filters for authorization.
@@ -91,7 +92,7 @@ it by these rules.
 | [QuickStart.Client](samples/QuickStart.Client/README.md) | Calls, errors, notifications and batches from a console application |
 | [QuickStart.Contracts](samples/QuickStart.Contracts) | The request and response classes both sides share |
 | [PayloadQuickStart.Server](samples/PayloadQuickStart.Server/README.md) | Encrypted parameters and results with replay protection, on the server |
-| [PayloadQuickStart.Client](samples/PayloadQuickStart.Client/README.md) | The same from a console application, including a replayed call refused |
+| [PayloadQuickStart.Client](samples/PayloadQuickStart.Client/README.md) | The same from a console application with `PayloadConnector`, including a repeated sequence number refused |
 
 ## Extension points
 
@@ -135,7 +136,7 @@ using var http = new HttpClient(new ApiKeyHandler(apiKey) { InnerHandler = new H
 
 HTTPS protects the connection. When parameters and results must also be protected end to end, or a call must not be
 replayable, add the optional payload packages: `Polhem.JsonRpc.Payload.Server` on the server and
-`Polhem.JsonRpc.Payload` on the client. They carry `params` and `result` in an envelope that is plain JSON, encoded
+`Polhem.JsonRpc.Payload.Client` on the client. They carry `params` and `result` in an envelope that is plain JSON, encoded
 (a codec, then gzip) or encrypted (AES-256-CBC with HMAC-SHA256), with an optional frame that rejects a repeated
 sequence number.
 
@@ -143,12 +144,13 @@ sequence number.
 // Server: the application supplies the key and the replay rules.
 builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
 
-// Client: wrap the parameters and unwrap the result of each call.
-var parameters = payload.WrapRequest("Calculator.Add", request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-var result = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+// Client: called like JsonRpcConnector; each call is sealed and its result opened.
+var rpc = new PayloadConnector(connector, new PayloadProcessor(payloadOptions), new PayloadConnectorOptions { KeyProvider = () => sessionKey });
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", request);
 ```
 
-Both ends share the same `PayloadOptions` settings; how the key is agreed is up to the application. The
+Both ends share the same `PayloadOptions` settings; how the key is agreed is up to the application. A client that
+seals by hand calls `PayloadProcessor.WrapRequest` and `UnwrapResult` around `JsonRpcConnector` instead. The
 [PayloadQuickStart](samples/PayloadQuickStart.Server/README.md) samples run it end to end, and
 [ADR-002](maintainers/adr/adr-002-payload-packages.md) describes the format, which other clients can implement.
 
