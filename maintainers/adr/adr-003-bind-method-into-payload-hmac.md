@@ -34,7 +34,9 @@ attacker cannot write an encrypted request, and rewriting `method` gives them on
 
    The binding is not written to the payload; the reader supplies it from the call it is reading. The bytes on the
    wire keep the layout of ADR-002 (`PayloadWireVectorTests.Wrap_EncryptedFramed_WritesPolhemLayout` recomputes the
-   HMAC without this package's code).
+   HMAC without this package's code, and
+   `PayloadWireVectorTests.WrapRequestAndSealResponse_Encrypted_HmacCoversDirectionAndUtf8Method` does so for both
+   directions and a method that is not ASCII).
 2. **Every encrypted payload is bound, with or without frames.** `PayloadProcessor.WrapRequest`, `SealResponse`,
    `UnwrapResult` and the overloads of `OpenRequest` and `OpenResult` that take the method write and check the binding;
    the methods that take none refuse an encrypted payload (`PayloadBindingTests`). `PayloadFilter` opens a request with
@@ -46,7 +48,8 @@ attacker cannot write an encrypted request, and rewriting `method` gives them on
    would be downgraded by any attacker who sends the old form.
 4. **The encryptor authenticates associated data.** `IPayloadEncryptor` gains `Encrypt` and `Decrypt` overloads that
    take it. Their default implementations throw, so an encryptor written against 1.0 refuses to run rather than leave
-   the binding unchecked (`PayloadBindingTests.WrapRequest_EncryptorWithoutAssociatedData_Throws`).
+   the binding unchecked, whether it writes or reads (`PayloadBindingTests.WrapRequest_EncryptorWithoutAssociatedData_Throws`,
+   `PayloadBindingTests.OpenRequest_EncryptorWithoutAssociatedData_Throws`).
 5. **What stays outside the HMAC:** the envelope's `format`, `type` and `codec`, and the request `id`.
    - `type`: the server decides the type from the method, which is bound. A client that opens a result without naming
      the type (`UnwrapResult` without a type argument) still resolves it from `type`, among the types its

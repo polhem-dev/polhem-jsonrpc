@@ -224,7 +224,7 @@ public sealed class HttpHandlerTests : IAsyncLifetime
     public async Task AddJsonRpcServer_TwoProviders_EachUsesItsOwnFactory()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IJsonRpcObjectFactory, TestObjectFactory>();
+        services.AddSingleton<IJsonRpcObjectFactory, ProviderOwnedFactory>();
         services.AddJsonRpcServer();
         var first = services.BuildServiceProvider();
         await using var second = services.BuildServiceProvider();
@@ -290,5 +290,23 @@ public sealed class HttpHandlerTests : IAsyncLifetime
             lock (kinds) { kinds.Add(context.Transport.Kind); }
             return next(context);
         }
+    }
+
+    // A factory each provider creates and disposes; once disposed it refuses, so a dispatcher that kept another
+    // provider's factory fails.
+    private sealed class ProviderOwnedFactory : IJsonRpcObjectFactory, IDisposable
+    {
+        private readonly TestObjectFactory _inner = new();
+        private bool _disposed;
+
+        public object? CreateObject(string progId, JsonRpcRequestContext context)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return _inner.CreateObject(progId, context);
+        }
+
+        public ValueTask ReleaseObjectAsync(object instance, JsonRpcRequestContext context) => _inner.ReleaseObjectAsync(instance, context);
+
+        public void Dispose() => _disposed = true;
     }
 }

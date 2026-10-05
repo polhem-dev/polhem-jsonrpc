@@ -120,7 +120,9 @@ requests as in-process; the HTTP handler marks every request as HTTP. The identi
 > Amended for 1.1.1 (2026-10-05): the option has no effect and is obsolete. `Polhem.JsonRpc.AspNetCore` 1.0 does not
 > read the kind but sets it, to the value 1.1 reads as in-process, and the Polhem framework 1.2.0 reads it with the old
 > numbers. Whether code reads or sets the kind cannot be told reliably from outside (it can go through reflection or
-> an integer), so no assembly is told apart: any assembly compiled against `Polhem.JsonRpc.Server` 1.0 is refused (`CompiledVersionGuardTests.Dispatcher_StaleAssemblyEvenIfAllowed_Throws`).
+> an integer), so no assembly is told apart: any assembly compiled against `Polhem.JsonRpc.Server` 1.0 is refused (`CompiledVersionGuardTests.Dispatcher_StaleAssemblyEvenIfAllowed_Throws`; whatever the assembly's name,
+> `CompiledVersionGuardTests.FindStale_ReferenceBefore11_IsNamed`; through the public constructors with such an assembly
+> loaded, `CompiledVersionGuardProcessTests.PublicConstructors_StaleAssemblyLoaded_Throw`).
 
 ### 5. Compression and encryption are not part of the packages
 

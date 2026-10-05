@@ -143,6 +143,17 @@ public class ClientTests
         Assert.Equal(5, await connector.InvokeAsync<int>("Any.Method", null));
     }
 
+    [Theory(DisplayName = "Client: an error whose code is not a 32-bit integer is refused as a malformed response")]
+    [InlineData("-32600.5")]
+    [InlineData("2147483648")]
+    public async Task InvokeAsync_ErrorCodeNotInt32_Throws(string code)
+    {
+        using var http = new HttpClient(new StubHandler(HttpStatusCode.OK, $$"""{"jsonrpc": "2.0", "error": {"code": {{code}}, "message": "m"}, "id": 1}""")) { BaseAddress = new Uri("http://test/api") };
+        var connector = new JsonRpcConnector(new HttpTransport(http), new JsonRpcClientOptions { IdGenerator = () => 1 });
+
+        await Assert.ThrowsAsync<JsonException>(() => connector.InvokeAsync<int>("Any.Method", null));
+    }
+
     [Fact(DisplayName = "Client: an IdGenerator that returns no id is refused, because the call would become a notification")]
     public async Task InvokeAsync_IdGeneratorReturnsNone_Throws()
     {

@@ -63,6 +63,9 @@ public class PayloadPrimitiveTests
     [Theory(DisplayName = "AES-CBC-HMAC: a key that is not 64 bytes is refused")]
     [InlineData(0)]
     [InlineData(32)]
+    [InlineData(33)]
+    [InlineData(63)]
+    [InlineData(65)]
     public void AesCbcHmac_WrongKeySize_Throws(int size)
     {
         Assert.Throws<CryptographicException>(() => new AesCbcHmacPayloadEncryptor().Encrypt([1], new byte[size]));

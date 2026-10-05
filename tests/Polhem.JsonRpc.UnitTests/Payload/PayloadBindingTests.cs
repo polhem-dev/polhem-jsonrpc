@@ -77,6 +77,20 @@ public class PayloadBindingTests
             () => processor.WrapRequest(GetData, new VectorPing(), PayloadFormat.Encrypted, key: s_key, sequence: 1));
     }
 
+    [Fact(DisplayName = "Binding: an encryptor that does not implement associated data cannot open the parameters of a call, so the method does not run unbound")]
+    public void OpenRequest_EncryptorWithoutAssociatedData_Throws()
+    {
+        var envelope = PayloadEnvelope.Read(CreateProcessor().WrapRequest(GetData, new VectorPing(), PayloadFormat.Encrypted, key: s_key, sequence: 1));
+        var server = new PayloadProcessor(new PayloadOptions
+        {
+            RequireFrame = true,
+            Encryptor = new UnboundEncryptor(),
+            TypeResolver = new PayloadTypeRegistry().Register<VectorPing>(),
+        });
+
+        Assert.Throws<NotSupportedException>(() => server.OpenRequest(envelope, typeof(VectorPing), s_key, GetData, out _));
+    }
+
     [Theory(DisplayName = "AES-CBC-HMAC: data encrypted with associated data decrypts only with the same associated data")]
     [InlineData(new byte[] { 1, 2 }, new byte[] { 1, 3 })]
     [InlineData(new byte[] { 1, 2 }, new byte[] { 2, 2 })]
