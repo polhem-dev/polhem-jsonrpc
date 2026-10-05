@@ -12,6 +12,10 @@
 JSON-RPC 2.0 for .NET, built on System.Text.Json: a transport-independent server, an ASP.NET Core endpoint and a
 client, published as separate NuGet packages so an application takes only the part it needs.
 
+It is convention-based JSON-RPC, not a general-purpose one: a method is named `ProgId.Action`, takes one request class
+and returns one response class, and is found by that convention instead of being registered. The reasons and what
+it rules out are under [Design choices and when not to use it](#design-choices-and-when-not-to-use-it).
+
 The packages are published on [nuget.org](https://www.nuget.org/packages?q=Polhem.JsonRpc); the changes of each release
 are in the [CHANGELOG](CHANGELOG.md).
 

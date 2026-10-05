@@ -12,6 +12,9 @@
 以 System.Text.Json 實作的 .NET JSON-RPC 2.0 套件：與傳輸無關的伺服器、ASP.NET Core 端點與用戶端，
 拆成多個 NuGet 套件發佈，應用程式只引用需要的部分。
 
+它是依約定運作的 JSON-RPC，不是通用的 JSON-RPC：方法名為 `ProgId.Action`，傳入一個 request 類別、傳出一個 response 類別，
+依這個約定找到方法，不需要註冊。理由與它排除的場景見[設計取向與不適用的場景](#設計取向與不適用的場景)。
+
 套件已發佈在 [nuget.org](https://www.nuget.org/packages?q=Polhem.JsonRpc)；每一版的變更見 [CHANGELOG](CHANGELOG.zh-TW.md)。
 
 ## 套件
