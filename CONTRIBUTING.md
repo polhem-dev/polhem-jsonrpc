@@ -35,7 +35,7 @@ dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
 
 Documents are split by reader:
 
-- **User documents** (for developers who use the packages): `README.md`, `CHANGELOG.md` and the README of each sample.
+- **User documents** (for developers who use the packages): `README.md`, `CHANGELOG.md`, the documents under `docs/` and the README of each sample.
   They are bilingual: `name.md` is English and `name.zh-TW.md` is Traditional Chinese, each with a language switch at
   the top. Change both files in the same pull request.
 - **Maintainer documents** (this file, `maintainers/`, the ADRs in `maintainers/adr/`): English only.

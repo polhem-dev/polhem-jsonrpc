@@ -147,6 +147,11 @@ var result = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.E
 兩端使用相同的 `PayloadOptions` 設定；金鑰如何協商由應用程式決定。[PayloadQuickStart](samples/PayloadQuickStart.Server/README.zh-TW.md)
 範例完整跑過一遍，[ADR-002](maintainers/adr/adr-002-payload-packages.md)（英文）說明格式，其他用戶端可依此實作。
 
+## 安全性
+
+套件如何防範惡意的呼叫端與網路、哪些事留給應用程式負責，以及已知限制，見
+[docs/security.zh-TW.md](docs/security.zh-TW.md)。
+
 ## 設計
 
 套件切分與主要設計取捨的理由，記錄在 [ADR-001](maintainers/adr/adr-001-package-split-and-design.md)（英文）；payload 套件的理由在

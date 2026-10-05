@@ -152,6 +152,11 @@ Both ends share the same `PayloadOptions` settings; how the key is agreed is up 
 [PayloadQuickStart](samples/PayloadQuickStart.Server/README.md) samples run it end to end, and
 [ADR-002](maintainers/adr/adr-002-payload-packages.md) describes the format, which other clients can implement.
 
+## Security
+
+What the packages do against hostile callers and networks, what is left to the application, and the known limits
+are in [docs/security.md](docs/security.md).
+
 ## Design
 
 The reasons behind the package split and the main design choices are recorded in
