@@ -82,6 +82,20 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest 
 | Id | 字串、整數或 `null`，原樣回傳。帶小數或指數的數字（`1.0`、`1e2`），或超出 64 位元整數的數字，會回 `-32600 Invalid Request` 且 id 為 `null`，因為規格不建議使用這些值；請使用整數或字串。 |
 | 錯誤 | 名稱、物件或 action 找不到時回 `-32601 Method not found`。丟 `JsonRpcErrorException` 可回傳自訂的錯誤碼與訊息；其他例外一律回 `-32603 Internal error`，不帶出例外訊息。 |
 
+## 設計取向與不適用的場景
+
+固定的形狀（`ProgId.Action` 名稱、傳入一個 request 類別、傳出一個 response 類別）是刻意的：讓 API 可以演進，
+而不會弄壞已經部署出去的前端。request 或 response 類別新增成員，不會影響在那之前建置的前端：前端沒送的成員，
+在伺服器端繫結為預設值；前端不認得的結果成員則略過。新舊前端繼續呼叫同一個方法，不必維護 `v1`、`v2` 兩套端點。
+這在 System.Text.Json 的預設設定下成立；設定 `JsonUnmappedMemberHandling.Disallow` 或
+`RespectRequiredConstructorParameters` 就會關掉這個行為。
+
+同一個選擇也排除了「方法名稱和參數由別人訂好」的協定。這些套件不實作 Language Server Protocol、
+Model Context Protocol 或以太坊節點的 API，它們使用 `textDocument/didOpen`、`eth_call` 這類名稱與位置參數；
+這類需求適合 [StreamJsonRpc](https://github.com/microsoft/vs-streamjsonrpc) 或
+[MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)。它們也不提供伺服器反過來呼叫前端的全雙工連線：
+一次呼叫就是一個 HTTP 請求與它的回應。
+
 ## 範例
 
 | 範例 | 示範內容 |

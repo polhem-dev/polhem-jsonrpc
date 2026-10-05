@@ -84,6 +84,21 @@ it by these rules.
 | Id | A string, an integer or `null`, echoed as it came. A number with a fraction or an exponent (`1.0`, `1e2`), or one beyond a 64-bit integer, is answered with `-32600 Invalid Request` and a `null` id, because the specification discourages them; send integers or strings. |
 | Errors | An unknown name, object or action is answered with `-32601 Method not found`. Throw `JsonRpcErrorException` to answer with your own code and message; any other exception is answered with `-32603 Internal error`, without its message. |
 
+## Design choices and when not to use it
+
+The fixed shape (a `ProgId.Action` name, one request class in, one response class out) is deliberate: it lets an API
+change without breaking the clients already deployed. Adding a member to a request or a response class does not
+break a client built before it. A member the client does not send binds its default on the server, and a result
+member the client does not know is skipped. Old and new front ends keep calling the same method, with no `v1` and
+`v2` endpoints to maintain. This holds with the default System.Text.Json settings; setting
+`JsonUnmappedMemberHandling.Disallow` or `RespectRequiredConstructorParameters` turns it off.
+
+The same choice rules out protocols whose method names and parameters are defined by someone else. The packages do
+not implement the Language Server Protocol, the Model Context Protocol or an Ethereum node's API, which use names like
+`textDocument/didOpen` or `eth_call` and positional parameters; [StreamJsonRpc](https://github.com/microsoft/vs-streamjsonrpc)
+or the [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) fit those. Nor do they offer a full-duplex
+connection in which the server calls the client: a call is an HTTP request and its response.
+
 ## Samples
 
 | Sample | What it shows |
