@@ -7,6 +7,17 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-05
+
+### 安全性
+
+- `JsonRpcServerOptions.AllowCodeCompiledAgainst10` 不再有作用，並標為已過時：只要已載入的組件中有以 `Polhem.JsonRpc.Server` 1.0
+  編譯的，不論這個選項怎麼設，`JsonRpcDispatcher` 的建構子都會擲出例外。1.1.0 時這個選項會放行這類程式碼，例外訊息也建議
+  「從不讀取傳輸類型」的程式碼可以設它。以 1.0 編譯、又讀或寫傳輸類型的程式碼，會把 HTTP 呼叫與行程內呼叫互相弄錯：
+  `Polhem.JsonRpc.AspNetCore` 1.0 會把每個 HTTP 呼叫標成行程內，Polhem 框架 1.2.0 則會把每個 HTTP 呼叫當成行程內。
+  兩者都會讓呼叫通過應用程式對行程內呼叫略過的存取檢查。設過這個選項的 host，請把 `Polhem.JsonRpc.Server` 升到 1.1.1，
+  並重新編譯或升級例外訊息列出的組件。
+
 ## [1.1.0] - 2026-10-05
 
 ### 新增
@@ -143,7 +154,8 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 - `Polhem.JsonRpc.Client`：`JsonRpcConnector`，支援一般呼叫、notification 與 batch，`HttpTransport` 與攔截器。
   支援 trimming 與 Native AOT。
 
-[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/releases/tag/v0.1.0

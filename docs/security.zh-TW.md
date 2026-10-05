@@ -84,7 +84,7 @@ Polhem.JsonRpc 套件如何防範惡意的呼叫端與不可信任的網路、�
 
 | 防護 | 位置 |
 |------|------|
-| 當下已載入的組件中，有對 `Polhem.JsonRpc.Server` 1.0 編譯的，dispatcher 就拒絕啟動；1.0 的傳輸類型數值不同。之後才載入的組件看不到。 | `JsonRpcServerOptions.AllowCodeCompiledAgainst10`、ADR-001 決策 4 |
+| 當下已載入的組件中，有對 `Polhem.JsonRpc.Server` 1.0 編譯的，dispatcher 就拒絕啟動；1.0 的傳輸類型數值不同。之後才載入的組件看不到。這項檢查沒有例外。 | `JsonRpcDispatcher`、ADR-001 決策 4 |
 | 套件只相依 .NET，端點另外相依 ASP.NET Core。本 repo 的建置遇到會傳給使用端的套件參考就失敗。 | ADR-001 決策 1 |
 
 ## 應用程式要負責的部分

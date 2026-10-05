@@ -7,6 +7,19 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-05
+
+### Security
+
+- `JsonRpcServerOptions.AllowCodeCompiledAgainst10` has no effect and is marked obsolete: the `JsonRpcDispatcher`
+  constructor throws while any assembly compiled against `Polhem.JsonRpc.Server` 1.0 is loaded, whatever the option
+  says. In 1.1.0 the option let such code run, and the exception message advised setting it for code that "never reads
+  the transport kind". Code compiled against 1.0 that reads or sets the kind takes HTTP and in-process calls for each
+  other: `Polhem.JsonRpc.AspNetCore` 1.0 marks every HTTP call as in-process, and the Polhem framework 1.2.0 takes every
+  HTTP call for an in-process one. Either lets a call past access checks an application skips for in-process calls.
+  A host that set the option upgrades `Polhem.JsonRpc.Server` to 1.1.1 and recompiles, or upgrades, what the exception
+  names.
+
 ## [1.1.0] - 2026-10-05
 
 ### Added
@@ -175,7 +188,8 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 - `Polhem.JsonRpc.Client`: `JsonRpcConnector` with calls, notifications and batches, `HttpTransport` and
   interceptors. It supports trimming and Native AOT.
 
-[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/polhem-dev/polhem-jsonrpc/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/polhem-dev/polhem-jsonrpc/releases/tag/v0.1.0
