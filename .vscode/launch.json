@@ -26,6 +26,39 @@
             "cwd": "${workspaceFolder}/samples/QuickStart.Client",
             "console": "integratedTerminal",
             "stopAtEntry": false
+        },
+        {
+            "//": "The demo key decodes to the text 'PayloadQuickStart demo key: not secret, for local debugging only'. It is a public value for this sample; the client must use the same one.",
+            "name": "Run PayloadQuickStart.Server",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "prep-payload-quickstart-server",
+            "program": "${workspaceFolder}/samples/PayloadQuickStart.Server/bin/Debug/net10.0/PayloadQuickStart.Server.dll",
+            "cwd": "${workspaceFolder}/samples/PayloadQuickStart.Server",
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5081",
+                "PayloadDemoKey": "UGF5bG9hZFF1aWNrU3RhcnQgZGVtbyBrZXk6IG5vdCBzZWNyZXQsIGZvciBsb2NhbCBkZWJ1Z2dpbmcgb25seQ=="
+            },
+            "//justMyCode": "false so the debugger does not break on ReplayRejectedException: the client repeats a sequence number on purpose, and the server turns it into an error response.",
+            "justMyCode": false
+        },
+        {
+            "//": "Calls the server on http://localhost:5081/api with the same demo key. Start the server first, or use the 'PayloadQuickStart (Server + Client)' compound.",
+            "name": "Run PayloadQuickStart.Client",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "prep-payload-quickstart-client",
+            "program": "${workspaceFolder}/samples/PayloadQuickStart.Client/bin/Debug/net10.0/PayloadQuickStart.Client.dll",
+            "cwd": "${workspaceFolder}/samples/PayloadQuickStart.Client",
+            "console": "integratedTerminal",
+            "env": {
+                "PayloadDemoKey": "UGF5bG9hZFF1aWNrU3RhcnQgZGVtbyBrZXk6IG5vdCBzZWNyZXQsIGZvciBsb2NhbCBkZWJ1Z2dpbmcgb25seQ=="
+            },
+            "//justMyCode": "false so the debugger does not break on JsonRpcErrorException: the last call is refused on purpose, and the sample catches it.",
+            "justMyCode": false,
+            "stopAtEntry": false
         }
     ],
     "compounds": [
@@ -34,6 +67,14 @@
             "configurations": [
                 "Run QuickStart.Server",
                 "Run QuickStart.Client"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "Run PayloadQuickStart (Server + Client)",
+            "configurations": [
+                "Run PayloadQuickStart.Server",
+                "Run PayloadQuickStart.Client"
             ],
             "stopAll": true
         }
