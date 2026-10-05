@@ -37,9 +37,11 @@ public interface IPayloadServerPolicy
     /// Give each session its own key and use the session as the scope.
     /// <para>
     /// Where one key is shared by several sessions, this cannot be met. One scope for all of them makes their sequence
-    /// numbers one run, and <see cref="MemoryPayloadReplayStore"/> accepts a number only within a window below the
-    /// highest it has seen, so clients that count on their own refuse each other's calls. A scope per session leaves a
-    /// call captured in one session open to replay in another, by anybody who can present that other session.
+    /// numbers one run, and <see cref="MemoryPayloadReplayStore"/> accepts a number only near the highest it has seen,
+    /// neither far ahead of it nor more than a short window behind it, so clients that count on their own refuse each
+    /// other's calls. A scope per session leaves a call captured in one session open to replay in another in which its
+    /// sequence number is still new, while its timestamp is within the tolerance, by anybody who can present that
+    /// other session.
     /// </para>
     /// <para>
     /// Take the scope from the caller's session as an earlier filter or the object factory authenticated it, and read it
