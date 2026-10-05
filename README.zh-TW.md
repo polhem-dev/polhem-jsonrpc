@@ -23,11 +23,12 @@
 | `Polhem.JsonRpc.AspNetCore` | ASP.NET Core 端點（`MapJsonRpc`）與 HTTP 請求處理 | `Polhem.JsonRpc.Server`、ASP.NET Core |
 | `Polhem.JsonRpc.Client` | `JsonRpcConnector`：HTTP 傳輸、batch、notification 與請求攔截器 | `Polhem.JsonRpc` |
 | `Polhem.JsonRpc.Payload` | 選用：包住 `params` 與 `result` 的 payload 外殼，含 codec、gzip、AES-CBC-HMAC 加密與防重放 frame | `Polhem.JsonRpc` |
+| `Polhem.JsonRpc.Payload.Client` | 選用：`PayloadConnector`，每次呼叫自動封裝參數、開啟結果 | `Polhem.JsonRpc.Payload`、`Polhem.JsonRpc.Client` |
 | `Polhem.JsonRpc.Payload.Server` | 選用：開啟外殼並檢查 frame 的伺服器 filter | `Polhem.JsonRpc.Payload`、`Polhem.JsonRpc.Server` |
 
 伺服器端應用程式引用 `Polhem.JsonRpc.AspNetCore`（不是 ASP.NET Core 的 host 則引用 `Polhem.JsonRpc.Server`），
-用戶端應用程式只引用 `Polhem.JsonRpc.Client`。要加密 payload 的應用程式，兩端都加上 `Polhem.JsonRpc.Payload`，
-伺服器再加上 `Polhem.JsonRpc.Payload.Server`。
+用戶端應用程式只引用 `Polhem.JsonRpc.Client`。要加密 payload 的應用程式，用戶端加上 `Polhem.JsonRpc.Payload.Client`，
+伺服器加上 `Polhem.JsonRpc.Payload.Server`。
 
 這些套件不依賴 [Polhem 框架](https://github.com/polhem-dev/polhem)。Polhem 用它們實作自己的 API，
 以 payload 套件處理加密與壓縮，並以自己的 filter 處理授權。
@@ -89,7 +90,7 @@ var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest 
 | [QuickStart.Client](samples/QuickStart.Client/README.zh-TW.md) | 從主控台程式發出一般呼叫、處理錯誤、notification 與 batch |
 | [QuickStart.Contracts](samples/QuickStart.Contracts) | 兩端共用的 request 與 response 類別 |
 | [PayloadQuickStart.Server](samples/PayloadQuickStart.Server/README.zh-TW.md) | 伺服器端：加密的參數與結果，以及防重放 |
-| [PayloadQuickStart.Client](samples/PayloadQuickStart.Client/README.zh-TW.md) | 主控台程式端的同一件事，含重送的呼叫被拒絕 |
+| [PayloadQuickStart.Client](samples/PayloadQuickStart.Client/README.zh-TW.md) | 主控台程式以 `PayloadConnector` 做同一件事，含重複的序號被拒絕 |
 
 ## 擴充點
 
@@ -132,19 +133,20 @@ using var http = new HttpClient(new ApiKeyHandler(apiKey) { InnerHandler = new H
 ## 加密 payload
 
 HTTPS 保護的是連線。若參數與結果還需要端對端保護，或呼叫不得被重放，就加上選用的 payload 套件：伺服器用
-`Polhem.JsonRpc.Payload.Server`，用戶端用 `Polhem.JsonRpc.Payload`。它們把 `params` 與 `result` 放進外殼，外殼可以是一般 JSON、
+`Polhem.JsonRpc.Payload.Server`，用戶端用 `Polhem.JsonRpc.Payload.Client`。它們把 `params` 與 `result` 放進外殼，外殼可以是一般 JSON、
 編碼（codec 加 gzip）或加密（AES-256-CBC 加 HMAC-SHA256），並可加上拒絕重複序號的 frame。
 
 ```csharp
 // 伺服器：金鑰與防重放規則由應用程式提供。
 builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
 
-// 用戶端：每次呼叫包裝參數、還原結果。
-var parameters = payload.WrapRequest("Calculator.Add", request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-var result = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+// 用戶端：呼叫方式與 JsonRpcConnector 相同；每次呼叫自動封裝參數、開啟結果。
+var rpc = new PayloadConnector(connector, new PayloadProcessor(payloadOptions), new PayloadConnectorOptions { KeyProvider = () => sessionKey });
+var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", request);
 ```
 
-兩端使用相同的 `PayloadOptions` 設定；金鑰如何協商由應用程式決定。[PayloadQuickStart](samples/PayloadQuickStart.Server/README.zh-TW.md)
+兩端使用相同的 `PayloadOptions` 設定；金鑰如何協商由應用程式決定。要自行封裝的用戶端，則在 `JsonRpcConnector` 前後
+呼叫 `PayloadProcessor.WrapRequest` 與 `UnwrapResult`。[PayloadQuickStart](samples/PayloadQuickStart.Server/README.zh-TW.md)
 範例完整跑過一遍，[ADR-002](maintainers/adr/adr-002-payload-packages.md)（英文）說明格式，其他用戶端可依此實作。
 
 ## 安全性

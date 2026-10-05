@@ -3,6 +3,7 @@ using Polhem.JsonRpc;
 using Polhem.JsonRpc.AotSmoke;
 using Polhem.JsonRpc.Client;
 using Polhem.JsonRpc.Payload;
+using Polhem.JsonRpc.Payload.Client;
 
 const string AddMethod = "math.add";
 
@@ -91,6 +92,12 @@ var batchedEcho = payloadBatch.Add<JsonElement>("payload.echo", wrappedArgs);
 await payloadBatch.SendAsync();
 if (processor.Unwrap(await batchedEcho) is not PayloadArgs { Name: "sent", Count: 3 }) { failures.Add("the wrapped batch call did not round-trip"); }
 if (plain is not JsonElement { ValueKind: JsonValueKind.Object }) { failures.Add("the plain payload did not round-trip"); }
+
+// The payload connector seals and opens around the same connector, into the type the caller names and into the type
+// the envelope names.
+var payloadRpc = new PayloadConnector(rpc, processor, new PayloadConnectorOptions { Format = PayloadFormat.Encoded });
+if (await payloadRpc.InvokeAsync<PayloadArgs>("payload.echo", new PayloadArgs("connector", 4)) is not { Name: "connector", Count: 4 }) { failures.Add("the payload connector call did not round-trip"); }
+if (await payloadRpc.InvokeAsync<object>("payload.echo", new PayloadArgs("named", 5)) is not PayloadArgs { Name: "named", Count: 5 }) { failures.Add("the payload connector call into the named type did not round-trip"); }
 
 // A reader that names the type needs nothing registered, in either an encoded or a plain envelope.
 var unregistered = new PayloadProcessor(new PayloadOptions { SerializerOptions = payloadJson, JsonCodec = new JsonPayloadCodec(payloadJson) });

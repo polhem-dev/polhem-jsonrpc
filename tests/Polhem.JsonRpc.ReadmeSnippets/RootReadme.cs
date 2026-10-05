@@ -34,16 +34,16 @@ namespace Polhem.JsonRpc.ReadmeSnippets.Root
             #endregion
         }
 
-        public static async Task Payload(WebApplicationBuilder builder, PayloadOptions payloadOptions, PayloadProcessor payload,
-            JsonRpcConnector rpc, AddRequest request, byte[] sessionKey, long next)
+        public static async Task Payload(WebApplicationBuilder builder, PayloadOptions payloadOptions,
+            JsonRpcConnector connector, AddRequest request, byte[] sessionKey)
         {
             #region readme: README.md#5
             // Server: the application supplies the key and the replay rules.
             builder.Services.AddJsonRpcServer(options => options.UsePayload(payloadOptions, new MyPayloadPolicy()));
 
-            // Client: wrap the parameters and unwrap the result of each call.
-            var parameters = payload.WrapRequest("Calculator.Add", request, PayloadFormat.Encrypted, key: sessionKey, sequence: next);
-            var result = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters), sessionKey)!;
+            // Client: called like JsonRpcConnector; each call is sealed and its result opened.
+            var rpc = new PayloadConnector(connector, new PayloadProcessor(payloadOptions), new PayloadConnectorOptions { KeyProvider = () => sessionKey });
+            var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", request);
             #endregion
         }
     }

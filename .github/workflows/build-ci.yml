@@ -47,7 +47,7 @@ jobs:
         run: dotnet test Polhem.JsonRpc.slnx --configuration Release --no-build
 
   # Native AOT: publishes the smoke test, which uses only the packages that promise AOT support (Polhem.JsonRpc,
-  # Polhem.JsonRpc.Client and Polhem.JsonRpc.Payload), with Native AOT and runs it. Every AOT warning is an error, so a change that breaks AOT compatibility fails here even when the
+  # Polhem.JsonRpc.Client, Polhem.JsonRpc.Payload and Polhem.JsonRpc.Payload.Client), with Native AOT and runs it. Every AOT warning is an error, so a change that breaks AOT compatibility fails here even when the
   # analyzers of a normal build do not see it.
   aot:
     runs-on: ubuntu-latest

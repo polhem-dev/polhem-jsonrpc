@@ -6,7 +6,7 @@ namespace Polhem.JsonRpc.UnitTests;
 
 /// <summary>
 /// The packages reference nothing but .NET, ASP.NET Core for Polhem.JsonRpc.AspNetCore, and each other only along the
-/// edges ADR-001 decision 1 and ADR-002 decision 1 allow. The build-time gate in src/Directory.Build.targets checks the
+/// edges ADR-001 decision 1, ADR-002 decision 1 and ADR-004 allow. The build-time gate in src/Directory.Build.targets checks the
 /// package and framework references; these tests check the project references and the assemblies actually referenced,
 /// and that every package under src is listed here.
 /// </summary>
@@ -24,6 +24,7 @@ public class DependencyGateTests
         ["Polhem.JsonRpc.AspNetCore"] = (["Polhem.JsonRpc", "Polhem.JsonRpc.Server"], s_aspNetCore),
         ["Polhem.JsonRpc.Client"] = (["Polhem.JsonRpc"], s_dotNet),
         ["Polhem.JsonRpc.Payload"] = (["Polhem.JsonRpc"], s_dotNet),
+        ["Polhem.JsonRpc.Payload.Client"] = (["Polhem.JsonRpc", "Polhem.JsonRpc.Client", "Polhem.JsonRpc.Payload"], s_dotNet),
         ["Polhem.JsonRpc.Payload.Server"] = (["Polhem.JsonRpc", "Polhem.JsonRpc.Payload", "Polhem.JsonRpc.Server"], s_dotNet),
     };
 

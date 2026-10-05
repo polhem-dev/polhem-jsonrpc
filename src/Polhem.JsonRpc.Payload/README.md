@@ -14,6 +14,7 @@ var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
 var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, sessionKey)!;
 ```
 
+`Polhem.JsonRpc.Payload.Client` does this for every call: its `PayloadConnector` is called like `JsonRpcConnector`.
 The format, the codec, the key and the sequence number are chosen per call. An encrypted payload is bound to the method
 and the direction under its HMAC, so it cannot be sent to another method or sent back as a request.
 `UnwrapResult<T>` decodes into the type the caller expects and only checks the envelope's `type` against it;

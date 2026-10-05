@@ -100,11 +100,12 @@ AOT smoke test never runs, and every semantic rule.
 
 ## Checklists (paste the relevant ones into each agent's prompt)
 
-### 1. Package boundaries and dependencies (ADR-001 decision 1, ADR-002 decision 1)
+### 1. Package boundaries and dependencies (ADR-001 decision 1, ADR-002 decision 1, ADR-004)
 
 - Extract every `<ProjectReference>`, `<PackageReference>` and `<FrameworkReference>` under `src/`. Allowed edges:
   `.Server → Polhem.JsonRpc`; `.AspNetCore → .Server` + ASP.NET Core; `.Client → Polhem.JsonRpc`;
-  `.Payload → Polhem.JsonRpc`; `.Payload.Server → .Payload, .Server`. Anything else is a finding.
+  `.Payload → Polhem.JsonRpc`; `.Payload.Client → .Payload, .Client`; `.Payload.Server → .Payload, .Server`. Anything
+  else is a finding.
 - Hard constraints: the client never references the server; the core packages never reference the payload packages;
   nothing references Polhem; no Newtonsoft.Json or MessagePack anywhere in `src/`.
 - Check the gate covers what it claims: `JSONRPC9001` sees direct package and framework references, and
@@ -191,13 +192,13 @@ name the bound and the test that pins it.
 - XML docs: English, `<see cref>` for types in this solution, no inventory counts, and every absolute claim ("never",
   "always") names what enforces it.
 
-### 6. Trim / AOT (ADR-001 decision 7, ADR-002 decision 1)
+### 6. Trim / AOT (ADR-001 decision 7, ADR-002 decision 1, ADR-004)
 
-- `Polhem.JsonRpc`, `.Client` and `.Payload` are `IsAotCompatible`; `.Server`, `.AspNetCore` and `.Payload.Server`
+- `Polhem.JsonRpc`, `.Client`, `.Payload` and `.Payload.Client` are `IsAotCompatible`; `.Server`, `.AspNetCore` and `.Payload.Server`
   enable the trim analyzer and annotate reflection with `RequiresUnreferencedCode` / `RequiresDynamicCode`. Look for an
   annotation that is missing, or one that is suppressed with `UnconditionalSuppressMessage` without a justification that
   holds.
-- **Which paths `tests/Polhem.JsonRpc.AotSmoke` runs**, and which public paths of the three AOT packages it never runs
+- **Which paths `tests/Polhem.JsonRpc.AotSmoke` runs**, and which public paths of the AOT packages it never runs
   (batches, notifications, interceptors, each payload format and codec, error mapping). The analyzer passes on code that
   is never rooted; only running proves it.
 - Parameters and results go through the application's `JsonSerializerOptions`; look for any internal serialization that

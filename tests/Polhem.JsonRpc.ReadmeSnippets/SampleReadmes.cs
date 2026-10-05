@@ -51,15 +51,14 @@ namespace Polhem.JsonRpc.ReadmeSnippets.PayloadQuickStart
 {
     public static class Snippets
     {
-        public static async Task Client(string base64Key, string clientId, JsonRpcConnector rpc)
+        public static async Task Client(string base64Key, string clientId, JsonRpcConnector connector)
         {
             #region readme: samples/PayloadQuickStart.Client/README.md#1
             var key = HMACSHA512.HashData(Convert.FromBase64String(base64Key), Encoding.UTF8.GetBytes(clientId));
             var payload = new PayloadProcessor(new PayloadOptions { RequireFrame = true });
+            var rpc = new PayloadConnector(connector, payload, new PayloadConnectorOptions { KeyProvider = () => key });
 
-            var parameters = payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
-            var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
-            var added = payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!;
+            var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
             #endregion
         }
 

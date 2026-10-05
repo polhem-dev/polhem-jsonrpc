@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Client half of Polhem.JsonRpc.Payload: PayloadConnector seals the parameters of each call into the payload envelope and opens its result, so an encrypted call is made like a plain one.</Description>
+    <PackageTags>$(PackageTags);encryption;compression</PackageTags>
+    <!-- Runs on iOS, Android and WebAssembly. The trim and AOT analyzers turn every incompatible call into a build error. -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polhem.JsonRpc.Client\Polhem.JsonRpc.Client.csproj" />
+    <ProjectReference Include="..\Polhem.JsonRpc.Payload\Polhem.JsonRpc.Payload.csproj" />
+  </ItemGroup>
+
+</Project>

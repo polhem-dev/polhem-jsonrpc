@@ -4,13 +4,14 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Polhem.JsonRpc.Client;
 using Polhem.JsonRpc.Payload;
+using Polhem.JsonRpc.Payload.Client;
 using QuickStart.Contracts;
 
 namespace Polhem.JsonRpc.UnitTests;
 
 /// <summary>
-/// Runs the PayloadQuickStart server sample and calls it the way the PayloadQuickStart client sample does, so that the
-/// samples cannot drift away from the API.
+/// Runs the PayloadQuickStart server sample and calls it the way the PayloadQuickStart client sample does, and with
+/// parameters sealed by hand, so that the samples cannot drift away from the API.
 /// </summary>
 public sealed class PayloadQuickStartSampleTests : IDisposable
 {
@@ -38,25 +39,39 @@ public sealed class PayloadQuickStartSampleTests : IDisposable
 
     private static PayloadProcessor CreateProcessor() => new(new PayloadOptions { RequireFrame = true });
 
-    [Fact(DisplayName = "PayloadQuickStart sample: an encrypted Calculator.Add is answered encrypted")]
-    public async Task CalculatorAdd_Encrypted_ReturnsSum()
+    [Fact(DisplayName = "PayloadQuickStart sample: encrypted Calculator.Add calls through PayloadConnector return the sums")]
+    public async Task CalculatorAdd_PayloadConnector_ReturnsSums()
     {
-        var payload = CreateProcessor();
-        var (rpc, key) = Connect();
+        var (connector, key) = Connect();
+        var rpc = new PayloadConnector(connector, CreateProcessor(), new PayloadConnectorOptions { KeyProvider = () => key });
 
-        var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add",
-            payload.WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1));
+        var added = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
+        var sum = await rpc.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 2, B = 3 });
 
-        Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
-        Assert.Equal(3, payload.UnwrapResult<AddResponse>("Calculator.Add", PayloadFormat.Encrypted, result, key)!.Sum);
+        Assert.Equal(3, added!.Sum);
+        Assert.Equal(5, sum!.Sum);
     }
 
-    [Fact(DisplayName = "PayloadQuickStart sample: sending the same call twice is refused with -32005")]
+    [Fact(DisplayName = "PayloadQuickStart sample: a connector that numbers from 1 again under the same client id is refused with -32005")]
+    public async Task CalculatorAdd_RestartedConnector_IsRefused()
+    {
+        var (connector, key) = Connect();
+        var options = new PayloadConnectorOptions { KeyProvider = () => key };
+        await new PayloadConnector(connector, CreateProcessor(), options).InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 });
+        var restarted = new PayloadConnector(connector, CreateProcessor(), options);
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => restarted.InvokeAsync<AddResponse>("Calculator.Add", new AddRequest { A = 1, B = 2 }));
+
+        Assert.Equal(-32005, ex.Code);
+    }
+
+    [Fact(DisplayName = "PayloadQuickStart sample: sending the same parameters twice is refused with -32005")]
     public async Task CalculatorAdd_Replayed_IsRefused()
     {
         var (rpc, key) = Connect();
         var parameters = CreateProcessor().WrapRequest("Calculator.Add", new AddRequest { A = 1, B = 2 }, PayloadFormat.Encrypted, key: key, sequence: 1);
-        await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
+        var result = await rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters);
+        Assert.Equal(PayloadFormat.Encrypted, PayloadEnvelope.ReadFormat(result));
 
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>("Calculator.Add", parameters));
 
