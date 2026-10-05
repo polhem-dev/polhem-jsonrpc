@@ -61,6 +61,7 @@ public partial class DispatcherTests
     [InlineData("Spé.Subtract")]
     [InlineData("Spec.Sub tract")]
     [InlineData("Spec.Subträct")]
+    [InlineData("Spec.Sub-tract")]
     public async Task DispatchAsync_DisallowedCharacter_FactoryNotAsked(string method)
     {
         var factory = new RecordingFactory();

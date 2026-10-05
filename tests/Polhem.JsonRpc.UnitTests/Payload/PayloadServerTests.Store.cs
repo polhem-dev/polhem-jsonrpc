@@ -62,19 +62,22 @@ public partial class PayloadServerTests
         var serverClock = new ManualClock(DateTimeOffset.UtcNow);
         var (rpc, _) = Create(new TestPolicy { ReplayScope = "session-1", UniqueSequence = true }, serverClock);
         var tolerance = new PayloadOptions().FrameTimestampTolerance;
-        var parameters = new PayloadProcessor(new PayloadOptions
+        var client = new PayloadProcessor(new PayloadOptions
         {
             RequireFrame = true,
             TypeResolver = Registry(),
             TimeProvider = new FixedClock(serverClock.GetUtcNow() + tolerance),
-        }).WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
+        });
+        var parameters = client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 1);
 
         await rpc.InvokeAsync<JsonElement>(Subtract, parameters);
-        serverClock.Advance(tolerance * 1.5);
+        serverClock.Advance(tolerance * 2);
 
-        // The frame is still within the tolerance, so only the store can refuse it.
+        // The frame is still within the tolerance on the server's side, so only the store can refuse it; a new sequence
+        // number with the same timestamp is accepted, which shows the refusal is the store's and not the timestamp's.
         var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, parameters));
         Assert.Equal(ReplayRejected, ex.Code);
+        await rpc.InvokeAsync<JsonElement>(Subtract, client.WrapRequest(Subtract, new SubtractRequest(5, 3), PayloadFormat.Encrypted, key: s_key, sequence: 2));
     }
 
     private static (JsonRpcConnector Rpc, PayloadProcessor Client) CreateWithStore(IPayloadReplayStore store, TimeProvider clock)
