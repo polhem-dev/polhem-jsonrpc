@@ -13,11 +13,13 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:5080"
             },
-            "//justMyCode": "false so the debugger does not break on JsonRpcErrorException: Calculator.Divide throws it on purpose, and the dispatcher turns it into an error response.",
+            // false so the debugger does not break on JsonRpcErrorException: Calculator.Divide throws it on
+            // purpose, and the dispatcher turns it into an error response.
             "justMyCode": false
         },
         {
-            "//": "Calls the server on http://localhost:5080/api. Start the server first, or use the 'Server + Client' compound.",
+            // Calls the server on http://localhost:5080/api. Start the server first, or use the 'Server + Client'
+            // compound.
             "name": "Run QuickStart.Client",
             "type": "coreclr",
             "request": "launch",
@@ -28,7 +30,8 @@
             "stopAtEntry": false
         },
         {
-            "//": "The demo key decodes to the text 'PayloadQuickStart demo key: not secret, for local debugging only'. It is a public value for this sample; the client must use the same one.",
+            // The demo key decodes to the text 'PayloadQuickStart demo key: not secret, for local debugging only'.
+            // It is a public value for this sample; the client must use the same one.
             "name": "Run PayloadQuickStart.Server",
             "type": "coreclr",
             "request": "launch",
@@ -41,11 +44,13 @@
                 "ASPNETCORE_URLS": "http://localhost:5081",
                 "PayloadDemoKey": "UGF5bG9hZFF1aWNrU3RhcnQgZGVtbyBrZXk6IG5vdCBzZWNyZXQsIGZvciBsb2NhbCBkZWJ1Z2dpbmcgb25seQ=="
             },
-            "//justMyCode": "false so the debugger does not break on ReplayRejectedException: the client repeats a sequence number on purpose, and the server turns it into an error response.",
+            // false so the debugger does not break on ReplayRejectedException: the client repeats a sequence number
+            // on purpose, and the server turns it into an error response.
             "justMyCode": false
         },
         {
-            "//": "Calls the server on http://localhost:5081/api with the same demo key. Start the server first, or use the 'PayloadQuickStart (Server + Client)' compound.",
+            // Calls the server on http://localhost:5081/api with the same demo key. Start the server first, or use
+            // the 'PayloadQuickStart (Server + Client)' compound.
             "name": "Run PayloadQuickStart.Client",
             "type": "coreclr",
             "request": "launch",
@@ -56,7 +61,8 @@
             "env": {
                 "PayloadDemoKey": "UGF5bG9hZFF1aWNrU3RhcnQgZGVtbyBrZXk6IG5vdCBzZWNyZXQsIGZvciBsb2NhbCBkZWJ1Z2dpbmcgb25seQ=="
             },
-            "//justMyCode": "false so the debugger does not break on JsonRpcErrorException: the last call is refused on purpose, and the sample catches it.",
+            // false so the debugger does not break on JsonRpcErrorException: the last call is refused on purpose,
+            // and the sample catches it.
             "justMyCode": false,
             "stopAtEntry": false
         }
