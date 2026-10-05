@@ -95,6 +95,11 @@ Each of these is pinned by vectors that the Polhem implementation produced befor
 > built-in `MemoryPayloadReplayStore` accepts a sequence number that is not negative, that it has not seen in the
 > scope, and that is at most 1,000,000 ahead of the highest it has seen there and fewer than 64 behind it
 > (`ReplayWindow`); the first number of a scope is accepted as it is. Another `IPayloadReplayStore` may differ. A client should count up from 1 and never reuse a number within a scope.
+>
+> Corrected (2026-10-05, for 1.1.1): not every vector comes from Polhem. The two vectors bound to a method and a
+> direction (`PayloadWireVectorTests.AesCbcHmacDecrypt_BoundVector_OpensWithItsBindingOnly`, ADR-003) were produced by
+> this package for 1.1.0, then checked with an HMAC computed apart from it and decrypted by polhem-connector-js. They
+> are not regenerated either.
 
 ### 3. The client wraps and unwraps; there is no interceptor
 

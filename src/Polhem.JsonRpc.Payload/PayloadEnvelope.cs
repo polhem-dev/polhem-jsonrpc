@@ -47,19 +47,28 @@ public sealed class PayloadEnvelope
     /// <returns>
     /// The format, or <see cref="PayloadFormat.Plain"/> when there is no envelope object or it has no <c>format</c>.
     /// </returns>
-    /// <exception cref="InvalidPayloadException">The <c>format</c> member is not one of the formats.</exception>
+    /// <exception cref="InvalidPayloadException">
+    /// The <c>format</c> member is not one of the formats, or a member of the envelope appears more than once.
+    /// </exception>
     /// <remarks>
     /// An access filter that runs before the payload is opened uses it to apply rules by format, for example to reject a
-    /// plain call to a method that must be encrypted.
+    /// plain call to a method that must be encrypted. It refuses the envelopes <see cref="Read"/> refuses for a repeated
+    /// member, so the format it returns is the one the payload is opened in.
     /// </remarks>
     public static PayloadFormat ReadFormat(JsonElement? payload)
     {
-        if (payload is not { ValueKind: JsonValueKind.Object } element
-            || !element.TryGetProperty(FormatMember, out var format))
-        {
+        if (payload is not { ValueKind: JsonValueKind.Object } element)
             return PayloadFormat.Plain;
+
+        var format = PayloadFormat.Plain;
+        var seen = EnvelopeMembers.None;
+        foreach (var member in element.EnumerateObject())
+        {
+            Note(ref seen, member.Name);
+            if (member.NameEquals(FormatMember))
+                format = ParseFormat(member.Value);
         }
-        return ParseFormat(format);
+        return format;
     }
 
     /// <summary>Reads an envelope.</summary>
@@ -68,7 +77,14 @@ public sealed class PayloadEnvelope
     /// The envelope. A missing element reads as an empty plain envelope, and members the envelope does not define are
     /// ignored.
     /// </returns>
-    /// <exception cref="InvalidPayloadException">The element is not an envelope.</exception>
+    /// <exception cref="InvalidPayloadException">
+    /// The element is not an envelope, which includes an object in which a member of the envelope appears more than once.
+    /// </exception>
+    /// <remarks>
+    /// A repeated member is refused rather than resolved, because readers need not resolve it alike: one may keep the first
+    /// value and another the last, and a filter that decides by the format would then see another format than the one
+    /// the payload is opened in.
+    /// </remarks>
     public static PayloadEnvelope Read(JsonElement? payload)
     {
         if (payload is not { } element || element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
@@ -80,8 +96,10 @@ public sealed class PayloadEnvelope
         JsonElement? value = null;
         string typeName = string.Empty;
         string codec = string.Empty;
+        var seen = EnvelopeMembers.None;
         foreach (var member in element.EnumerateObject())
         {
+            Note(ref seen, member.Name);
             switch (member.Name)
             {
                 case FormatMember:
@@ -148,6 +166,22 @@ public sealed class PayloadEnvelope
         writer.WriteEndObject();
     }
 
+    // Records a member of the envelope and refuses it the second time; members the envelope does not define are ignored.
+    private static void Note(ref EnvelopeMembers seen, string name)
+    {
+        var member = name switch
+        {
+            FormatMember => EnvelopeMembers.Format,
+            ValueMember => EnvelopeMembers.Value,
+            TypeMember => EnvelopeMembers.Type,
+            CodecMember => EnvelopeMembers.Codec,
+            _ => EnvelopeMembers.None,
+        };
+        if ((seen & member) != 0)
+            throw new InvalidPayloadException($"The {name} member appears more than once in a payload envelope.");
+        seen |= member;
+    }
+
     private static PayloadFormat ParseFormat(JsonElement format)
     {
         if (format.ValueKind != JsonValueKind.Number || !format.TryGetInt32(out var value)
@@ -172,5 +206,15 @@ public sealed class PayloadEnvelope
         if (!element.TryGetBytesFromBase64(out var body))
             throw new InvalidPayloadException("The value of an encoded payload envelope is not valid Base64.");
         return body;
+    }
+
+    [Flags]
+    private enum EnvelopeMembers
+    {
+        None = 0,
+        Format = 1,
+        Value = 2,
+        Type = 4,
+        Codec = 8,
     }
 }

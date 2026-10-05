@@ -7,6 +7,21 @@ Notable changes to the Polhem.JsonRpc packages. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Security
+
+- `PayloadEnvelope.Read` and `PayloadEnvelope.ReadFormat` refuse an envelope in which `format`, `value`, `type` or
+  `codec` appears more than once (`InvalidPayloadException`, answered `-32602` by `UsePayload`). Both took the last
+  value until now, but only because of how System.Text.Json reads them; an access filter that decides by
+  `ReadFormat`, as the Polhem framework's does, could otherwise be shown another format than the one the payload is
+  opened in. No writer of the format repeats a member.
+
+### Changed
+
+- Under Native AOT, the `JsonRpcDispatcher` constructor throws `InvalidOperationException` saying that the server
+  package does not support Native AOT. Since 1.1.0 it threw `PlatformNotSupportedException` there, from the check for
+  code compiled against `Polhem.JsonRpc.Server` 1.0, which cannot list assembly references under Native AOT.
+  `Polhem.JsonRpc.Server` has never supported Native AOT (it is marked `RequiresDynamicCode`); 1.0 happened to run.
+
 ## [1.1.1] - 2026-10-05
 
 ### Security

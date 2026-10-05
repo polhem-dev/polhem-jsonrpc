@@ -7,6 +7,20 @@ Polhem.JsonRpc 各套件的重要變更。格式依循
 
 ## [Unreleased]
 
+### 安全性
+
+- `PayloadEnvelope.Read` 與 `PayloadEnvelope.ReadFormat` 會拒絕 `format`、`value`、`type` 或 `codec` 出現超過一次的信封
+  （擲 `InvalidPayloadException`，`UsePayload` 以 `-32602` 回應）。在此之前兩者都取最後一個值，但那只是 System.Text.Json
+  的讀法剛好如此；像 Polhem 框架那樣依 `ReadFormat` 判斷的存取 filter，否則可能看到與實際開啟時不同的格式。
+  這個格式的寫出端都不會重複成員。
+
+### 變更
+
+- 在 Native AOT 下，`JsonRpcDispatcher` 的建構子會擲出 `InvalidOperationException`，說明伺服器套件不支援 Native AOT。
+  自 1.1.0 起，它在那裡擲的是 `PlatformNotSupportedException`，來自檢查「以 `Polhem.JsonRpc.Server` 1.0 編譯的程式碼」的那一步，
+  因為 Native AOT 下列不出組件的參考。`Polhem.JsonRpc.Server` 從未支援 Native AOT（它標有 `RequiresDynamicCode`），
+  1.0 只是剛好能跑。
+
 ## [1.1.1] - 2026-10-05
 
 ### 安全性

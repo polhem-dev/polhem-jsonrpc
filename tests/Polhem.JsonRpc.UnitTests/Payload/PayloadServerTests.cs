@@ -180,6 +180,18 @@ public partial class PayloadServerTests
         Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
     }
 
+    [Theory(DisplayName = "Payload server: an envelope that names its format twice is answered as invalid params")]
+    [InlineData("""{"format": 2, "format": 0, "value": {"minuend": 5, "subtrahend": 3}}""")]
+    [InlineData("""{"format": 0, "format": 2, "value": {"minuend": 5, "subtrahend": 3}}""")]
+    public async Task Call_RepeatedFormat_ReturnsInvalidParams(string parameters)
+    {
+        var (rpc, _) = CreateWithoutMapper(new TestPolicy { MinimumFormat = PayloadFormat.Encrypted });
+
+        var ex = await Assert.ThrowsAsync<JsonRpcErrorException>(() => rpc.InvokeAsync<JsonElement>(Subtract, DispatcherFixture.Element(parameters)));
+
+        Assert.Equal(JsonRpcErrorCodes.InvalidParams, ex.Code);
+    }
+
     [Theory(DisplayName = "Payload server: a plain value of the wrong shape is invalid params, as it is without the payload packages")]
     [InlineData("Spec.Numbers", "[5, 3]")]
     [InlineData("Spec.Subtract", """{"minuend": "not a number"}""")]

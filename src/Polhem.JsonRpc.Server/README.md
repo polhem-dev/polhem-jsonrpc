@@ -23,6 +23,8 @@ public sealed class Calculator
 }
 ```
 
-The dispatcher resolves methods by reflection, so it does not support Native AOT.
+The dispatcher resolves methods by reflection, so it does not support Native AOT. Under Native AOT its constructor
+throws `InvalidOperationException`, because it cannot check which loaded code was compiled against
+`Polhem.JsonRpc.Server` 1.0.
 
 Documentation and samples: https://github.com/polhem-dev/polhem-jsonrpc
